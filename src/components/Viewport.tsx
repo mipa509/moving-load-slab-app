@@ -1,5 +1,5 @@
 import { useId } from "react";
-import type { AnalysisResults, RectOverlay, ResultField, SlabModel } from "../app/types";
+import type { AnalysisResults, ResultField, SlabModel } from "../app/types";
 import { createContourScale } from "../app/contourScale";
 
 interface ViewportProps {
@@ -56,7 +56,20 @@ export const Viewport = ({ model, results, selectedField }: ViewportProps) => {
       </section>
 
       <section className="viewport-shell">
+        <header className="viewport-shell-header">
+          <div className="viewport-shell-heading">
+            <p className="viewport-shell-kicker">Result Plot</p>
+            <h3>{resultLabel[selectedField]}</h3>
+          </div>
+          <div className="viewport-shell-meta" aria-label="Plot metadata">
+            <span>Plan View</span>
+            <span>
+              {model.geometry.lengthM.toFixed(2)} m x {model.geometry.widthM.toFixed(2)} m
+            </span>
+          </div>
+        </header>
         <div className="viewport-canvas">
+          <div className="viewport-frame" aria-hidden="true" />
           <svg
             viewBox={`${-plotPadding} ${-plotPadding} ${model.geometry.lengthM + plotPadding * 2} ${
               model.geometry.widthM + plotPadding * 2
@@ -69,9 +82,7 @@ export const Viewport = ({ model, results, selectedField }: ViewportProps) => {
               y={0}
               width={model.geometry.lengthM}
               height={model.geometry.widthM}
-              fill="#f8fbf9"
-              stroke="#163827"
-              strokeWidth={0.04}
+              className="slab-domain"
             />
 
             {model.display.contours && contour
@@ -151,24 +162,37 @@ export const Viewport = ({ model, results, selectedField }: ViewportProps) => {
           </svg>
 
           <div className="viewport-overlay">
-            <h3>{resultLabel[selectedField]} View</h3>
-            <p>
-              Contours: {model.display.contours ? "On" : "Off"} | Mesh:{" "}
-              {model.display.mesh ? "On" : "Off"} | Supports:{" "}
-              {model.display.supports ? "On" : "Off"} | Wheels:{" "}
-              {model.display.wheelPatches ? "On" : "Off"}
-            </p>
-            {selectedField === "reactions" ? (
+            <p className="viewport-overlay-label">Viewport Status</p>
+            <h4>{resultLabel[selectedField]} view</h4>
+            <div className="viewport-overlay-grid">
               <p>
+                <span>Contours</span>
+                <strong>{model.display.contours ? "On" : "Off"}</strong>
+              </p>
+              <p>
+                <span>Mesh</span>
+                <strong>{model.display.mesh ? "On" : "Off"}</strong>
+              </p>
+              <p>
+                <span>Supports</span>
+                <strong>{model.display.supports ? "On" : "Off"}</strong>
+              </p>
+              <p>
+                <span>Wheels</span>
+                <strong>{model.display.wheelPatches ? "On" : "Off"}</strong>
+              </p>
+            </div>
+            {selectedField === "reactions" ? (
+              <p className="viewport-overlay-summary">
                 Support groups: {results.reactionSummaryBySupport.length} | Total vertical reaction:{" "}
                 {totalReactionText}
               </p>
             ) : contour ? (
-              <p>
+              <p className="viewport-overlay-summary">
                 Range: {contour.min.toFixed(3)} to {contour.max.toFixed(3)} {contour.units}
               </p>
             ) : (
-              <p>No contour values available for this field yet.</p>
+              <p className="viewport-overlay-summary">No contour values available for this field yet.</p>
             )}
           </div>
           {contour && contourScale ? (

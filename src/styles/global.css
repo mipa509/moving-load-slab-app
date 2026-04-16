@@ -1,16 +1,17 @@
 :root {
-  --bg-0: #f2f4ef;
-  --bg-1: #e5ece1;
+  --bg-0: #edf1f5;
+  --bg-1: #dbe3ec;
   --panel: #ffffff;
-  --line: #d3dccf;
-  --ink: #122019;
-  --ink-muted: #4d5d53;
-  --accent: #1f6b5b;
-  --accent-2: #214a7a;
-  --warning: #b06f1a;
-  --danger: #a8372f;
+  --line: #c8d2dc;
+  --line-strong: #8190a0;
+  --ink: #17212b;
+  --ink-muted: #5b6773;
+  --accent: #245f9c;
+  --accent-2: #153a63;
+  --warning: #a46c1e;
+  --danger: #a43b31;
   --radius: 12px;
-  --shadow: 0 14px 30px rgba(18, 32, 25, 0.08);
+  --shadow: 0 18px 40px rgba(23, 33, 43, 0.08);
 }
 
 *,
@@ -31,7 +32,7 @@ body {
   font-family: "IBM Plex Sans", "Segoe UI", "Helvetica Neue", sans-serif;
   background:
     radial-gradient(circle at 20% 0%, var(--bg-1), transparent 45%),
-    linear-gradient(120deg, var(--bg-0), #f6f7f4 60%, #edf2eb);
+    linear-gradient(120deg, var(--bg-0), #f8fafc 60%, #edf2f7);
 }
 
 h1,
