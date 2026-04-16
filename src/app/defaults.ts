@@ -13,6 +13,9 @@ import type {
   VehiclePlacement,
 } from "./types";
 
+const isPlotMode = (input: unknown): input is DisplayToggles["plotMode"] =>
+  input === "results" || input === "structure" || input === "mesh";
+
 const defaultConstraintSet = (): ConstraintSet => ({
   uz: { type: "fixed" },
   rx: { type: "free" },
@@ -88,6 +91,7 @@ export const createDefaultModel = (): SlabModel => ({
     pathStepM: 1,
   },
   display: {
+    plotMode: "results",
     mesh: true,
     supports: true,
     wheelPatches: true,
@@ -255,6 +259,7 @@ function sanitizeDisplay(input: unknown, fallback: DisplayToggles): DisplayToggl
     return fallback;
   }
   return {
+    plotMode: isPlotMode(input.plotMode) ? input.plotMode : fallback.plotMode,
     mesh: booleanValue(input.mesh, fallback.mesh),
     supports: booleanValue(input.supports, fallback.supports),
     wheelPatches: booleanValue(input.wheelPatches, fallback.wheelPatches),

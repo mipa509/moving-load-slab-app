@@ -353,6 +353,10 @@
   stroke-width: 0.04;
 }
 
+.contour-cell {
+  opacity: 0.92;
+}
+
 .mesh-line {
   stroke: rgba(69, 83, 98, 0.3);
   stroke-width: 0.015;
@@ -424,6 +428,56 @@
 
 .viewport-axis-badge span {
   font-weight: 600;
+}
+
+.viewport-canvas.mode-results .mesh-line {
+  stroke: rgba(69, 83, 98, 0.24);
+}
+
+.viewport-canvas.mode-results .support-line,
+.viewport-canvas.mode-results .support-point {
+  opacity: 0.88;
+}
+
+.viewport-canvas.mode-structure .slab-domain {
+  fill: #ffffff;
+  stroke: #132536;
+}
+
+.viewport-canvas.mode-structure .mesh-line {
+  stroke: rgba(69, 83, 98, 0.14);
+}
+
+.viewport-canvas.mode-structure .support-line,
+.viewport-canvas.mode-structure .support-point {
+  opacity: 1;
+}
+
+.viewport-canvas.mode-structure .support-line {
+  stroke-width: 0.09;
+}
+
+.viewport-canvas.mode-structure .wheel-patch {
+  fill: rgba(156, 92, 13, 0.16);
+  stroke-width: 0.05;
+}
+
+.viewport-canvas.mode-mesh .slab-domain {
+  fill: #fbfcfe;
+}
+
+.viewport-canvas.mode-mesh .mesh-line {
+  stroke: rgba(37, 64, 94, 0.48);
+  stroke-width: 0.02;
+}
+
+.viewport-canvas.mode-mesh .support-line,
+.viewport-canvas.mode-mesh .support-point {
+  opacity: 0.9;
+}
+
+.viewport-canvas.mode-mesh .wheel-patch {
+  opacity: 0.55;
 }
 
 .viewport-overlay {

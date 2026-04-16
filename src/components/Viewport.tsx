@@ -1,5 +1,5 @@
 import { useId } from "react";
-import type { AnalysisResults, ContourPoint, ResultField, SlabModel } from "../app/types";
+import type { AnalysisResults, ContourPoint, PlotMode, ResultField, SlabModel } from "../app/types";
 import { createContourScale } from "../app/contourScale";
 
 interface ViewportProps {
@@ -32,8 +32,15 @@ const resultLabel: Record<ResultField, string> = {
   reactions: "Reactions",
 };
 
+const plotModeLabel: Record<PlotMode, string> = {
+  results: "Result View",
+  structure: "Structure View",
+  mesh: "Mesh View",
+};
+
 export const Viewport = ({ model, results, selectedField }: ViewportProps) => {
   const legendGradientId = useId().replace(/:/g, "");
+  const plotMode = model.display.plotMode;
   const contour = selectedField === "reactions" ? undefined : results.contours[selectedField];
   const mesh = results.mesh ?? buildFallbackMesh(model);
   const cells = contour ? buildContourCells(mesh.xCoordsM, mesh.yCoordsM, contour.points) : [];
@@ -47,6 +54,16 @@ export const Viewport = ({ model, results, selectedField }: ViewportProps) => {
   const contourExtrema = contour ? findContourExtrema(contour.points) : null;
   const plotPadding = Math.max(0.5, Math.max(model.geometry.lengthM, model.geometry.widthM) * 0.08);
   const totalReactionText = `${results.reactionTotals.uz.toFixed(3)} kN`;
+  const showContours = plotMode === "results" && model.display.contours && Boolean(contour);
+  const showMesh = plotMode === "mesh" ? true : model.display.mesh;
+  const showSupports =
+    plotMode === "structure" || plotMode === "mesh" ? true : model.display.supports;
+  const showWheelPatches = plotMode === "structure" ? true : model.display.wheelPatches;
+  const showLegend = showContours && Boolean(contourScale);
+  const plotModeNote =
+    plotMode !== "results" && selectedField !== "reactions"
+      ? `Contours hidden in ${plotModeLabel[plotMode].toLowerCase()}. Switch to Result View for the colour map.`
+      : undefined;
   const activeResultSummary =
     selectedField === "reactions"
       ? {
@@ -94,13 +111,13 @@ export const Viewport = ({ model, results, selectedField }: ViewportProps) => {
             <h3>{resultLabel[selectedField]}</h3>
           </div>
           <div className="viewport-shell-meta" aria-label="Plot metadata">
-            <span>Plan View</span>
+            <span>{plotModeLabel[plotMode]}</span>
             <span>
               {model.geometry.lengthM.toFixed(2)} m x {model.geometry.widthM.toFixed(2)} m
             </span>
           </div>
         </header>
-        <div className="viewport-canvas">
+        <div className={`viewport-canvas mode-${plotMode}`}>
           <div className="viewport-frame" aria-hidden="true" />
           <svg
             viewBox={`${-plotPadding} ${-plotPadding} ${model.geometry.lengthM + plotPadding * 2} ${
@@ -117,7 +134,7 @@ export const Viewport = ({ model, results, selectedField }: ViewportProps) => {
               className="slab-domain"
             />
 
-            {model.display.contours && contour
+            {showContours && contour
               ? cells.map((cell) => (
                   <rect
                     key={cell.key}
@@ -125,13 +142,13 @@ export const Viewport = ({ model, results, selectedField }: ViewportProps) => {
                     y={cell.y}
                     width={cell.width}
                     height={cell.height}
+                    className="contour-cell"
                     fill={contourScale?.getColor(cell.value) ?? "#f7f7f7"}
-                    opacity={0.92}
                   />
                 ))
               : null}
 
-            {model.display.contours && contourExtrema ? (
+            {showContours && contourExtrema ? (
               <g className="extrema-layer" aria-label="Contour extrema markers">
                 <circle
                   cx={contourExtrema.max.xM}
@@ -168,7 +185,7 @@ export const Viewport = ({ model, results, selectedField }: ViewportProps) => {
               </g>
             ) : null}
 
-            {model.display.mesh
+            {showMesh
               ? mesh.xCoordsM.map((xCoord) => (
                   <line
                     key={`vx-${xCoord}`}
@@ -180,7 +197,7 @@ export const Viewport = ({ model, results, selectedField }: ViewportProps) => {
                   />
                 ))
               : null}
-            {model.display.mesh
+            {showMesh
               ? mesh.yCoordsM.map((yCoord) => (
                   <line
                     key={`hy-${yCoord}`}
@@ -193,7 +210,7 @@ export const Viewport = ({ model, results, selectedField }: ViewportProps) => {
                 ))
               : null}
 
-            {model.display.supports
+            {showSupports
               ? model.supports.map((support) =>
                   support.kind === "line" ? (
                     <line
@@ -216,7 +233,7 @@ export const Viewport = ({ model, results, selectedField }: ViewportProps) => {
                 )
               : null}
 
-            {model.display.wheelPatches
+            {showWheelPatches
               ? (results.wheelPatches ?? []).map((patch, index) => (
                   <rect
                     key={`wheel-${index}`}
@@ -240,19 +257,19 @@ export const Viewport = ({ model, results, selectedField }: ViewportProps) => {
             <div className="viewport-overlay-grid">
               <p>
                 <span>Contours</span>
-                <strong>{model.display.contours ? "On" : "Off"}</strong>
+                <strong>{showContours ? "On" : "Off"}</strong>
               </p>
               <p>
                 <span>Mesh</span>
-                <strong>{model.display.mesh ? "On" : "Off"}</strong>
+                <strong>{showMesh ? "On" : "Off"}</strong>
               </p>
               <p>
                 <span>Supports</span>
-                <strong>{model.display.supports ? "On" : "Off"}</strong>
+                <strong>{showSupports ? "On" : "Off"}</strong>
               </p>
               <p>
                 <span>Wheels</span>
-                <strong>{model.display.wheelPatches ? "On" : "Off"}</strong>
+                <strong>{showWheelPatches ? "On" : "Off"}</strong>
               </p>
             </div>
             {selectedField === "reactions" ? (
@@ -275,12 +292,15 @@ export const Viewport = ({ model, results, selectedField }: ViewportProps) => {
                         contour.units
                       }`}
                 </p>
+                {plotModeNote ? (
+                  <p className="viewport-overlay-summary viewport-overlay-note">{plotModeNote}</p>
+                ) : null}
               </>
             ) : (
               <p className="viewport-overlay-summary">No contour values available for this field yet.</p>
             )}
           </div>
-          {contour && contourScale ? (
+          {showLegend && contour && contourScale ? (
             <div className="legend-panel" aria-label={`${resultLabel[selectedField]} legend`}>
               <div className="legend-title">Scale</div>
               <div className="legend-subtitle">{contour.units}</div>

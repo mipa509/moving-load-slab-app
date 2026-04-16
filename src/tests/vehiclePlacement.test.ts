@@ -46,6 +46,7 @@ function buildBaseAppModel(): SlabModel {
       pathStepM: 1,
     },
     display: {
+      plotMode: "results",
       mesh: true,
       supports: true,
       wheelPatches: true,

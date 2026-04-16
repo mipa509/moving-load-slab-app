@@ -3,6 +3,7 @@ import type {
   ConstraintType,
   Dof,
   DirectWheelInput,
+  PlotMode,
   ResultField,
   SlabModel,
   Support,
@@ -46,6 +47,7 @@ const resultFields: ResultField[] = [
   "qy",
   "reactions",
 ];
+const plotModes: PlotMode[] = ["results", "structure", "mesh"];
 const constraintOptionsByDof: Record<Dof, Exclude<ConstraintType, "pinned">[]> = {
   uz: ["free", "fixed", "spring"],
   rx: ["free", "fixed", "spring"],
@@ -1320,6 +1322,27 @@ export const ControlPanel = ({
       </SectionCard>
 
       <SectionCard title="Result Control">
+        <label className="field">
+          <span>Plot Mode</span>
+          <select
+            value={model.display.plotMode}
+            onChange={(e) =>
+              setModel((curr) => ({
+                ...curr,
+                display: { ...curr.display, plotMode: e.target.value as PlotMode },
+              }))
+            }
+          >
+            {plotModes.map((plotMode) => (
+              <option key={plotMode} value={plotMode}>
+                {plotMode.toUpperCase()}
+              </option>
+            ))}
+          </select>
+        </label>
+        <p className="field-note">
+          Structure and mesh views suppress contour filling so layer review stays readable.
+        </p>
         <label className="field">
           <span>Primary Result</span>
           <select

@@ -35,6 +35,9 @@ describe("app model sanitization", () => {
         axleInputs: [{ id: "A1", spacingFromPreviousM: "0", axleLoadKn: "120" }],
         directWheels: [],
       },
+      display: {
+        plotMode: "mesh",
+      },
     });
 
     expect(model.geometry.lengthM).toBe(12);
@@ -46,6 +49,7 @@ describe("app model sanitization", () => {
     expect(model.vehicle.trackM).toBe(2.5);
     expect(model.vehicle.wheelsPerAxle).toBe(4);
     expect(model.vehicle.axleInputs[0].axleLoadKn).toBe(120);
+    expect(model.display.plotMode).toBe("mesh");
   });
 
   it("falls back safely when nested arrays contain malformed items", () => {
@@ -69,6 +73,7 @@ describe("app model sanitization", () => {
     }
     expect(model.supports[0].y2).toBe(7.5);
     expect(model.vehicle.directWheels).toEqual(defaults.vehicle.directWheels);
+    expect(model.display.plotMode).toBe(defaults.display.plotMode);
   });
 });
 

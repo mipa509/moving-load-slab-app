@@ -5,6 +5,7 @@ export type Dof = "uz" | "rx" | "ry";
 export type ConstraintType = "free" | "fixed" | "pinned" | "spring";
 export type VehicleInputMode = "axle" | "direct";
 export type TravelDirection = "x+" | "x-" | "y+" | "y-";
+export type PlotMode = "results" | "structure" | "mesh";
 
 export interface SlabGeometry {
   lengthM: number;
@@ -104,6 +105,7 @@ export interface VehiclePlacement {
 }
 
 export interface DisplayToggles {
+  plotMode: PlotMode;
   mesh: boolean;
   supports: boolean;
   wheelPatches: boolean;
