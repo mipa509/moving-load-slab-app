@@ -1,0 +1,61 @@
+import type { BenchmarkFixtureMetadata } from "../model/types";
+
+export const TRANSFER_SLAB_BENCHMARK_FIXTURE: BenchmarkFixtureMetadata = {
+  id: "arnott-transfer-slab-pynite-v1",
+  name: "Arnott Transfer Slab PyNite 2D Reference",
+  sourceNotebookPath:
+    "C:/Users/bc975770/OneDrive - Skanska/Python/Python - Tata/Arnott Culvert/notebooks/transfer_slab_design.ipynb",
+  notes: [
+    "Reference extracted from notebook section: 'PyNite 2D Plate Model' outputs.",
+    "The app solver is not expected to match exactly; selected checks target about 5% agreement.",
+    "Case values below come from the published notebook output tables for Case A and Case B.",
+  ],
+  toleranceTargetPercent: 5,
+  slabReference: {
+    lengthX: 10.5,
+    widthY: 5.0,
+    thickness: 0.5,
+    supportLineX: [0.0, 5.0, 7.6, 10.5],
+    meshSize: 0.25,
+  },
+  loadReference: {
+    vehicleName: "KRT_100T",
+    patchLength: 0.65,
+    patchWidth: 0.35,
+    patchLoad: 125.568,
+    wheelsPerAxle: 4,
+    axleCount: 2,
+    wheelSpacingAlong: 1.0,
+    axleSpacingAcross: 1.0,
+    dynamicAmplificationFactor: 1.3,
+    gammaG: 1.25,
+    gammaQ: 1.35,
+    psi1: 0.75,
+  },
+  cases: [
+    {
+      id: "case-a-midspan-bending",
+      label: "Case A - span 1 midspan bending reference",
+      vehicleReferenceX: 2.5,
+      loadedElementCount: 32,
+      expectedTotalReactionKN: 2583.3,
+      referenceMxMinKNmPerM: -303.3,
+      referenceMxMaxKNmPerM: 240.2,
+      referenceMyMinKNmPerM: -80.4,
+      referenceMyMaxKNmPerM: 48.0,
+      referenceCentrelineMaxAbsQxKNPerM: 280.0,
+    },
+    {
+      id: "case-b-near-support-shear",
+      label: "Case B - W1 near-support shear reference",
+      vehicleReferenceX: 4.325,
+      loadedElementCount: 16,
+      expectedTotalReactionKN: 2583.3,
+      referenceMxMinKNmPerM: -108.2,
+      referenceMxMaxKNmPerM: 140.9,
+      referenceMyMinKNmPerM: -31.5,
+      referenceMyMaxKNmPerM: 28.7,
+      referenceCentrelineMaxAbsQxKNPerM: 310.1,
+    },
+  ],
+};

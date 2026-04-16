@@ -1,0 +1,49 @@
+:root {
+  --bg-0: #f2f4ef;
+  --bg-1: #e5ece1;
+  --panel: #ffffff;
+  --line: #d3dccf;
+  --ink: #122019;
+  --ink-muted: #4d5d53;
+  --accent: #1f6b5b;
+  --accent-2: #214a7a;
+  --warning: #b06f1a;
+  --danger: #a8372f;
+  --radius: 12px;
+  --shadow: 0 14px 30px rgba(18, 32, 25, 0.08);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  color: var(--ink);
+  font-family: "IBM Plex Sans", "Segoe UI", "Helvetica Neue", sans-serif;
+  background:
+    radial-gradient(circle at 20% 0%, var(--bg-1), transparent 45%),
+    linear-gradient(120deg, var(--bg-0), #f6f7f4 60%, #edf2eb);
+}
+
+h1,
+h2,
+h3,
+h4,
+p {
+  margin: 0;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
