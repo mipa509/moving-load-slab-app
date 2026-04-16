@@ -1,5 +1,10 @@
 import { startTransition, useRef, useState, type ChangeEvent } from "react";
-import { createDefaultModel, idleResults, sanitizeLoadedModel } from "./defaults";
+import {
+  createDefaultModel,
+  idleResults,
+  sanitizeLoadedModel,
+  validateModelForRun,
+} from "./defaults";
 import { runFixedAnalysis } from "./solverAdapter";
 import type { AnalysisResults, ResultField, SlabModel } from "./types";
 import { ControlPanel } from "../components/ControlPanel";
@@ -23,6 +28,16 @@ export const App = () => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleRunAnalysis = async () => {
+    const issues = validateModelForRun(model);
+    if (issues.length > 0) {
+      setResults({
+        ...idleResults(),
+        status: "error",
+        error: issues.join(" "),
+      });
+      return;
+    }
+
     setRunning(true);
     setResults((prev) => ({ ...prev, status: "running" }));
     const nextResults = await runFixedAnalysis(model);

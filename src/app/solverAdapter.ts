@@ -5,18 +5,7 @@ import type {
   ResultField,
   SlabModel,
 } from "./types";
-
-type SolverRunFn = (model: SlabModel) => Promise<unknown> | unknown;
-
-interface SolverModuleLike {
-  runFixedPositionAnalysis?: SolverRunFn;
-}
-
-declare global {
-  interface Window {
-    __slabSolver?: SolverModuleLike;
-  }
-}
+import { runFixedPositionAnalysis } from "../solver";
 
 const contourFields: Exclude<ResultField, "reactions">[] = [
   "deflection",
@@ -36,6 +25,9 @@ const defaultUnits: Record<Exclude<ResultField, "reactions">, string> = {
 
 const toNumber = (value: unknown, fallback = 0): number =>
   typeof value === "number" && Number.isFinite(value) ? value : fallback;
+
+const isDof = (value: unknown): value is Dof =>
+  value === "uz" || value === "rx" || value === "ry";
 
 const normalizeContours = (
   rawContours: unknown,
@@ -72,112 +64,25 @@ const normalizeContours = (
   return result;
 };
 
-const buildStubResults = (
-  model: SlabModel,
-  elapsedMs: number,
-  warning?: string,
-): AnalysisResults => {
-  const pointsPerSide = 9;
-  const dx = model.geometry.lengthM / (pointsPerSide - 1);
-  const dy = model.geometry.widthM / (pointsPerSide - 1);
-  const base = model.vehicle.mode === "axle"
-    ? model.vehicle.axleInputs.reduce((sum, axle) => sum + axle.axleLoadKn, 0)
-    : model.vehicle.directWheels.reduce((sum, wheel) => sum + wheel.loadKn, 0);
-
-  const makeContour = (
-    field: Exclude<ResultField, "reactions">,
-    factor: number,
-  ): ContourData => {
-    const points = Array.from({ length: pointsPerSide * pointsPerSide }, (_, i) => {
-      const xi = i % pointsPerSide;
-      const yi = Math.floor(i / pointsPerSide);
-      const xM = xi * dx;
-      const yM = yi * dy;
-      const xNorm = xM / Math.max(model.geometry.lengthM, 0.1);
-      const yNorm = yM / Math.max(model.geometry.widthM, 0.1);
-      const value = factor * base * Math.sin(Math.PI * xNorm) * Math.sin(Math.PI * yNorm);
-      return { xM, yM, value };
-    });
-    return {
-      field,
-      points,
-      min: Math.min(...points.map((p) => p.value)),
-      max: Math.max(...points.map((p) => p.value)),
-      units: defaultUnits[field],
-    };
-  };
-
-  const contourMap = {
-    deflection: makeContour("deflection", 0.02),
-    mx: makeContour("mx", 0.004),
-    my: makeContour("my", 0.0036),
-    qx: makeContour("qx", 0.007),
-    qy: makeContour("qy", 0.0065),
-  };
-
-  const reactionRows = model.supports.flatMap((support) =>
-    (["uz", "rx", "ry"] as Dof[]).map((dof, idx) => ({
-      supportId: support.id,
-      dof,
-      value: Number(((base / Math.max(model.supports.length, 1)) * (1 - idx * 0.25)).toFixed(3)),
-      units: dof === "uz" ? "kN" : "kN*m",
-    })),
-  );
-
-  return {
-    status: "success",
-    source: "stub",
-    contours: contourMap,
-    mesh: {
-      xCoordsM: Array.from({ length: pointsPerSide }, (_, index) => index * dx),
-      yCoordsM: Array.from({ length: pointsPerSide }, (_, index) => index * dy),
-    },
-    wheelPatches: [],
-    reactions: reactionRows,
-    summary: {
-      maxDeflectionMm: Number(Math.abs(contourMap.deflection.max).toFixed(3)),
-      maxAbsMomentKnmPerM: Number(
-        Math.max(Math.abs(contourMap.mx.max), Math.abs(contourMap.my.max)).toFixed(3),
-      ),
-      maxAbsShearKnPerM: Number(
-        Math.max(Math.abs(contourMap.qx.max), Math.abs(contourMap.qy.max)).toFixed(3),
-      ),
-    },
-    elapsedMs,
-    warning,
-  };
-};
-
 export const runFixedAnalysis = async (model: SlabModel): Promise<AnalysisResults> => {
   const start = performance.now();
-  let warning = "";
-
-  let runFixedPositionAnalysis: SolverRunFn | undefined =
-    window.__slabSolver?.runFixedPositionAnalysis;
-
-  if (!runFixedPositionAnalysis) {
-    try {
-      const solverSpecifier = "../solver";
-      const mod = (await import(/* @vite-ignore */ solverSpecifier)) as SolverModuleLike;
-      runFixedPositionAnalysis = mod.runFixedPositionAnalysis;
-    } catch {
-      warning = "No solver module found yet; showing placeholder results.";
-    }
-  }
-
-  if (!runFixedPositionAnalysis) {
-    return buildStubResults(model, performance.now() - start, warning);
-  }
 
   try {
     const raw = await runFixedPositionAnalysis(model);
     const elapsedMs = performance.now() - start;
     const payload = (raw ?? {}) as Record<string, unknown>;
+    const contours = normalizeContours(payload.contours);
+    const hasContourData = contourFields.some(
+      (field) => (contours[field]?.points.length ?? 0) > 0,
+    );
+    if (!hasContourData) {
+      throw new Error("Solver returned no contour field data.");
+    }
 
     return {
       status: "success",
       source: "solver",
-      contours: normalizeContours(payload.contours),
+      contours,
       mesh:
         payload.mesh && typeof payload.mesh === "object"
           ? {
@@ -204,7 +109,9 @@ export const runFixedAnalysis = async (model: SlabModel): Promise<AnalysisResult
       reactions: Array.isArray(payload.reactions)
         ? payload.reactions.map((r) => ({
             supportId: String((r as { supportId?: unknown }).supportId ?? "unknown"),
-            dof: (((r as { dof?: unknown }).dof as Dof) ?? "uz"),
+            dof: isDof((r as { dof?: unknown }).dof)
+              ? (r as { dof: Dof }).dof
+              : "uz",
             value: toNumber((r as { value?: unknown }).value),
             units: String((r as { units?: unknown }).units ?? "kN"),
           }))
@@ -222,7 +129,7 @@ export const runFixedAnalysis = async (model: SlabModel): Promise<AnalysisResult
         ),
       },
       elapsedMs,
-      warning: warning || (typeof payload.warning === "string" ? payload.warning : undefined),
+      warning: typeof payload.warning === "string" ? payload.warning : undefined,
     };
   } catch (error) {
     return {

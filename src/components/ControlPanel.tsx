@@ -21,6 +21,8 @@ interface ControlPanelProps {
   onExportPdf: () => void;
 }
 
+type LineOrientation = "vertical" | "horizontal";
+
 const dofs: Dof[] = ["uz", "rx", "ry"];
 const resultFields: ResultField[] = [
   "deflection",
@@ -30,10 +32,47 @@ const resultFields: ResultField[] = [
   "qy",
   "reactions",
 ];
+const constraintOptionsByDof: Record<Dof, Exclude<ConstraintType, "pinned">[]> = {
+  uz: ["free", "fixed", "spring"],
+  rx: ["free", "fixed", "spring"],
+  ry: ["free", "fixed", "spring"],
+};
+const springUnitsByDof: Record<Dof, string> = {
+  uz: "k (kN/m)",
+  rx: "k (kN*m/rad)",
+  ry: "k (kN*m/rad)",
+};
 
 const parseNumericInput = (value: string, fallback: number): number => {
   const num = Number(value);
   return Number.isFinite(num) ? num : fallback;
+};
+
+const getLineOrientation = (
+  support: Extract<Support, { kind: "line" }>,
+): LineOrientation =>
+  Math.abs(support.x1 - support.x2) <= Math.abs(support.y1 - support.y2)
+    ? "vertical"
+    : "horizontal";
+
+const snapLineSupportToOrientation = (
+  support: Extract<Support, { kind: "line" }>,
+  orientation: LineOrientation,
+  geometry: SlabModel["geometry"],
+): Extract<Support, { kind: "line" }> => {
+  if (orientation === "vertical") {
+    return {
+      ...support,
+      x2: support.x1,
+      y2: support.y2 !== support.y1 ? support.y2 : geometry.widthM,
+    };
+  }
+
+  return {
+    ...support,
+    y2: support.y1,
+    x2: support.x2 !== support.x1 ? support.x2 : geometry.lengthM,
+  };
 };
 
 const newSupport = (index: number): Support => ({
@@ -46,8 +85,8 @@ const newSupport = (index: number): Support => ({
   y2: 5,
   constraints: {
     uz: { type: "fixed" },
-    rx: { type: "pinned" },
-    ry: { type: "pinned" },
+    rx: { type: "free" },
+    ry: { type: "free" },
   },
 });
 
@@ -286,7 +325,16 @@ export const ControlPanel = ({
         </label>
       </SectionCard>
 
-      <SectionCard title="Supports" subtitle="Line and point supports with uz/rx/ry fixity">
+      <SectionCard title="Supports" subtitle="Line and point supports with explicit uz/rx/ry constraints">
+        <p className="field-note">
+          Line supports are axis-aligned only in v1. The editor below keeps each line support
+          horizontal or vertical.
+        </p>
+        <p className="field-note">
+          Spring stiffness is entered in solver units. For line springs, the entered stiffness is
+          the total support stiffness and is distributed internally across the mapped support
+          nodes.
+        </p>
         {model.supports.map((support, supportIndex) => (
           <article key={support.id} className="sub-card">
             <div className="sub-card-head">
@@ -357,88 +405,172 @@ export const ControlPanel = ({
             </label>
 
             {support.kind === "line" ? (
-              <div className="grid-2">
+              <>
+                {support.x1 !== support.x2 && support.y1 !== support.y2 ? (
+                  <p className="field-note">
+                    This support was loaded with non-axis-aligned coordinates. Choose an
+                    orientation below to snap it back to a valid v1 support.
+                  </p>
+                ) : null}
                 <label className="field">
-                  <span>x1</span>
-                  <input
-                    type="number"
-                    value={support.x1}
+                  <span>Orientation</span>
+                  <select
+                    value={getLineOrientation(support)}
                     onChange={(e) =>
                       setModel((curr) => {
                         const supports = [...curr.supports];
                         const line = supports[supportIndex];
                         if (line.kind === "line") {
-                          supports[supportIndex] = {
-                            ...line,
-                            x1: parseNumericInput(e.target.value, line.x1),
-                          };
+                          supports[supportIndex] = snapLineSupportToOrientation(
+                            line,
+                            e.target.value as LineOrientation,
+                            curr.geometry,
+                          );
                         }
                         return { ...curr, supports };
                       })
                     }
-                  />
+                  >
+                    <option value="vertical">Vertical</option>
+                    <option value="horizontal">Horizontal</option>
+                  </select>
                 </label>
-                <label className="field">
-                  <span>y1</span>
-                  <input
-                    type="number"
-                    value={support.y1}
-                    onChange={(e) =>
-                      setModel((curr) => {
-                        const supports = [...curr.supports];
-                        const line = supports[supportIndex];
-                        if (line.kind === "line") {
-                          supports[supportIndex] = {
-                            ...line,
-                            y1: parseNumericInput(e.target.value, line.y1),
-                          };
+                {getLineOrientation(support) === "vertical" ? (
+                  <div className="grid-2">
+                    <label className="field">
+                      <span>X</span>
+                      <input
+                        type="number"
+                        value={support.x1}
+                        onChange={(e) =>
+                          setModel((curr) => {
+                            const supports = [...curr.supports];
+                            const line = supports[supportIndex];
+                            if (line.kind === "line") {
+                              const x = parseNumericInput(e.target.value, line.x1);
+                              supports[supportIndex] = {
+                                ...line,
+                                x1: x,
+                                x2: x,
+                              };
+                            }
+                            return { ...curr, supports };
+                          })
                         }
-                        return { ...curr, supports };
-                      })
-                    }
-                  />
-                </label>
-                <label className="field">
-                  <span>x2</span>
-                  <input
-                    type="number"
-                    value={support.x2}
-                    onChange={(e) =>
-                      setModel((curr) => {
-                        const supports = [...curr.supports];
-                        const line = supports[supportIndex];
-                        if (line.kind === "line") {
-                          supports[supportIndex] = {
-                            ...line,
-                            x2: parseNumericInput(e.target.value, line.x2),
-                          };
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Y Start</span>
+                      <input
+                        type="number"
+                        value={support.y1}
+                        onChange={(e) =>
+                          setModel((curr) => {
+                            const supports = [...curr.supports];
+                            const line = supports[supportIndex];
+                            if (line.kind === "line") {
+                              supports[supportIndex] = {
+                                ...line,
+                                x2: line.x1,
+                                y1: parseNumericInput(e.target.value, line.y1),
+                              };
+                            }
+                            return { ...curr, supports };
+                          })
                         }
-                        return { ...curr, supports };
-                      })
-                    }
-                  />
-                </label>
-                <label className="field">
-                  <span>y2</span>
-                  <input
-                    type="number"
-                    value={support.y2}
-                    onChange={(e) =>
-                      setModel((curr) => {
-                        const supports = [...curr.supports];
-                        const line = supports[supportIndex];
-                        if (line.kind === "line") {
-                          supports[supportIndex] = {
-                            ...line,
-                            y2: parseNumericInput(e.target.value, line.y2),
-                          };
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Y End</span>
+                      <input
+                        type="number"
+                        value={support.y2}
+                        onChange={(e) =>
+                          setModel((curr) => {
+                            const supports = [...curr.supports];
+                            const line = supports[supportIndex];
+                            if (line.kind === "line") {
+                              supports[supportIndex] = {
+                                ...line,
+                                x2: line.x1,
+                                y2: parseNumericInput(e.target.value, line.y2),
+                              };
+                            }
+                            return { ...curr, supports };
+                          })
                         }
-                        return { ...curr, supports };
-                      })
-                    }
-                  />
-                </label>
-              </div>
+                      />
+                    </label>
+                  </div>
+                ) : (
+                  <div className="grid-2">
+                    <label className="field">
+                      <span>Y</span>
+                      <input
+                        type="number"
+                        value={support.y1}
+                        onChange={(e) =>
+                          setModel((curr) => {
+                            const supports = [...curr.supports];
+                            const line = supports[supportIndex];
+                            if (line.kind === "line") {
+                              const y = parseNumericInput(e.target.value, line.y1);
+                              supports[supportIndex] = {
+                                ...line,
+                                y1: y,
+                                y2: y,
+                              };
+                            }
+                            return { ...curr, supports };
+                          })
+                        }
+                      />
+                    </label>
+                    <label className="field">
+                      <span>X Start</span>
+                      <input
+                        type="number"
+                        value={support.x1}
+                        onChange={(e) =>
+                          setModel((curr) => {
+                            const supports = [...curr.supports];
+                            const line = supports[supportIndex];
+                            if (line.kind === "line") {
+                              supports[supportIndex] = {
+                                ...line,
+                                y2: line.y1,
+                                x1: parseNumericInput(e.target.value, line.x1),
+                              };
+                            }
+                            return { ...curr, supports };
+                          })
+                        }
+                      />
+                    </label>
+                    <label className="field">
+                      <span>X End</span>
+                      <input
+                        type="number"
+                        value={support.x2}
+                        onChange={(e) =>
+                          setModel((curr) => {
+                            const supports = [...curr.supports];
+                            const line = supports[supportIndex];
+                            if (line.kind === "line") {
+                              supports[supportIndex] = {
+                                ...line,
+                                y2: line.y1,
+                                x2: parseNumericInput(e.target.value, line.x2),
+                              };
+                            }
+                            return { ...curr, supports };
+                          })
+                        }
+                      />
+                    </label>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="grid-2">
                 <label className="field">
@@ -499,33 +631,38 @@ export const ControlPanel = ({
                         )
                       }
                     >
-                      <option value="free">Free</option>
-                      <option value="fixed">Fixed</option>
-                      <option value="pinned">Pinned</option>
-                      <option value="spring">Spring</option>
+                      {constraintOptionsByDof[dof].map((constraintType) => (
+                        <option key={`${support.id}-${dof}-${constraintType}`} value={constraintType}>
+                          {constraintType.charAt(0).toUpperCase()}
+                          {constraintType.slice(1)}
+                        </option>
+                      ))}
                     </select>
                   </label>
                   {support.constraints[dof].type === "spring" ? (
-                    <input
-                      type="number"
-                      value={support.constraints[dof].stiffness ?? 10000}
-                      onChange={(e) =>
-                        setModel((curr) => {
-                          const supports = [...curr.supports];
-                          const target = { ...supports[supportIndex] };
-                          target.constraints = { ...target.constraints };
-                          target.constraints[dof] = {
-                            ...target.constraints[dof],
-                            stiffness: parseNumericInput(
-                              e.target.value,
-                              target.constraints[dof].stiffness ?? 10000,
-                            ),
-                          };
-                          supports[supportIndex] = target;
-                          return { ...curr, supports };
-                        })
-                      }
-                    />
+                    <div className="spring-input">
+                      <input
+                        type="number"
+                        value={support.constraints[dof].stiffness ?? 10000}
+                        onChange={(e) =>
+                          setModel((curr) => {
+                            const supports = [...curr.supports];
+                            const target = { ...supports[supportIndex] };
+                            target.constraints = { ...target.constraints };
+                            target.constraints[dof] = {
+                              ...target.constraints[dof],
+                              stiffness: parseNumericInput(
+                                e.target.value,
+                                target.constraints[dof].stiffness ?? 10000,
+                              ),
+                            };
+                            supports[supportIndex] = target;
+                            return { ...curr, supports };
+                          })
+                        }
+                      />
+                      <small>{springUnitsByDof[dof]}</small>
+                    </div>
                   ) : null}
                 </div>
               ))}
@@ -738,6 +875,10 @@ export const ControlPanel = ({
           </div>
         ) : (
           <div className="stack">
+            <p className="field-note">
+              Direct-wheel mode uses absolute slab coordinates. Placement center and transverse
+              offset are not applied to these wheel coordinates.
+            </p>
             {model.vehicle.directWheels.map((wheel, idx) => (
               <article key={wheel.id} className="sub-card">
                 <div className="sub-card-head">
@@ -759,7 +900,7 @@ export const ControlPanel = ({
                 </div>
                 <div className="grid-2">
                   <label className="field">
-                    <span>x (m)</span>
+                    <span>X (global slab m)</span>
                     <input
                       type="number"
                       value={wheel.xM}
@@ -776,7 +917,7 @@ export const ControlPanel = ({
                     />
                   </label>
                   <label className="field">
-                    <span>y (m)</span>
+                    <span>Y (global slab m)</span>
                     <input
                       type="number"
                       value={wheel.yM}
@@ -863,115 +1004,118 @@ export const ControlPanel = ({
         )}
       </SectionCard>
 
-      <SectionCard title="Fixed Placement / Path">
-        <div className="grid-2">
-          <label className="field">
-            <span>Center X (m)</span>
-            <input
-              type="number"
-              value={model.placement.centerXM}
-              onChange={(e) =>
-                setModel((curr) => ({
-                  ...curr,
-                  placement: {
-                    ...curr.placement,
-                    centerXM: parseNumericInput(e.target.value, curr.placement.centerXM),
-                  },
-                }))
-              }
-            />
-          </label>
-          <label className="field">
-            <span>Center Y (m)</span>
-            <input
-              type="number"
-              value={model.placement.centerYM}
-              onChange={(e) =>
-                setModel((curr) => ({
-                  ...curr,
-                  placement: {
-                    ...curr.placement,
-                    centerYM: parseNumericInput(e.target.value, curr.placement.centerYM),
-                  },
-                }))
-              }
-            />
-          </label>
-          <label className="field">
-            <span>Heading (deg)</span>
-            <input
-              type="number"
-              value={model.placement.headingDeg}
-              onChange={(e) =>
-                setModel((curr) => ({
-                  ...curr,
-                  placement: {
-                    ...curr.placement,
-                    headingDeg: parseNumericInput(e.target.value, curr.placement.headingDeg),
-                  },
-                }))
-              }
-            />
-          </label>
-          <label className="field">
-            <span>Transverse offset (m)</span>
-            <input
-              type="number"
-              value={model.placement.transverseOffsetM}
-              onChange={(e) =>
-                setModel((curr) => ({
-                  ...curr,
-                  placement: {
-                    ...curr.placement,
-                    transverseOffsetM: parseNumericInput(
-                      e.target.value,
-                      curr.placement.transverseOffsetM,
-                    ),
-                  },
-                }))
-              }
-            />
-          </label>
-        </div>
-        <div className="grid-2">
-          <label className="field">
-            <span>Travel direction</span>
-            <select
-              value={model.placement.travelDirection}
-              onChange={(e) =>
-                setModel((curr) => ({
-                  ...curr,
-                  placement: {
-                    ...curr.placement,
-                    travelDirection: e.target.value as SlabModel["placement"]["travelDirection"],
-                  },
-                }))
-              }
-            >
-              <option value="x+">+X</option>
-              <option value="x-">-X</option>
-              <option value="y+">+Y</option>
-              <option value="y-">-Y</option>
-            </select>
-          </label>
-          <label className="field">
-            <span>Step for moved runs (m)</span>
-            <input
-              type="number"
-              step="0.1"
-              value={model.placement.pathStepM}
-              onChange={(e) =>
-                setModel((curr) => ({
-                  ...curr,
-                  placement: {
-                    ...curr.placement,
-                    pathStepM: parseNumericInput(e.target.value, curr.placement.pathStepM),
-                  },
-                }))
-              }
-            />
-          </label>
-        </div>
+      <SectionCard title="Fixed Placement">
+        {model.vehicle.mode === "axle" ? (
+          <>
+            <p className="field-note">
+              Vehicle center X/Y is the midpoint between the first and last axle centres in the
+              axle-builder solver.
+            </p>
+            <p className="field-note muted">
+              Fixed-position analysis is the active v1 workflow. Arbitrary heading and moved-run
+              path controls remain deferred until after fixed-position verification is complete.
+            </p>
+            <div className="grid-2">
+              <label className="field">
+                <span>Vehicle Center X (m)</span>
+                <input
+                  type="number"
+                  value={model.placement.centerXM}
+                  onChange={(e) =>
+                    setModel((curr) => ({
+                      ...curr,
+                      placement: {
+                        ...curr.placement,
+                        centerXM: parseNumericInput(e.target.value, curr.placement.centerXM),
+                      },
+                    }))
+                  }
+                />
+              </label>
+              <label className="field">
+                <span>Vehicle Center Y (m)</span>
+                <input
+                  type="number"
+                  value={model.placement.centerYM}
+                  onChange={(e) =>
+                    setModel((curr) => ({
+                      ...curr,
+                      placement: {
+                        ...curr.placement,
+                        centerYM: parseNumericInput(e.target.value, curr.placement.centerYM),
+                      },
+                    }))
+                  }
+                />
+              </label>
+              <label className="field">
+                <span>Transverse offset (m)</span>
+                <input
+                  type="number"
+                  value={model.placement.transverseOffsetM}
+                  onChange={(e) =>
+                    setModel((curr) => ({
+                      ...curr,
+                      placement: {
+                        ...curr.placement,
+                        transverseOffsetM: parseNumericInput(
+                          e.target.value,
+                          curr.placement.transverseOffsetM,
+                        ),
+                      },
+                    }))
+                  }
+                />
+              </label>
+              <label className="field">
+                <span>Travel direction</span>
+                <select
+                  value={model.placement.travelDirection}
+                  onChange={(e) =>
+                    setModel((curr) => ({
+                      ...curr,
+                      placement: {
+                        ...curr.placement,
+                        travelDirection: e.target.value as SlabModel["placement"]["travelDirection"],
+                      },
+                    }))
+                  }
+                >
+                  <option value="x+">+X</option>
+                  <option value="x-">-X</option>
+                  <option value="y+">+Y</option>
+                  <option value="y-">-Y</option>
+                </select>
+              </label>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="field-note">
+              Travel direction only controls wheel patch orientation in direct-wheel mode.
+            </p>
+            <label className="field">
+              <span>Travel direction (patch orientation)</span>
+              <select
+                value={model.placement.travelDirection}
+                onChange={(e) =>
+                  setModel((curr) => ({
+                    ...curr,
+                    placement: {
+                      ...curr.placement,
+                      travelDirection: e.target.value as SlabModel["placement"]["travelDirection"],
+                    },
+                  }))
+                }
+              >
+                <option value="x+">+X</option>
+                <option value="x-">-X</option>
+                <option value="y+">+Y</option>
+                <option value="y-">-Y</option>
+              </select>
+            </label>
+          </>
+        )}
       </SectionCard>
 
       <SectionCard title="Display Toggles">

@@ -130,7 +130,7 @@ function collectSupportControlCoordinates(
     const vertical = Math.abs(support.x1 - support.x2) <= tolerance;
     if (!horizontal && !vertical) {
       throw new Error(
-        `Line support "${support.id ?? "<unassigned>"}" is not axis-aligned.`,
+        `Line support "${support.id ?? "<unassigned>"}" must be axis-aligned for v1 (x1==x2 or y1==y2).`,
       );
     }
 

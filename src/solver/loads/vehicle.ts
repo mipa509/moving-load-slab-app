@@ -37,10 +37,17 @@ function buildAxleWheelPatches(
   const vectors = getDirectionVectors(vehicle.direction);
   const baseCenterX = vehicle.reference.x + vectors.transverse.x * (vehicle.transverseOffset ?? 0);
   const baseCenterY = vehicle.reference.y + vectors.transverse.y * (vehicle.transverseOffset ?? 0);
+  const rawAxleOffsets = vehicle.axles.map((_, axleIndex) =>
+    resolveAxleOffset(vehicle.axles, axleIndex),
+  );
+  const axleOffsets = normalizeAxleOffsets(
+    rawAxleOffsets,
+    vehicle.referenceKind ?? "lead-axle-center",
+  );
 
   vehicle.axles.forEach((axle, axleIndex) => {
     validateAxle(axle, axleIndex);
-    const axleOffset = resolveAxleOffset(vehicle.axles, axleIndex);
+    const axleOffset = axleOffsets[axleIndex];
     const track = axle.wheelTrack ?? vehicle.defaultWheelTrack;
     const patchLength = axle.patchLength ?? vehicle.defaultPatchLength;
     const patchWidth = axle.patchWidth ?? vehicle.defaultPatchWidth;
@@ -77,6 +84,23 @@ function buildAxleWheelPatches(
   });
 
   return patches;
+}
+
+function normalizeAxleOffsets(
+  offsets: number[],
+  referenceKind: AxleBuilderVehicleDefinition["referenceKind"],
+): number[] {
+  if (offsets.length === 0) {
+    return offsets;
+  }
+  if (referenceKind !== "vehicle-center") {
+    return offsets;
+  }
+
+  const minOffset = Math.min(...offsets);
+  const maxOffset = Math.max(...offsets);
+  const centerOffset = 0.5 * (minOffset + maxOffset);
+  return offsets.map((offset) => offset - centerOffset);
 }
 
 function resolveAxleOffset(axles: VehicleAxleDefinition[], axleIndex: number): number {

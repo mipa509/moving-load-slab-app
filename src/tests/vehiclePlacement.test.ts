@@ -1,0 +1,107 @@
+import { describe, expect, it } from "vitest";
+import type { SlabModel } from "../app/types";
+import { generateWheelPatches } from "../solver/loads/vehicle";
+import { fromAppModel } from "../solver/model/fromAppModel";
+
+function buildBaseAppModel(): SlabModel {
+  return {
+    projectName: "test",
+    geometry: {
+      lengthM: 10,
+      widthM: 5,
+      thicknessM: 0.4,
+    },
+    material: {
+      elasticModulusMPa: 32000,
+      poisson: 0.2,
+      densityKnPerM3: 25,
+    },
+    mesh: {
+      density: 10,
+      autoTargetElementM: 0.5,
+    },
+    supports: [],
+    vehicle: {
+      name: "test vehicle",
+      mode: "axle",
+      trackM: 2,
+      wheelsPerAxle: 2,
+      wheelPatchLongM: 0.4,
+      wheelPatchTransM: 0.25,
+      axleInputs: [
+        { id: "A1", spacingFromPreviousM: 0, axleLoadKn: 90 },
+        { id: "A2", spacingFromPreviousM: 4, axleLoadKn: 140 },
+      ],
+      directWheels: [],
+    },
+    placement: {
+      centerXM: 5,
+      centerYM: 2.5,
+      headingDeg: 0,
+      transverseOffsetM: 0,
+      travelDirection: "x+",
+      pathStartM: 0,
+      pathEndM: 10,
+      pathStepM: 1,
+    },
+    display: {
+      mesh: true,
+      supports: true,
+      wheelPatches: true,
+      contours: true,
+      tables: true,
+    },
+  };
+}
+
+describe("vehicle placement semantics", () => {
+  it("treats axle-builder placement center as vehicle center", () => {
+    const appModel = buildBaseAppModel();
+    const analysisModel = fromAppModel(appModel);
+    expect(analysisModel.vehicle.kind).toBe("axle-builder");
+    if (analysisModel.vehicle.kind !== "axle-builder") {
+      throw new Error("Expected axle-builder vehicle");
+    }
+    expect(analysisModel.vehicle.referenceKind).toBe("vehicle-center");
+
+    const patches = generateWheelPatches(analysisModel.vehicle, analysisModel.slab);
+    const uniqueAxleCentersX = [...new Set(patches.map((patch) => patch.center.x))]
+      .sort((a, b) => a - b);
+
+    expect(uniqueAxleCentersX.length).toBe(2);
+    expect(uniqueAxleCentersX[0]).toBeCloseTo(3, 8);
+    expect(uniqueAxleCentersX[1]).toBeCloseTo(7, 8);
+    const axleMidpoint = 0.5 * (uniqueAxleCentersX[0] + uniqueAxleCentersX[1]);
+    expect(axleMidpoint).toBeCloseTo(appModel.placement.centerXM, 8);
+  });
+
+  it("keeps direct wheel coordinates in global slab coordinates", () => {
+    const appModel = buildBaseAppModel();
+    appModel.vehicle.mode = "direct";
+    appModel.vehicle.directWheels = [
+      {
+        id: "W1",
+        xM: 1.2,
+        yM: 0.8,
+        loadKn: 50,
+        patchLongM: 0.4,
+        patchTransM: 0.25,
+      },
+    ];
+    appModel.placement.centerXM = 8;
+    appModel.placement.centerYM = 4;
+    appModel.placement.transverseOffsetM = 1.5;
+
+    const analysisModel = fromAppModel(appModel);
+    expect(analysisModel.vehicle.kind).toBe("explicit-wheels");
+    if (analysisModel.vehicle.kind !== "explicit-wheels") {
+      throw new Error("Expected explicit-wheels vehicle");
+    }
+    expect(analysisModel.vehicle.coordinateSystem).toBe("global-slab");
+
+    const patches = generateWheelPatches(analysisModel.vehicle, analysisModel.slab);
+    expect(patches.length).toBe(1);
+    expect(patches[0].center.x).toBeCloseTo(1.2, 8);
+    expect(patches[0].center.y).toBeCloseTo(0.8, 8);
+  });
+});

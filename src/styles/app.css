@@ -64,6 +64,16 @@
   gap: 0.25rem;
 }
 
+.field-note {
+  color: var(--ink-muted);
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.field-note.muted {
+  opacity: 0.9;
+}
+
 .field span {
   font-size: 0.78rem;
   color: var(--ink-muted);
@@ -156,6 +166,16 @@
 
 .constraint-row label span {
   font-size: 0.72rem;
+  color: var(--ink-muted);
+}
+
+.spring-input {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.spring-input small {
+  font-size: 0.7rem;
   color: var(--ink-muted);
 }
 

@@ -37,6 +37,7 @@ export function fromAppModel(model: SlabModel): FixedPositionAnalysisModel {
               x: model.placement.centerXM,
               y: model.placement.centerYM,
             },
+            referenceKind: "vehicle-center",
             transverseOffset: model.placement.transverseOffsetM,
             defaultWheelTrack: model.vehicle.trackM,
             defaultPatchLength: model.vehicle.wheelPatchLongM,
@@ -52,6 +53,7 @@ export function fromAppModel(model: SlabModel): FixedPositionAnalysisModel {
         : {
             kind: "explicit-wheels",
             direction: toDirection(model.placement.travelDirection),
+            coordinateSystem: "global-slab",
             wheels: model.vehicle.directWheels.map((wheel) => ({
               id: wheel.id,
               x: wheel.xM,

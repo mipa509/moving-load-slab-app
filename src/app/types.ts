@@ -150,7 +150,7 @@ export interface AnalysisSummary {
 
 export interface AnalysisResults {
   status: "idle" | "running" | "success" | "error";
-  source: "solver" | "stub";
+  source: "solver";
   contours: Partial<Record<Exclude<ResultField, "reactions">, ContourData>>;
   mesh?: MeshOverlay;
   wheelPatches?: RectOverlay[];

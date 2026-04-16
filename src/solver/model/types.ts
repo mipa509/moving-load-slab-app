@@ -3,6 +3,8 @@ export const DOF_KEYS = ["w", "rx", "ry"] as const;
 export type DofKey = (typeof DOF_KEYS)[number];
 export type AxisDirection = "+x" | "-x" | "+y" | "-y";
 export type SupportBehavior = "fixed" | "pinned" | "custom";
+export type AxleReferenceKind = "lead-axle-center" | "vehicle-center";
+export type ExplicitWheelCoordinateSystem = "global-slab";
 
 export const DOF_INDEX_BY_KEY: Record<DofKey, number> = {
   w: 0,
@@ -98,6 +100,7 @@ export interface AxleBuilderVehicleDefinition {
   kind: "axle-builder";
   direction: AxisDirection;
   reference: VehicleReferencePoint;
+  referenceKind?: AxleReferenceKind;
   transverseOffset?: number;
   defaultWheelTrack: number;
   defaultPatchLength: number;
@@ -118,6 +121,7 @@ export interface ExplicitWheelInput {
 export interface ExplicitWheelVehicleDefinition {
   kind: "explicit-wheels";
   direction?: AxisDirection;
+  coordinateSystem?: ExplicitWheelCoordinateSystem;
   wheels: ExplicitWheelInput[];
 }
 
