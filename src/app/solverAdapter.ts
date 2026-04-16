@@ -3,8 +3,10 @@ import type {
   ContourData,
   Dof,
   ResultField,
+  ReactionRow,
   SlabModel,
 } from "./types";
+import { summarizeReactions } from "./reactionSummary";
 import { runFixedPositionAnalysis } from "../solver";
 
 const contourFields: Exclude<ResultField, "reactions">[] = [
@@ -28,6 +30,9 @@ const toNumber = (value: unknown, fallback = 0): number =>
 
 const isDof = (value: unknown): value is Dof =>
   value === "uz" || value === "rx" || value === "ry";
+
+const parseReactionType = (value: unknown): ReactionRow["type"] =>
+  value === "fixed" || value === "spring" ? value : undefined;
 
 const normalizeContours = (
   rawContours: unknown,
@@ -79,6 +84,24 @@ export const runFixedAnalysis = async (model: SlabModel): Promise<AnalysisResult
       throw new Error("Solver returned no contour field data.");
     }
 
+    const reactions: ReactionRow[] = Array.isArray(payload.reactions)
+      ? payload.reactions.map((r) => ({
+          supportId: String((r as { supportId?: unknown }).supportId ?? "unknown"),
+          nodeId:
+            typeof (r as { nodeId?: unknown }).nodeId === "number" &&
+            Number.isFinite((r as { nodeId?: unknown }).nodeId)
+              ? ((r as { nodeId?: unknown }).nodeId as number)
+              : undefined,
+          dof: isDof((r as { dof?: unknown }).dof)
+            ? (r as { dof: Dof }).dof
+            : "uz",
+          type: parseReactionType((r as { type?: unknown }).type),
+          value: toNumber((r as { value?: unknown }).value),
+          units: String((r as { units?: unknown }).units ?? "kN"),
+        }))
+      : [];
+    const reactionSummary = summarizeReactions(reactions);
+
     return {
       status: "success",
       source: "solver",
@@ -106,16 +129,9 @@ export const runFixedAnalysis = async (model: SlabModel): Promise<AnalysisResult
             yMaxM: toNumber((item as { yMaxM?: unknown }).yMaxM),
           }))
         : [],
-      reactions: Array.isArray(payload.reactions)
-        ? payload.reactions.map((r) => ({
-            supportId: String((r as { supportId?: unknown }).supportId ?? "unknown"),
-            dof: isDof((r as { dof?: unknown }).dof)
-              ? (r as { dof: Dof }).dof
-              : "uz",
-            value: toNumber((r as { value?: unknown }).value),
-            units: String((r as { units?: unknown }).units ?? "kN"),
-          }))
-        : [],
+      reactions,
+      reactionSummaryBySupport: reactionSummary.reactionSummaryBySupport,
+      reactionTotals: reactionSummary.reactionTotals,
       summary: {
         maxDeflectionMm: toNumber(
           (payload.summary as { maxDeflectionMm?: unknown } | undefined)?.maxDeflectionMm,
@@ -139,6 +155,12 @@ export const runFixedAnalysis = async (model: SlabModel): Promise<AnalysisResult
       mesh: undefined,
       wheelPatches: [],
       reactions: [],
+      reactionSummaryBySupport: [],
+      reactionTotals: {
+        uz: 0,
+        rx: 0,
+        ry: 0,
+      },
       summary: {
         maxDeflectionMm: 0,
         maxAbsMomentKnmPerM: 0,

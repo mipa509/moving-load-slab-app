@@ -256,7 +256,7 @@ function combineVectors(
   a: Float64Array,
   b: Float64Array,
   scaleB: number,
-): Float64Array {
+): Float64Array<ArrayBuffer> {
   const result = new Float64Array(a.length);
   for (let i = 0; i < a.length; i += 1) {
     result[i] = a[i] + scaleB * b[i];

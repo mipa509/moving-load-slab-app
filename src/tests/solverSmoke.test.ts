@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { summarizeReactions } from "../app/reactionSummary";
 import { runFixedPositionAnalysis } from "../solver/runFixedPositionAnalysis";
 import type { FixedPositionAnalysisModel } from "../solver/model/types";
 
@@ -60,5 +61,21 @@ describe("solver smoke", () => {
       Math.abs(result.summary.totalVerticalReaction) - result.summary.totalAppliedLoadToSlab,
     );
     expect(imbalance).toBeLessThan(1e-4);
+
+    const reactionSummary = summarizeReactions(
+      result.supportReactions.map((reaction) => ({
+        supportId: reaction.supportId,
+        nodeId: reaction.nodeId,
+        dof: reaction.dof === "w" ? "uz" : reaction.dof,
+        type: reaction.type,
+        value: reaction.value,
+        units: reaction.dof === "w" ? "kN" : "kN*m",
+      })),
+    );
+    const aggregatedImbalance = Math.abs(
+      Math.abs(reactionSummary.reactionTotals.uz) - result.summary.totalAppliedLoadToSlab,
+    );
+
+    expect(aggregatedImbalance).toBeLessThan(1e-4);
   });
 });

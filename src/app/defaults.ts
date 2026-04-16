@@ -103,6 +103,12 @@ export const idleResults = (): AnalysisResults => ({
   mesh: undefined,
   wheelPatches: [],
   reactions: [],
+  reactionSummaryBySupport: [],
+  reactionTotals: {
+    uz: 0,
+    rx: 0,
+    ry: 0,
+  },
   summary: {
     maxDeflectionMm: 0,
     maxAbsMomentKnmPerM: 0,
@@ -135,6 +141,11 @@ export const sanitizeLoadedModel = (input: unknown): SlabModel => {
     supports: sanitizeSupports(candidate.supports, defaultSupports(geometry.widthM)),
   };
 };
+
+export const sanitizeVehicleDefinition = (
+  input: unknown,
+  fallback: VehicleDefinition = createDefaultModel().vehicle,
+): VehicleDefinition => sanitizeVehicle(input, fallback);
 
 export const validateModelForRun = (model: SlabModel): string[] => {
   const issues: string[] = [];
@@ -257,9 +268,14 @@ function sanitizeSupports(input: unknown, fallback: Support[]): Support[] {
     return fallback;
   }
 
-  const supports = input
-    .map((item, index) => sanitizeSupport(item, fallback[index] ?? fallback[0], index))
-    .filter((item): item is Support => item !== null);
+  const sanitized = input.map((item, index) =>
+    sanitizeSupport(item, fallback[index] ?? fallback[0], index),
+  );
+  if (sanitized.some((item) => item === null)) {
+    return fallback;
+  }
+
+  const supports = sanitized.filter((item): item is Support => item !== null);
 
   return supports.length > 0 ? supports : fallback;
 }

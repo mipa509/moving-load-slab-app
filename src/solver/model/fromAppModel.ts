@@ -1,4 +1,5 @@
 import type { SlabModel } from "../../app/types";
+import { deriveMeshResolution } from "../../app/meshSizing";
 import type {
   AxisDirection,
   FixedPositionAnalysisModel,
@@ -7,10 +8,9 @@ import type {
 } from "./types";
 
 export function fromAppModel(model: SlabModel): FixedPositionAnalysisModel {
-  const targetElementsX = Math.max(2, Math.round(model.mesh.density));
-  const targetElementsY = Math.max(
-    2,
-    Math.round((model.geometry.widthM / Math.max(model.geometry.lengthM, 0.1)) * targetElementsX),
+  const { targetElementsX, targetElementsY } = deriveMeshResolution(
+    model.geometry,
+    model.mesh.autoTargetElementM,
   );
 
   return {

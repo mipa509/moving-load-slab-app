@@ -6,7 +6,14 @@ type SolverPayload = {
   contours: Record<string, ContourData>;
   mesh: { xCoordsM: number[]; yCoordsM: number[] };
   wheelPatches: RectOverlay[];
-  reactions: { supportId: string; dof: "uz" | "rx" | "ry"; value: number; units: string }[];
+  reactions: {
+    supportId: string;
+    nodeId: number;
+    dof: "uz" | "rx" | "ry";
+    type: "fixed" | "spring";
+    value: number;
+    units: string;
+  }[];
   summary: {
     maxDeflectionMm: number;
     maxAbsMomentKnmPerM: number;
@@ -40,7 +47,9 @@ export function runFixedPositionAnalysis(model: SlabModel): SolverPayload {
       })),
     reactions: result.supportReactions.map((reaction) => ({
       supportId: reaction.supportId,
+      nodeId: reaction.nodeId,
       dof: reaction.dof === "w" ? "uz" : reaction.dof,
+      type: reaction.type,
       value: reaction.value,
       units: reaction.dof === "w" ? "kN" : "kN*m",
     })),

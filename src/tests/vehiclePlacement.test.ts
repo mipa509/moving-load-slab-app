@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { getTravelAxisSliderConfig } from "../app/placementControls";
 import type { SlabModel } from "../app/types";
 import { generateWheelPatches } from "../solver/loads/vehicle";
 import { fromAppModel } from "../solver/model/fromAppModel";
@@ -103,5 +104,42 @@ describe("vehicle placement semantics", () => {
     expect(patches.length).toBe(1);
     expect(patches[0].center.x).toBeCloseTo(1.2, 8);
     expect(patches[0].center.y).toBeCloseTo(0.8, 8);
+  });
+
+  it("maps the live slider to X when travel runs along the x axis", () => {
+    const appModel = buildBaseAppModel();
+    appModel.placement.travelDirection = "x-";
+
+    const slider = getTravelAxisSliderConfig(appModel);
+
+    expect(slider).toMatchObject({
+      axis: "x",
+      field: "centerXM",
+      min: 0,
+      max: appModel.geometry.lengthM,
+      value: appModel.placement.centerXM,
+    });
+  });
+
+  it("maps the live slider to Y when travel runs along the y axis", () => {
+    const appModel = buildBaseAppModel();
+    appModel.placement.travelDirection = "y+";
+
+    const slider = getTravelAxisSliderConfig(appModel);
+
+    expect(slider).toMatchObject({
+      axis: "y",
+      field: "centerYM",
+      min: 0,
+      max: appModel.geometry.widthM,
+      value: appModel.placement.centerYM,
+    });
+  });
+
+  it("does not expose the travel-axis slider in direct-wheel mode", () => {
+    const appModel = buildBaseAppModel();
+    appModel.vehicle.mode = "direct";
+
+    expect(getTravelAxisSliderConfig(appModel)).toBeNull();
   });
 });

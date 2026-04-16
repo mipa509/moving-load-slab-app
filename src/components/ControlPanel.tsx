@@ -6,14 +6,28 @@ import type {
   ResultField,
   SlabModel,
   Support,
+  VehicleLibraryItem,
 } from "../app/types";
+import { deriveMeshResolution } from "../app/meshSizing";
+import { getTravelAxisSliderConfig } from "../app/placementControls";
 import { SectionCard } from "./SectionCard";
 
 interface ControlPanelProps {
   model: SlabModel;
+  vehicleLibrary: VehicleLibraryItem[];
+  selectedVehicleLibraryId: string;
+  vehicleLibraryStatus?: string;
   selectedResultField: ResultField;
   running: boolean;
   onModelChange: (next: SlabModel) => void;
+  onVehicleLibrarySelectionChange: (vehicleLibraryId: string) => void;
+  onSaveVehicleToLibrary: () => void;
+  onLoadVehicleFromLibrary: () => void;
+  onOverwriteVehicleInLibrary: () => void;
+  onDuplicateVehicleInLibrary: () => void;
+  onDeleteVehicleFromLibrary: () => void;
+  onExportVehicleLibrary: () => void;
+  onImportVehicleLibraryClick: () => void;
   onResultFieldChange: (field: ResultField) => void;
   onRunAnalysis: () => void;
   onSaveJson: () => void;
@@ -107,9 +121,20 @@ const newWheel = (index: number): DirectWheelInput => ({
 
 export const ControlPanel = ({
   model,
+  vehicleLibrary,
+  selectedVehicleLibraryId,
+  vehicleLibraryStatus,
   selectedResultField,
   running,
   onModelChange,
+  onVehicleLibrarySelectionChange,
+  onSaveVehicleToLibrary,
+  onLoadVehicleFromLibrary,
+  onOverwriteVehicleInLibrary,
+  onDuplicateVehicleInLibrary,
+  onDeleteVehicleFromLibrary,
+  onExportVehicleLibrary,
+  onImportVehicleLibraryClick,
   onResultFieldChange,
   onRunAnalysis,
   onSaveJson,
@@ -119,6 +144,15 @@ export const ControlPanel = ({
   const setModel = (updater: (curr: SlabModel) => SlabModel) => {
     onModelChange(updater(model));
   };
+  const derivedMeshResolution = deriveMeshResolution(
+    model.geometry,
+    model.mesh.autoTargetElementM,
+  );
+  const sliderConfig = getTravelAxisSliderConfig(model);
+  const selectedVehicleLibraryItem = vehicleLibrary.find(
+    (item) => item.id === selectedVehicleLibraryId,
+  );
+  const hasVehicleLibrarySelection = Boolean(selectedVehicleLibraryItem);
 
   const updateSupportConstraint = (
     supportIndex: number,
@@ -149,15 +183,16 @@ export const ControlPanel = ({
         <p>kN, m, MPa | linear elastic plate model</p>
       </header>
 
-      <SectionCard title="Run">
+      <SectionCard title="Run" className="section-card-sticky">
         <div className="inline-actions">
           <button className="button button-primary" onClick={onRunAnalysis} disabled={running}>
-            {running ? "Running..." : "Run Fixed Analysis"}
+            {running ? "Running..." : "Re-run Analysis"}
           </button>
           <button className="button" onClick={onExportPdf}>
             Export PDF (Print)
           </button>
         </div>
+        <p className="field-note">Valid changes auto-run after a 150 ms debounce.</p>
       </SectionCard>
 
       <SectionCard title="Project">
@@ -178,6 +213,86 @@ export const ControlPanel = ({
             Load JSON
           </button>
         </div>
+      </SectionCard>
+
+      <SectionCard
+        title="Vehicle Library"
+        subtitle="Save reusable vehicle definitions in browser storage and recall them later"
+      >
+        <label className="field">
+          <span>Saved vehicles</span>
+          <select
+            value={selectedVehicleLibraryId}
+            onChange={(e) => onVehicleLibrarySelectionChange(e.target.value)}
+            disabled={vehicleLibrary.length === 0}
+          >
+            {vehicleLibrary.length === 0 ? (
+              <option value="">No saved vehicles yet</option>
+            ) : (
+              vehicleLibrary.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))
+            )}
+          </select>
+        </label>
+        <p className="field-note">
+          Saved vehicles: {vehicleLibrary.length}. Model JSON save/load does not modify this
+          library.
+        </p>
+        {selectedVehicleLibraryItem ? (
+          <p className="field-note">
+            Selected: {selectedVehicleLibraryItem.name} | Mode:{" "}
+            {selectedVehicleLibraryItem.vehicle.mode === "axle" ? "Axle-based" : "Direct wheels"}
+          </p>
+        ) : null}
+        <div className="inline-actions">
+          <button className="button" onClick={onSaveVehicleToLibrary}>
+            Save Current
+          </button>
+          <button
+            className="button"
+            onClick={onLoadVehicleFromLibrary}
+            disabled={!hasVehicleLibrarySelection}
+          >
+            Load Selected
+          </button>
+          <button
+            className="button"
+            onClick={onOverwriteVehicleInLibrary}
+            disabled={!hasVehicleLibrarySelection}
+          >
+            Overwrite Selected
+          </button>
+        </div>
+        <div className="inline-actions">
+          <button
+            className="button"
+            onClick={onDuplicateVehicleInLibrary}
+            disabled={!hasVehicleLibrarySelection}
+          >
+            Duplicate Selected
+          </button>
+          <button
+            className="button"
+            onClick={onDeleteVehicleFromLibrary}
+            disabled={!hasVehicleLibrarySelection}
+          >
+            Delete Selected
+          </button>
+          <button
+            className="button"
+            onClick={onExportVehicleLibrary}
+            disabled={vehicleLibrary.length === 0}
+          >
+            Export Library
+          </button>
+          <button className="button" onClick={onImportVehicleLibraryClick}>
+            Import Library
+          </button>
+        </div>
+        {vehicleLibraryStatus ? <p className="notice info">{vehicleLibraryStatus}</p> : null}
       </SectionCard>
 
       <SectionCard title="Slab Geometry">
@@ -287,22 +402,7 @@ export const ControlPanel = ({
         </label>
       </SectionCard>
 
-      <SectionCard title="Mesh Density">
-        <label className="field">
-          <span>Density ({model.mesh.density} elements/side)</span>
-          <input
-            type="range"
-            min={6}
-            max={60}
-            value={model.mesh.density}
-            onChange={(e) =>
-              setModel((curr) => ({
-                ...curr,
-                mesh: { ...curr.mesh, density: parseNumericInput(e.target.value, curr.mesh.density) },
-              }))
-            }
-          />
-        </label>
+      <SectionCard title="Mesh" subtitle="Target element size now drives the solver mesh directly">
         <label className="field">
           <span>Target element size (m)</span>
           <input
@@ -310,19 +410,28 @@ export const ControlPanel = ({
             step="0.1"
             value={model.mesh.autoTargetElementM}
             onChange={(e) =>
-              setModel((curr) => ({
-                ...curr,
-                mesh: {
-                  ...curr.mesh,
-                  autoTargetElementM: parseNumericInput(
-                    e.target.value,
-                    curr.mesh.autoTargetElementM,
-                  ),
-                },
-              }))
+              setModel((curr) => {
+                const autoTargetElementM = parseNumericInput(
+                  e.target.value,
+                  curr.mesh.autoTargetElementM,
+                );
+                const resolution = deriveMeshResolution(curr.geometry, autoTargetElementM);
+                return {
+                  ...curr,
+                  mesh: {
+                    ...curr.mesh,
+                    autoTargetElementM,
+                    density: resolution.targetElementsX,
+                  },
+                };
+              })
             }
           />
         </label>
+        <p className="field-note">
+          Estimated solver mesh: {derivedMeshResolution.targetElementsX} x{" "}
+          {derivedMeshResolution.targetElementsY} elements.
+        </p>
       </SectionCard>
 
       <SectionCard title="Supports" subtitle="Line and point supports with explicit uz/rx/ry constraints">
@@ -1088,6 +1197,33 @@ export const ControlPanel = ({
                 </select>
               </label>
             </div>
+            {sliderConfig ? (
+              <label className="field">
+                <span>{sliderConfig.label}</span>
+                <input
+                  type="range"
+                  min={sliderConfig.min}
+                  max={sliderConfig.max}
+                  step={sliderConfig.step}
+                  value={sliderConfig.value}
+                  onChange={(e) =>
+                    setModel((curr) => ({
+                      ...curr,
+                      placement: {
+                        ...curr.placement,
+                        [sliderConfig.field]: parseNumericInput(
+                          e.target.value,
+                          curr.placement[sliderConfig.field],
+                        ),
+                      },
+                    }))
+                  }
+                />
+                <small className="field-note">
+                  Travel-axis live control: {sliderConfig.value.toFixed(2)} m
+                </small>
+              </label>
+            ) : null}
           </>
         ) : (
           <>

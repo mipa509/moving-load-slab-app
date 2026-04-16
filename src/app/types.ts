@@ -79,6 +79,19 @@ export interface VehicleDefinition {
   directWheels: DirectWheelInput[];
 }
 
+export interface VehicleLibraryItem {
+  id: string;
+  name: string;
+  vehicle: VehicleDefinition;
+  updatedAtIso: string;
+}
+
+export interface VehicleLibraryExport {
+  version: 1;
+  exportedAtIso: string;
+  vehicles: VehicleLibraryItem[];
+}
+
 export interface VehiclePlacement {
   centerXM: number;
   centerYM: number;
@@ -137,9 +150,21 @@ export interface ContourData {
 
 export interface ReactionRow {
   supportId: string;
+  nodeId?: number;
   dof: Dof;
+  type?: "fixed" | "spring";
   value: number;
   units: string;
+}
+
+export interface ReactionComponentTotals {
+  uz: number;
+  rx: number;
+  ry: number;
+}
+
+export interface ReactionSummaryRow extends ReactionComponentTotals {
+  supportId: string;
 }
 
 export interface AnalysisSummary {
@@ -155,6 +180,8 @@ export interface AnalysisResults {
   mesh?: MeshOverlay;
   wheelPatches?: RectOverlay[];
   reactions: ReactionRow[];
+  reactionSummaryBySupport: ReactionSummaryRow[];
+  reactionTotals: ReactionComponentTotals;
   summary: AnalysisSummary;
   elapsedMs: number;
   warning?: string;

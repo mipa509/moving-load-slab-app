@@ -39,6 +39,12 @@
   background: linear-gradient(180deg, #ffffff, #f8faf7);
 }
 
+.section-card-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
 .section-header {
   margin-bottom: 0.7rem;
 }
@@ -89,6 +95,10 @@
   padding: 0.4rem 0.55rem;
   background: #fff;
   color: var(--ink);
+}
+
+.field input[type="range"] {
+  padding: 0;
 }
 
 .compound-input {
@@ -316,6 +326,51 @@
   line-height: 1.4;
 }
 
+.legend-panel {
+  position: absolute;
+  top: 0.9rem;
+  right: 0.9rem;
+  width: 84px;
+  height: min(240px, calc(100% - 1.8rem));
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(33, 74, 122, 0.2);
+  border-radius: 10px;
+  padding: 0.7rem 0.7rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.45rem;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+  forced-color-adjust: none;
+}
+
+.legend-scale-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.legend-scale {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+  forced-color-adjust: none;
+}
+
+.legend-label {
+  font-size: 0.74rem;
+  color: var(--ink-muted);
+  line-height: 1.25;
+}
+
+.legend-label-top {
+  order: -1;
+}
+
 .summary-grid {
   display: grid;
   gap: 0.65rem;
@@ -343,6 +398,11 @@
   border: 1px solid var(--line);
   border-radius: 10px;
   overflow: hidden;
+}
+
+.table-stack {
+  display: grid;
+  gap: 0.9rem;
 }
 
 .table-panel header {
@@ -388,6 +448,11 @@ th {
   top: 0;
 }
 
+.total-row td {
+  font-weight: 600;
+  background: #f7faf8;
+}
+
 .notice {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -405,6 +470,12 @@ th {
   border-color: #e7aea8;
   background: #fff1f0;
   color: #7e2721;
+}
+
+.notice.info {
+  border-color: #b8d1ee;
+  background: #eff7ff;
+  color: #214a7a;
 }
 
 .sign-note {
@@ -428,6 +499,11 @@ th {
   .viewport-canvas {
     height: 40vh;
   }
+
+  .legend-panel {
+    width: 78px;
+    height: 190px;
+  }
 }
 
 @media print {
@@ -446,6 +522,51 @@ th {
   }
 
   .viewport-canvas {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0.6rem;
+    height: auto;
+    min-height: 0;
+    padding: 0.6rem;
+    background: none;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+    forced-color-adjust: none;
+  }
+
+  .slab-viewport {
+    position: static;
+    inset: auto;
+    width: 100%;
     height: 320px;
+    flex: 1 0 100%;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+    forced-color-adjust: none;
+  }
+
+  .viewport-overlay {
+    position: static;
+    left: auto;
+    right: auto;
+    top: auto;
+    bottom: auto;
+    width: 100%;
+    margin: 0;
+    background: #fff;
+    border-color: rgba(33, 74, 122, 0.2);
+    backdrop-filter: none;
+    order: 2;
+  }
+
+  .legend-panel {
+    position: absolute;
+    top: 0.7rem;
+    right: 0.7rem;
+    width: 74px;
+    height: 150px;
+    background: #fff;
+    border-radius: 6px;
   }
 }
