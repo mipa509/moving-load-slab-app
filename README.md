@@ -4,6 +4,7 @@ Browser-based structural analysis app for rapid fixed-position and stepped movin
 
 ## Documentation
 
+- [V4 specification](./docs/v4-specification.md)
 - [V3 specification](./docs/v3-specification.md)
 - [V2 specification](./docs/v2-specification.md)
 - [V1 specification](./docs/v1-specification.md)
