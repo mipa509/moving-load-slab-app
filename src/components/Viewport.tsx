@@ -1,5 +1,5 @@
 import { useId } from "react";
-import type { AnalysisResults, ResultField, SlabModel } from "../app/types";
+import type { AnalysisResults, ContourPoint, ResultField, SlabModel } from "../app/types";
 import { createContourScale } from "../app/contourScale";
 
 interface ViewportProps {
@@ -15,6 +15,12 @@ type CellRect = {
   width: number;
   height: number;
   value: number;
+};
+
+type LegendTick = {
+  key: string;
+  label: string;
+  y: number;
 };
 
 const resultLabel: Record<ResultField, string> = {
@@ -35,8 +41,34 @@ export const Viewport = ({ model, results, selectedField }: ViewportProps) => {
   const legendStops = contourScale
     ? buildLegendStops(contourScale.domainMin, contourScale.domainMax, contourScale.getColor)
     : [];
+  const legendTicks = contourScale
+    ? buildLegendTicks(contourScale.domainMin, contourScale.domainMax)
+    : [];
+  const contourExtrema = contour ? findContourExtrema(contour.points) : null;
   const plotPadding = Math.max(0.5, Math.max(model.geometry.lengthM, model.geometry.widthM) * 0.08);
   const totalReactionText = `${results.reactionTotals.uz.toFixed(3)} kN`;
+  const activeResultSummary =
+    selectedField === "reactions"
+      ? {
+          title: "Active Plot Summary",
+          value: totalReactionText,
+          detail: `${results.reactionSummaryBySupport.length} support groups in current reaction view`,
+        }
+      : contour
+        ? {
+            title: `${resultLabel[selectedField]} Range`,
+            value: `${formatLegendValue(contour.min)} to ${formatLegendValue(contour.max)} ${
+              contour.units
+            }`,
+            detail: contourScale?.hasZeroTick
+              ? "Colour scale is symmetric about zero for mixed-sign values"
+              : "Colour scale follows the active field min/max range",
+          }
+        : {
+            title: `${resultLabel[selectedField]} Range`,
+            value: "No contour data",
+            detail: "Run a valid analysis to populate this plot",
+          };
 
   return (
     <main className="result-area">
@@ -98,6 +130,43 @@ export const Viewport = ({ model, results, selectedField }: ViewportProps) => {
                   />
                 ))
               : null}
+
+            {model.display.contours && contourExtrema ? (
+              <g className="extrema-layer" aria-label="Contour extrema markers">
+                <circle
+                  cx={contourExtrema.max.xM}
+                  cy={contourExtrema.max.yM}
+                  r={0.13}
+                  className="extrema-marker extrema-marker-max"
+                />
+                <text
+                  x={contourExtrema.max.xM + 0.16}
+                  y={contourExtrema.max.yM - 0.12}
+                  className="extrema-label extrema-label-max"
+                  fontSize={0.24}
+                >
+                  MAX
+                </text>
+                {contourExtrema.samePoint ? null : (
+                  <>
+                    <circle
+                      cx={contourExtrema.min.xM}
+                      cy={contourExtrema.min.yM}
+                      r={0.13}
+                      className="extrema-marker extrema-marker-min"
+                    />
+                    <text
+                      x={contourExtrema.min.xM + 0.16}
+                      y={contourExtrema.min.yM - 0.12}
+                      className="extrema-label extrema-label-min"
+                      fontSize={0.24}
+                    >
+                      MIN
+                    </text>
+                  </>
+                )}
+              </g>
+            ) : null}
 
             {model.display.mesh
               ? mesh.xCoordsM.map((xCoord) => (
@@ -161,6 +230,10 @@ export const Viewport = ({ model, results, selectedField }: ViewportProps) => {
               : null}
           </svg>
 
+          <div className="viewport-axis-badge" aria-label="Axis orientation">
+            <span>X+</span>
+            <span>Y+</span>
+          </div>
           <div className="viewport-overlay">
             <p className="viewport-overlay-label">Viewport Status</p>
             <h4>{resultLabel[selectedField]} view</h4>
@@ -188,21 +261,32 @@ export const Viewport = ({ model, results, selectedField }: ViewportProps) => {
                 {totalReactionText}
               </p>
             ) : contour ? (
-              <p className="viewport-overlay-summary">
+              <>
+                <p className="viewport-overlay-summary">
                 Range: {contour.min.toFixed(3)} to {contour.max.toFixed(3)} {contour.units}
-              </p>
+                </p>
+                <p className="viewport-overlay-summary viewport-overlay-note">
+                  Scale:{" "}
+                  {contourScale?.hasZeroTick
+                    ? `${formatLegendValue(contourScale.domainMin)} to ${formatLegendValue(
+                        contourScale.domainMax,
+                      )} ${contour.units} (symmetric about zero)`
+                    : `${formatLegendValue(contour.min)} to ${formatLegendValue(contour.max)} ${
+                        contour.units
+                      }`}
+                </p>
+              </>
             ) : (
               <p className="viewport-overlay-summary">No contour values available for this field yet.</p>
             )}
           </div>
           {contour && contourScale ? (
             <div className="legend-panel" aria-label={`${resultLabel[selectedField]} legend`}>
-              <div className="legend-label legend-label-top">
-                {contour.max.toFixed(3)} {contour.units}
-              </div>
+              <div className="legend-title">Scale</div>
+              <div className="legend-subtitle">{contour.units}</div>
               <div className="legend-scale-wrap">
                 <svg
-                  viewBox="0 0 20 100"
+                  viewBox="0 0 54 100"
                   preserveAspectRatio="none"
                   className="legend-scale"
                   aria-hidden="true"
@@ -221,7 +305,7 @@ export const Viewport = ({ model, results, selectedField }: ViewportProps) => {
                   <rect
                     x={1}
                     y={1}
-                    width={18}
+                    width={16}
                     height={98}
                     fill={`url(#${legendGradientId})`}
                     stroke="none"
@@ -229,37 +313,48 @@ export const Viewport = ({ model, results, selectedField }: ViewportProps) => {
                   <rect
                     x={1}
                     y={1}
-                    width={18}
+                    width={16}
                     height={98}
                     fill="none"
-                    stroke="rgba(18, 32, 25, 0.16)"
+                    stroke="rgba(23, 33, 43, 0.2)"
                   />
+                  {legendTicks.map((tick) => (
+                    <g key={tick.key}>
+                      <line
+                        x1={18}
+                        y1={tick.y}
+                        x2={24}
+                        y2={tick.y}
+                        stroke="rgba(23, 33, 43, 0.45)"
+                        strokeWidth={0.7}
+                      />
+                      <text
+                        x={27}
+                        y={tick.y + 1.6}
+                        fontSize={5}
+                        fill="#17212b"
+                      >
+                        {tick.label}
+                      </text>
+                    </g>
+                  ))}
                   {contourScale.hasZeroTick && contourScale.zeroOffsetPercent !== null ? (
                     <>
                       <line
                         x1={2}
                         y1={100 - contourScale.zeroOffsetPercent}
-                        x2={18}
+                        x2={17}
                         y2={100 - contourScale.zeroOffsetPercent}
-                        stroke="rgba(18, 32, 25, 0.65)"
+                        stroke="rgba(23, 33, 43, 0.7)"
                         strokeDasharray="1.2 1"
                         strokeWidth={0.5}
                       />
-                      <text
-                        x={10}
-                        y={100 - contourScale.zeroOffsetPercent - 1.5}
-                        textAnchor="middle"
-                        fontSize={5}
-                        fill="#122019"
-                      >
-                        0
-                      </text>
                     </>
                   ) : null}
                 </svg>
               </div>
-              <div className="legend-label legend-label-bottom">
-                {contour.min.toFixed(3)} {contour.units}
+              <div className="legend-footnote">
+                {contourScale.hasZeroTick ? "Symmetric colour scale" : "Direct field scale"}
               </div>
             </div>
           ) : null}
@@ -278,6 +373,11 @@ export const Viewport = ({ model, results, selectedField }: ViewportProps) => {
         <article className="summary-card">
           <h4>Max |Q|</h4>
           <strong>{results.summary.maxAbsShearKnPerM.toFixed(3)} kN/m</strong>
+        </article>
+        <article className="summary-card summary-card-highlight">
+          <h4>{activeResultSummary.title}</h4>
+          <strong>{activeResultSummary.value}</strong>
+          <small>{activeResultSummary.detail}</small>
         </article>
       </section>
 
@@ -445,4 +545,60 @@ function buildLegendStops(
       color: getColor(sampleValue),
     };
   });
+}
+
+function buildLegendTicks(domainMin: number, domainMax: number, tickCount: number = 5): LegendTick[] {
+  if (tickCount < 2 || Math.abs(domainMax - domainMin) < 1e-12) {
+    return [
+      {
+        key: "legend-tick-single",
+        label: formatLegendValue(domainMax),
+        y: 50,
+      },
+    ];
+  }
+
+  return Array.from({ length: tickCount }, (_, index) => {
+    const fraction = index / (tickCount - 1);
+    const value = domainMax - (domainMax - domainMin) * fraction;
+    return {
+      key: `legend-tick-${index}`,
+      label: formatLegendValue(value),
+      y: 1 + fraction * 98,
+    };
+  });
+}
+
+function findContourExtrema(points: ContourPoint[]): {
+  min: ContourPoint;
+  max: ContourPoint;
+  samePoint: boolean;
+} | null {
+  if (points.length === 0) {
+    return null;
+  }
+
+  let min = points[0];
+  let max = points[0];
+
+  for (const point of points) {
+    if (point.value < min.value) {
+      min = point;
+    }
+    if (point.value > max.value) {
+      max = point;
+    }
+  }
+
+  return {
+    min,
+    max,
+    samePoint: min.xM === max.xM && min.yM === max.yM,
+  };
+}
+
+function formatLegendValue(value: number): string {
+  const magnitude = Math.abs(value);
+  const decimals = magnitude >= 100 ? 0 : magnitude >= 10 ? 1 : magnitude >= 1 ? 2 : 3;
+  return value.toFixed(decimals);
 }

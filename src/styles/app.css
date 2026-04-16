@@ -370,11 +370,60 @@
   stroke-width: 0.05;
 }
 
+.extrema-marker {
+  stroke-width: 0.05;
+}
+
+.extrema-marker-max {
+  fill: #c62828;
+  stroke: #ffffff;
+}
+
+.extrema-marker-min {
+  fill: #1e4f8a;
+  stroke: #ffffff;
+}
+
+.extrema-label {
+  font-weight: 700;
+  paint-order: stroke;
+  stroke: rgba(255, 255, 255, 0.95);
+  stroke-width: 0.06;
+  stroke-linejoin: round;
+}
+
+.extrema-label-max {
+  fill: #8d1d1d;
+}
+
+.extrema-label-min {
+  fill: #173a63;
+}
+
 .wheel-patch {
   fill: rgba(183, 106, 15, 0.12);
   stroke: #9c5c0d;
   stroke-width: 0.04;
   stroke-dasharray: 0.16 0.08;
+}
+
+.viewport-axis-badge {
+  position: absolute;
+  top: 0.9rem;
+  left: 0.9rem;
+  display: flex;
+  gap: 0.45rem;
+  padding: 0.35rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(253, 254, 255, 0.94);
+  border: 1px solid rgba(23, 58, 99, 0.16);
+  box-shadow: 0 10px 24px rgba(23, 33, 43, 0.1);
+  font-size: 0.76rem;
+  color: var(--accent-2);
+}
+
+.viewport-axis-badge span {
+  font-weight: 600;
 }
 
 .viewport-overlay {
@@ -439,11 +488,15 @@
   line-height: 1.4;
 }
 
+.viewport-overlay-note {
+  color: var(--accent-2);
+}
+
 .legend-panel {
   position: absolute;
   top: 0.9rem;
   right: 0.9rem;
-  width: 84px;
+  width: 122px;
   height: min(240px, calc(100% - 1.8rem));
   background: rgba(253, 254, 255, 0.96);
   border: 1px solid rgba(23, 58, 99, 0.18);
@@ -457,6 +510,19 @@
   print-color-adjust: exact;
   -webkit-print-color-adjust: exact;
   forced-color-adjust: none;
+}
+
+.legend-title {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ink-muted);
+}
+
+.legend-subtitle {
+  font-size: 0.82rem;
+  color: var(--accent-2);
+  font-weight: 600;
 }
 
 .legend-scale-wrap {
@@ -486,10 +552,16 @@
   order: -1;
 }
 
+.legend-footnote {
+  font-size: 0.7rem;
+  line-height: 1.3;
+  color: var(--ink-muted);
+}
+
 .summary-grid {
   display: grid;
   gap: 0.65rem;
-  grid-template-columns: repeat(3, minmax(140px, 1fr));
+  grid-template-columns: repeat(4, minmax(140px, 1fr));
 }
 
 .summary-card {
@@ -508,6 +580,19 @@
 
 .summary-card strong {
   font-size: 1rem;
+}
+
+.summary-card small {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--ink-muted);
+}
+
+.summary-card-highlight {
+  border-color: rgba(36, 95, 156, 0.26);
+  background: linear-gradient(180deg, #fdfefe, #edf4fb);
 }
 
 .table-panel {
@@ -634,7 +719,7 @@ th {
   }
 
   .legend-panel {
-    width: 78px;
+    width: 114px;
     height: 190px;
   }
 }
@@ -698,7 +783,7 @@ th {
     position: absolute;
     top: 0.7rem;
     right: 0.7rem;
-    width: 74px;
+    width: 110px;
     height: 150px;
     background: #fff;
     border-radius: 6px;
