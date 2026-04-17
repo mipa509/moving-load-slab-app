@@ -5,6 +5,7 @@ import {
   sanitizeLoadedModel,
   validateModelForRun,
 } from "./defaults";
+import { buildAutoRunSignature } from "./autoRun";
 import { runFixedAnalysis } from "./solverAdapter";
 import {
   cloneVehicleDefinition,
@@ -50,6 +51,7 @@ export const App = () => {
   const vehicleLibraryInputRef = useRef<HTMLInputElement | null>(null);
   const autoRunTimeoutRef = useRef<number | null>(null);
   const activeRunIdRef = useRef(0);
+  const autoRunSignature = buildAutoRunSignature(model);
 
   const handleRunAnalysis = async (nextModel: SlabModel) => {
     const issues = validateModelForRun(nextModel);
@@ -110,7 +112,7 @@ export const App = () => {
         window.clearTimeout(autoRunTimeoutRef.current);
       }
     };
-  }, [model]);
+  }, [autoRunSignature]);
 
   useEffect(() => {
     saveVehicleLibraryToStorage(vehicleLibrary);
