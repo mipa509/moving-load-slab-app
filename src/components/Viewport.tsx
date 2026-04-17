@@ -1,6 +1,12 @@
 import { useId } from "react";
-import type { AnalysisResults, ContourPoint, PlotMode, ResultField, SlabModel } from "../app/types";
+import type { AnalysisResults, PlotMode, ResultField, SlabModel } from "../app/types";
 import { createContourScale } from "../app/contourScale";
+import {
+  buildLegendTicks,
+  deriveViewportLayerVisibility,
+  findContourExtrema,
+  formatViewportValue,
+} from "./viewportHelpers";
 
 interface ViewportProps {
   model: SlabModel;
@@ -15,12 +21,6 @@ type CellRect = {
   width: number;
   height: number;
   value: number;
-};
-
-type LegendTick = {
-  key: string;
-  label: string;
-  y: number;
 };
 
 const resultLabel: Record<ResultField, string> = {
@@ -54,11 +54,9 @@ export const Viewport = ({ model, results, selectedField }: ViewportProps) => {
   const contourExtrema = contour ? findContourExtrema(contour.points) : null;
   const plotPadding = Math.max(0.5, Math.max(model.geometry.lengthM, model.geometry.widthM) * 0.08);
   const totalReactionText = `${results.reactionTotals.uz.toFixed(3)} kN`;
-  const showContours = plotMode === "results" && model.display.contours && Boolean(contour);
-  const showMesh = plotMode === "mesh" ? true : model.display.mesh;
-  const showSupports =
-    plotMode === "structure" || plotMode === "mesh" ? true : model.display.supports;
-  const showWheelPatches = plotMode === "structure" ? true : model.display.wheelPatches;
+  const contourSpan = contour ? Math.abs(contour.max - contour.min) : 0;
+  const layerVisibility = deriveViewportLayerVisibility(plotMode, model.display, Boolean(contour));
+  const { showContours, showMesh, showSupports, showWheelPatches } = layerVisibility;
   const showLegend = showContours && Boolean(contourScale);
   const plotModeNote =
     plotMode !== "results" && selectedField !== "reactions"
@@ -74,7 +72,10 @@ export const Viewport = ({ model, results, selectedField }: ViewportProps) => {
       : contour
         ? {
             title: `${resultLabel[selectedField]} Range`,
-            value: `${formatLegendValue(contour.min)} to ${formatLegendValue(contour.max)} ${
+            value: `${formatViewportValue(contour.min, contourSpan)} to ${formatViewportValue(
+              contour.max,
+              contourSpan,
+            )} ${
               contour.units
             }`,
             detail: contourScale?.hasZeroTick
@@ -162,7 +163,7 @@ export const Viewport = ({ model, results, selectedField }: ViewportProps) => {
                   className="extrema-label extrema-label-max"
                   fontSize={0.24}
                 >
-                  MAX
+                  MAX*
                 </text>
                 {contourExtrema.samePoint ? null : (
                   <>
@@ -178,7 +179,7 @@ export const Viewport = ({ model, results, selectedField }: ViewportProps) => {
                       className="extrema-label extrema-label-min"
                       fontSize={0.24}
                     >
-                      MIN
+                      MIN*
                     </text>
                   </>
                 )}
@@ -280,18 +281,31 @@ export const Viewport = ({ model, results, selectedField }: ViewportProps) => {
             ) : contour ? (
               <>
                 <p className="viewport-overlay-summary">
-                Range: {contour.min.toFixed(3)} to {contour.max.toFixed(3)} {contour.units}
+                  Range: {formatViewportValue(contour.min, contourSpan)} to{" "}
+                  {formatViewportValue(contour.max, contourSpan)} {contour.units}
                 </p>
                 <p className="viewport-overlay-summary viewport-overlay-note">
                   Scale:{" "}
                   {contourScale?.hasZeroTick
-                    ? `${formatLegendValue(contourScale.domainMin)} to ${formatLegendValue(
+                    ? `${formatViewportValue(
+                        contourScale.domainMin,
+                        Math.abs(contourScale.domainMax - contourScale.domainMin),
+                      )} to ${formatViewportValue(
                         contourScale.domainMax,
+                        Math.abs(contourScale.domainMax - contourScale.domainMin),
                       )} ${contour.units} (symmetric about zero)`
-                    : `${formatLegendValue(contour.min)} to ${formatLegendValue(contour.max)} ${
+                    : `${formatViewportValue(contour.min, contourSpan)} to ${formatViewportValue(
+                        contour.max,
+                        contourSpan,
+                      )} ${
                         contour.units
                       }`}
                 </p>
+                {showContours ? (
+                  <p className="viewport-overlay-summary viewport-overlay-note">
+                    * Extrema markers indicate sampled element-centre values.
+                  </p>
+                ) : null}
                 {plotModeNote ? (
                   <p className="viewport-overlay-summary viewport-overlay-note">{plotModeNote}</p>
                 ) : null}
@@ -565,60 +579,4 @@ function buildLegendStops(
       color: getColor(sampleValue),
     };
   });
-}
-
-function buildLegendTicks(domainMin: number, domainMax: number, tickCount: number = 5): LegendTick[] {
-  if (tickCount < 2 || Math.abs(domainMax - domainMin) < 1e-12) {
-    return [
-      {
-        key: "legend-tick-single",
-        label: formatLegendValue(domainMax),
-        y: 50,
-      },
-    ];
-  }
-
-  return Array.from({ length: tickCount }, (_, index) => {
-    const fraction = index / (tickCount - 1);
-    const value = domainMax - (domainMax - domainMin) * fraction;
-    return {
-      key: `legend-tick-${index}`,
-      label: formatLegendValue(value),
-      y: 1 + fraction * 98,
-    };
-  });
-}
-
-function findContourExtrema(points: ContourPoint[]): {
-  min: ContourPoint;
-  max: ContourPoint;
-  samePoint: boolean;
-} | null {
-  if (points.length === 0) {
-    return null;
-  }
-
-  let min = points[0];
-  let max = points[0];
-
-  for (const point of points) {
-    if (point.value < min.value) {
-      min = point;
-    }
-    if (point.value > max.value) {
-      max = point;
-    }
-  }
-
-  return {
-    min,
-    max,
-    samePoint: min.xM === max.xM && min.yM === max.yM,
-  };
-}
-
-function formatLegendValue(value: number): string {
-  const magnitude = Math.abs(value);
-  const decimals = magnitude >= 100 ? 0 : magnitude >= 10 ? 1 : magnitude >= 1 ? 2 : 3;
-  return value.toFixed(decimals);
 }
