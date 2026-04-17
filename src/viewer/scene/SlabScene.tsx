@@ -36,6 +36,9 @@ export const SlabScene = ({
   const maxDim = Math.max(Lx, Ly);
   const is3D = plotMode === "deformed";
 
+  // Position camera above and behind the slab for a 3/4 view
+  const cameraZ = Math.max(model.geometry.thicknessM * deformScale * 3, maxDim * 0.4);
+
   return (
     <>
       <ambientLight intensity={0.7} />
@@ -45,10 +48,10 @@ export const SlabScene = ({
         <>
           <PerspectiveCamera
             makeDefault
-            position={[cx, cy - maxDim * 0.7, maxDim * 0.6]}
+            position={[cx, cy - maxDim * 0.7, cameraZ + maxDim * 0.5]}
             fov={50}
           />
-          <OrbitControls target={[cx, cy, 0]} />
+          <OrbitControls target={[cx, cy, cameraZ / 4]} />
         </>
       ) : (
         <>
