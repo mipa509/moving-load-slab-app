@@ -85,14 +85,7 @@ export function findContourExtrema(points: ContourPoint[]): ContourExtrema | nul
 
 export function formatViewportValue(value: number, span: number): string {
   const safeSpan = Math.max(Math.abs(span), 1e-12);
-  const decimals =
-    safeSpan >= 100 ? 0
-    : safeSpan >= 10 ? 1
-    : safeSpan >= 1 ? 2
-    : safeSpan >= 0.1 ? 3
-    : safeSpan >= 0.01 ? 4
-    : safeSpan >= 0.001 ? 5
-    : 6;
+  const decimals = Math.min(12, Math.max(0, Math.ceil(-Math.log10(safeSpan)) + 2));
   const rounded = Number(value.toFixed(decimals));
   const normalized = Object.is(rounded, -0) ? 0 : rounded;
   return normalized.toFixed(decimals);

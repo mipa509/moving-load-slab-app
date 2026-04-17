@@ -51,7 +51,16 @@ describe("viewport helpers", () => {
 
     expect(new Set(labels).size).toBeGreaterThan(1);
     expect(labels.some((label) => label.includes("-0.000"))).toBe(false);
-    expect(formatViewportValue(-0.0000002, 0.00001)).not.toContain("-0.000");
+    expect(formatViewportValue(-0.00000002, 0.00001)).toBe("0.0000000");
+  });
+
+  it("keeps precision for ultra-small legend spans", () => {
+    const ticks = buildLegendTicks(0.00000012, 0.00000018);
+    const labels = ticks.map((tick) => tick.label);
+
+    expect(new Set(labels).size).toBeGreaterThan(1);
+    expect(labels[0]).toContain("0.00000018");
+    expect(labels[labels.length - 1]).toContain("0.00000012");
   });
 
   it("finds sampled extrema from contour points", () => {
