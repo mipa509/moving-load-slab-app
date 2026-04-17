@@ -8,6 +8,8 @@ import type { ContourScale } from "../../app/contourScale";
 import type { AnalysisResults, ResultField, SlabModel } from "../../app/types";
 import type { ProbeHit } from "../hooks/useViewerState";
 import { ResultSurface } from "./ResultSurface";
+import { StructureOverlay } from "./StructureOverlay";
+import { MeshOverlay } from "./MeshOverlay";
 
 interface SlabSceneProps {
   model: SlabModel;
@@ -71,6 +73,18 @@ export const SlabScene = ({
             contourScale={contourScale}
             deformScale={plotMode === "deformed" ? deformScale : 0}
             onProbeHit={onProbeHit}
+          />
+        )}
+
+      {(plotMode === "structure" || plotMode === "deformed") && (
+        <StructureOverlay model={model} results={results} />
+      )}
+
+      {(plotMode === "mesh" || model.display.mesh) &&
+        results.meshNodes.length > 0 && (
+          <MeshOverlay
+            meshNodes={results.meshNodes}
+            meshElements={results.meshElements}
           />
         )}
     </>

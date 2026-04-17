@@ -51,11 +51,13 @@
 
 ## Task 1: Install three.js dependencies
 
+**Status:** ✅ Done — commit `c2127db` (fiber pinned to v8 / drei v9 for React 18 compatibility)
+
 **Files:**
 - Modify: `package.json`
 - Create: `src/tests/threeSmoke.test.ts`
 
-- [ ] **Step 1: Install packages**
+- [x] **Step 1: Install packages**
 
 ```bash
 npm install three @react-three/fiber @react-three/drei
@@ -64,7 +66,7 @@ npm install --save-dev @types/three
 
 Expected: packages appear under `dependencies` in `package.json`; `node_modules/three` exists.
 
-- [ ] **Step 2: Verify build passes**
+- [x] **Step 2: Verify build passes**
 
 ```bash
 npm run build
@@ -72,7 +74,7 @@ npm run build
 
 Expected: build exits 0 with no type errors.
 
-- [ ] **Step 3: Write smoke test**
+- [x] **Step 3: Write smoke test**
 
 Create `src/tests/threeSmoke.test.ts`:
 
@@ -89,7 +91,7 @@ describe("three.js smoke", () => {
 });
 ```
 
-- [ ] **Step 4: Run smoke test**
+- [x] **Step 4: Run smoke test**
 
 ```bash
 npm test -- src/tests/threeSmoke.test.ts
@@ -97,7 +99,7 @@ npm test -- src/tests/threeSmoke.test.ts
 
 Expected: PASS 1 test.
 
-- [ ] **Step 5: Run full test suite**
+- [x] **Step 5: Run full test suite**
 
 ```bash
 npm test
@@ -105,7 +107,7 @@ npm test
 
 Expected: all existing tests still PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add package.json package-lock.json src/tests/threeSmoke.test.ts
@@ -116,13 +118,15 @@ git commit -m "feat: add three.js, @react-three/fiber, @react-three/drei"
 
 ## Task 2: Nodal field recovery
 
+**Status:** ✅ Done — commit `d243091`. Reviewer flagged two follow-ups for later tasks: (I1) `NodalFieldValues` may want to move to `src/solver/model/types.ts` before Task 4 to match the project's type-registry pattern; (I2) twisting moment `mxy` is not recovered at nodes — add before Task 7 if needed for reinforcement checks.
+
 **Files:**
 - Create: `src/solver/post/recoverNodal.ts`
 - Create: `src/tests/recoverNodal.test.ts`
 
 This upgrades field recovery from one value per element centre to one averaged value per mesh node, which is the prerequisite for smooth per-vertex WebGL contour interpolation.
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 Create `src/tests/recoverNodal.test.ts`:
 
@@ -207,7 +211,7 @@ describe("recoverNodalFields", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 ```bash
 npm test -- src/tests/recoverNodal.test.ts
@@ -215,7 +219,7 @@ npm test -- src/tests/recoverNodal.test.ts
 
 Expected: FAIL — `Cannot find module '../solver/post/recoverNodal'`.
 
-- [ ] **Step 3: Implement recoverNodal**
+- [x] **Step 3: Implement recoverNodal**
 
 Create `src/solver/post/recoverNodal.ts`:
 
@@ -310,7 +314,7 @@ function gatherElementDisp(element: MeshElement, full: Float64Array): Float64Arr
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 npm test -- src/tests/recoverNodal.test.ts
@@ -318,7 +322,7 @@ npm test -- src/tests/recoverNodal.test.ts
 
 Expected: PASS 5 tests.
 
-- [ ] **Step 5: Run full suite**
+- [x] **Step 5: Run full suite**
 
 ```bash
 npm test
@@ -326,7 +330,7 @@ npm test
 
 Expected: all tests PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/solver/post/recoverNodal.ts src/tests/recoverNodal.test.ts
@@ -337,6 +341,8 @@ git commit -m "feat: add nodal field recovery by element-corner averaging"
 
 ## Task 3: Surface geometry + vertex colour math
 
+**Status:** ✅ Done — commit `c2ca0b6`. Reviewer follow-ups to address before/during Task 7 integration: (I1) `buildSurfaceGeometry` silently writes `NaN` if `zDisplacements.length !== nodeCount` — add a length guard or throw; (I2) `buildSurfaceGeometry` assumes dense 0..n-1 node ids (writes via `node.id * 3`) — document the invariant on `MeshTopology`. Architectural note: `buildVertexColors` round-trips through a CSS string (`ContourScale.getColor` → parse) — consider a float-returning variant on `ContourScale` when Task 7 needs performance or stronger typing.
+
 **Files:**
 - Create: `src/viewer/math/buildSurfaceGeometry.ts`
 - Create: `src/viewer/math/interpolateField.ts`
@@ -345,7 +351,7 @@ git commit -m "feat: add nodal field recovery by element-corner averaging"
 
 These pure math utilities are the foundation of the WebGL renderer and are independently testable without browser APIs or React.
 
-- [ ] **Step 1: Write failing geometry tests**
+- [x] **Step 1: Write failing geometry tests**
 
 Create `src/tests/buildSurfaceGeometry.test.ts`:
 
@@ -425,7 +431,7 @@ describe("buildSurfaceGeometry", () => {
 });
 ```
 
-- [ ] **Step 2: Write failing colour tests**
+- [x] **Step 2: Write failing colour tests**
 
 Create `src/tests/interpolateField.test.ts`:
 
@@ -460,7 +466,7 @@ describe("buildVertexColors", () => {
 });
 ```
 
-- [ ] **Step 3: Run failing tests**
+- [x] **Step 3: Run failing tests**
 
 ```bash
 npm test -- src/tests/buildSurfaceGeometry.test.ts src/tests/interpolateField.test.ts
@@ -468,7 +474,7 @@ npm test -- src/tests/buildSurfaceGeometry.test.ts src/tests/interpolateField.te
 
 Expected: FAIL — cannot find modules.
 
-- [ ] **Step 4: Implement buildSurfaceGeometry**
+- [x] **Step 4: Implement buildSurfaceGeometry**
 
 Create `src/viewer/math/buildSurfaceGeometry.ts`:
 
@@ -522,7 +528,7 @@ export function buildSurfaceGeometry(
 }
 ```
 
-- [ ] **Step 5: Implement interpolateField**
+- [x] **Step 5: Implement interpolateField**
 
 Create `src/viewer/math/interpolateField.ts`:
 
@@ -568,7 +574,7 @@ function parseCssColor(css: string): [number, number, number] {
 }
 ```
 
-- [ ] **Step 6: Run tests to verify they pass**
+- [x] **Step 6: Run tests to verify they pass**
 
 ```bash
 npm test -- src/tests/buildSurfaceGeometry.test.ts src/tests/interpolateField.test.ts
@@ -576,7 +582,7 @@ npm test -- src/tests/buildSurfaceGeometry.test.ts src/tests/interpolateField.te
 
 Expected: PASS all tests.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/viewer/math/buildSurfaceGeometry.ts src/viewer/math/interpolateField.ts \
@@ -588,6 +594,8 @@ git commit -m "feat: add surface geometry builder and vertex colour interpolatio
 
 ## Task 4: Types + solver payload + adapter upgrade
 
+**Status:** ✅ Done — commit `585df51`
+
 **Files:**
 - Modify: `src/app/types.ts`
 - Modify: `src/app/defaults.ts`
@@ -596,7 +604,7 @@ git commit -m "feat: add surface geometry builder and vertex colour interpolatio
 
 This wires nodal recovery into the solver pipeline so `AnalysisResults` carries the data the WebGL viewer needs.
 
-- [ ] **Step 1: Update src/app/types.ts**
+- [x] **Step 1: Update src/app/types.ts**
 
 Make the following edits to `src/app/types.ts`:
 
@@ -665,7 +673,7 @@ export interface AnalysisResults {
 }
 ```
 
-- [ ] **Step 2: Update src/app/defaults.ts**
+- [x] **Step 2: Update src/app/defaults.ts**
 
 **2a. Fix isPlotMode guard:**
 ```typescript
@@ -698,7 +706,7 @@ export const idleResults = (): AnalysisResults => ({
 });
 ```
 
-- [ ] **Step 3: Update src/solver/index.ts**
+- [x] **Step 3: Update src/solver/index.ts**
 
 Add the import at the top:
 ```typescript
@@ -843,7 +851,7 @@ function toNodalContour(
 }
 ```
 
-- [ ] **Step 4: Update src/app/solverAdapter.ts**
+- [x] **Step 4: Update src/app/solverAdapter.ts**
 
 Extend `runFixedAnalysis` to pass through the new fields in both the success and error return values.
 
@@ -919,7 +927,7 @@ Add the import at the top of solverAdapter.ts:
 import type { NodalContourData } from "./types";
 ```
 
-- [ ] **Step 5: Run full test suite**
+- [x] **Step 5: Run full test suite**
 
 ```bash
 npm test
@@ -927,7 +935,7 @@ npm test
 
 Expected: all existing tests PASS. TypeScript must compile cleanly (type errors would surface here).
 
-- [ ] **Step 6: Verify build**
+- [x] **Step 6: Verify build**
 
 ```bash
 npm run build
@@ -935,7 +943,7 @@ npm run build
 
 Expected: build exits 0.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/app/types.ts src/app/defaults.ts src/solver/index.ts src/app/solverAdapter.ts
@@ -946,10 +954,12 @@ git commit -m "feat: add nodal contours, mesh topology, and nodal displacements 
 
 ## Task 5: Viewer state hook
 
+**Status:** ✅ Done — commit `42ad67d`
+
 **Files:**
 - Create: `src/viewer/hooks/useViewerState.ts`
 
-- [ ] **Step 1: Create the hook**
+- [x] **Step 1: Create the hook**
 
 Create `src/viewer/hooks/useViewerState.ts`:
 
@@ -976,7 +986,7 @@ export function useViewerState(): ViewerState {
 }
 ```
 
-- [ ] **Step 2: Verify build**
+- [x] **Step 2: Verify build**
 
 ```bash
 npm run build
@@ -984,7 +994,7 @@ npm run build
 
 Expected: build exits 0.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/viewer/hooks/useViewerState.ts
@@ -995,13 +1005,15 @@ git commit -m "feat: add viewer state hook (probe hit, deform scale)"
 
 ## Task 6: WebGL viewer shell
 
+**Status:** ✅ Done — commit `28e73d2`
+
 **Files:**
 - Create: `src/viewer/scene/SlabScene.tsx`
 - Create: `src/viewer/ViewerCanvas.tsx`
 
 This creates the structural skeleton of the viewer — an R3F Canvas with camera management and a scene root that conditionally mounts layers. No layers are implemented yet; `SlabScene` renders a placeholder.
 
-- [ ] **Step 1: Create SlabScene**
+- [x] **Step 1: Create SlabScene**
 
 Create `src/viewer/scene/SlabScene.tsx`:
 
@@ -1074,7 +1086,7 @@ export const SlabScene = ({
 };
 ```
 
-- [ ] **Step 2: Create ViewerCanvas**
+- [x] **Step 2: Create ViewerCanvas**
 
 Create `src/viewer/ViewerCanvas.tsx`:
 
@@ -1128,7 +1140,7 @@ export const ViewerCanvas = ({
 };
 ```
 
-- [ ] **Step 3: Verify build**
+- [x] **Step 3: Verify build**
 
 ```bash
 npm run build
@@ -1136,7 +1148,7 @@ npm run build
 
 Expected: build exits 0. React Three Fiber requires a browser-compatible environment, so tests won't cover these components — build is the verification.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/viewer/scene/SlabScene.tsx src/viewer/ViewerCanvas.tsx
@@ -1326,6 +1338,11 @@ git commit -m "feat: add smooth contour result surface (Results 2D mode)"
 ---
 
 ## Task 8: Structure and Mesh overlay layers
+
+**Status:** ✅ Done — commit pending. Deviation from plan: used drei `<Line>` component instead of raw `line_` intrinsic to avoid JSX type errors.
+
+**Reviewer notes:**
+- (I1) `lineWidth` on drei `Line` may not render >1px in Chromium browsers — WebGL's `gl.lineWidth` is deprecated. Lines will render at 1px regardless of the value. This is a known three.js/WebGL limitation, not fixable without custom shaders or thicker geometry (e.g. fat lines from drei). Acceptable for now.
 
 **Files:**
 - Create: `src/viewer/scene/StructureOverlay.tsx`
