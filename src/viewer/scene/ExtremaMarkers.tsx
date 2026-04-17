@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+import { findContourExtrema } from "../../components/viewportHelpers";
 import type { NodalContourData } from "../../app/types";
 
 interface ExtremaMarkersProps {
@@ -6,25 +8,23 @@ interface ExtremaMarkersProps {
 }
 
 export const ExtremaMarkers = ({ contour, radius }: ExtremaMarkersProps) => {
-  if (!contour || contour.points.length === 0) return null;
+  const extrema = useMemo(
+    () => (contour ? findContourExtrema(contour.points) : null),
+    [contour],
+  );
 
-  let minPt = contour.points[0];
-  let maxPt = contour.points[0];
-  for (const pt of contour.points) {
-    if (pt.value < minPt.value) minPt = pt;
-    if (pt.value > maxPt.value) maxPt = pt;
-  }
+  if (!extrema) return null;
 
-  const samePoint = minPt.nodeId === maxPt.nodeId;
+  const { min, max, samePoint } = extrema;
 
   return (
     <>
-      <mesh position={[maxPt.xM, maxPt.yM, 0.04]}>
+      <mesh position={[max.xM, max.yM, 0.04]}>
         <sphereGeometry args={[radius, 16, 16]} />
         <meshBasicMaterial color="#ef4444" />
       </mesh>
       {!samePoint && (
-        <mesh position={[minPt.xM, minPt.yM, 0.04]}>
+        <mesh position={[min.xM, min.yM, 0.04]}>
           <sphereGeometry args={[radius, 16, 16]} />
           <meshBasicMaterial color="#3b82f6" />
         </mesh>

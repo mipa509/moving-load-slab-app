@@ -1,10 +1,13 @@
 import type { PlotMode, SlabModel } from "../app/types";
+import { PLOT_MODE_OPTIONS } from "../app/plotModes";
 
-const MODES: { value: PlotMode; label: string }[] = [
-  { value: "structure", label: "Structure" },
-  { value: "mesh", label: "Mesh" },
-  { value: "results", label: "Results 2D" },
-  { value: "deformed", label: "Deformed 3D" },
+type BoolToggleKey = "mesh" | "supports" | "wheelPatches" | "contours";
+
+const TOGGLES: { key: BoolToggleKey; label: string }[] = [
+  { key: "mesh", label: "Mesh" },
+  { key: "supports", label: "Supports" },
+  { key: "wheelPatches", label: "Wheels" },
+  { key: "contours", label: "Contours" },
 ];
 
 interface ViewerToolbarProps {
@@ -20,14 +23,12 @@ export const ViewerToolbar = ({
   deformScale,
   onDeformScaleChange,
 }: ViewerToolbarProps) => {
-  const { plotMode, mesh, supports, wheelPatches, contours } = model.display;
+  const { plotMode } = model.display;
 
   const setMode = (mode: PlotMode) => {
     onModelChange({ ...model, display: { ...model.display, plotMode: mode } });
   };
 
-  // Only boolean display toggles — excludes plotMode which is PlotMode type
-  type BoolToggleKey = "mesh" | "supports" | "wheelPatches" | "contours";
   const toggle = (key: BoolToggleKey) => {
     onModelChange({ ...model, display: { ...model.display, [key]: !model.display[key] } });
   };
@@ -35,34 +36,28 @@ export const ViewerToolbar = ({
   return (
     <div className="viewer-toolbar">
       <div className="viewer-toolbar-modes">
-        {MODES.map(({ value, label }) => (
+        {PLOT_MODE_OPTIONS.map(({ value, toolbarLabel }) => (
           <button
             key={value}
             className={`viewer-mode-btn${plotMode === value ? " active" : ""}`}
             onClick={() => setMode(value)}
             type="button"
           >
-            {label}
+            {toolbarLabel}
           </button>
         ))}
       </div>
       <div className="viewer-toolbar-toggles">
-        <label>
-          <input type="checkbox" checked={mesh} onChange={() => toggle("mesh")} />
-          Mesh
-        </label>
-        <label>
-          <input type="checkbox" checked={supports} onChange={() => toggle("supports")} />
-          Supports
-        </label>
-        <label>
-          <input type="checkbox" checked={wheelPatches} onChange={() => toggle("wheelPatches")} />
-          Wheels
-        </label>
-        <label>
-          <input type="checkbox" checked={contours} onChange={() => toggle("contours")} />
-          Contours
-        </label>
+        {TOGGLES.map(({ key, label }) => (
+          <label key={key}>
+            <input
+              type="checkbox"
+              checked={model.display[key]}
+              onChange={() => toggle(key)}
+            />
+            {label}
+          </label>
+        ))}
       </div>
       {plotMode === "deformed" && (
         <div className="viewer-toolbar-deform">

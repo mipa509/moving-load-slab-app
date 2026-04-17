@@ -5,7 +5,7 @@ import {
   PerspectiveCamera,
 } from "@react-three/drei";
 import type { ContourScale } from "../../app/contourScale";
-import type { AnalysisResults, ResultField, SlabModel } from "../../app/types";
+import type { AnalysisResults, NodalContourData, ResultField, SlabModel } from "../../app/types";
 import type { ProbeHit } from "../hooks/useViewerState";
 import { ResultSurface } from "./ResultSurface";
 import { StructureOverlay } from "./StructureOverlay";
@@ -16,8 +16,13 @@ interface SlabSceneProps {
   model: SlabModel;
   results: AnalysisResults;
   selectedField: ResultField;
+  contour: NodalContourData | undefined;
   contourScale: ContourScale | null;
   deformScale: number;
+  showContours: boolean;
+  showMesh: boolean;
+  showSupports: boolean;
+  showWheelPatches: boolean;
   onProbeHit: (hit: ProbeHit | null) => void;
 }
 
@@ -25,8 +30,13 @@ export const SlabScene = ({
   model,
   results,
   selectedField,
+  contour,
   contourScale,
   deformScale,
+  showContours,
+  showMesh,
+  showSupports,
+  showWheelPatches,
   onProbeHit,
 }: SlabSceneProps) => {
   const { plotMode } = model.display;
@@ -37,7 +47,6 @@ export const SlabScene = ({
   const maxDim = Math.max(Lx, Ly);
   const is3D = plotMode === "deformed";
 
-  // Position camera above and behind the slab for a 3/4 view
   const cameraZ = Math.max(model.geometry.thicknessM * deformScale * 3, maxDim * 0.4);
 
   return (
@@ -67,38 +76,33 @@ export const SlabScene = ({
         </>
       )}
 
-      {/* Layers mounted in subsequent tasks */}
-      {(plotMode === "results" || plotMode === "deformed") &&
-        contourScale !== null &&
-        results.meshElements.length > 0 && (
-          <ResultSurface
-            results={results}
-            selectedField={selectedField}
-            contourScale={contourScale}
-            deformScale={plotMode === "deformed" ? deformScale : 0}
-            onProbeHit={onProbeHit}
-          />
-        )}
-
-      {(plotMode === "structure" || plotMode === "deformed") && (
-        <StructureOverlay model={model} results={results} />
+      {showContours && contourScale !== null && results.meshElements.length > 0 && (
+        <ResultSurface
+          results={results}
+          selectedField={selectedField}
+          contourScale={contourScale}
+          deformScale={plotMode === "deformed" ? deformScale : 0}
+          onProbeHit={onProbeHit}
+        />
       )}
 
-      {(plotMode === "mesh" || model.display.mesh) &&
-        results.meshNodes.length > 0 && (
-          <MeshOverlay
-            meshNodes={results.meshNodes}
-            meshElements={results.meshElements}
-          />
-        )}
+      <StructureOverlay
+        model={model}
+        results={results}
+        showSupports={showSupports}
+        showWheelPatches={showWheelPatches}
+      />
 
-      {(plotMode === "results" || plotMode === "deformed") &&
-        selectedField !== "reactions" && (
-          <ExtremaMarkers
-            contour={results.nodalContours[selectedField]}
-            radius={maxDim * 0.013}
-          />
-        )}
+      {showMesh && results.meshNodes.length > 0 && (
+        <MeshOverlay
+          meshNodes={results.meshNodes}
+          meshElements={results.meshElements}
+        />
+      )}
+
+      {showContours && (
+        <ExtremaMarkers contour={contour} radius={maxDim * 0.013} />
+      )}
     </>
   );
 };

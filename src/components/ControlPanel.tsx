@@ -10,6 +10,7 @@ import type {
   VehicleLibraryItem,
 } from "../app/types";
 import { deriveMeshResolution } from "../app/meshSizing";
+import { PLOT_MODE_OPTIONS } from "../app/plotModes";
 import { getTravelAxisSliderConfig } from "../app/placementControls";
 import { SectionCard } from "./SectionCard";
 
@@ -47,7 +48,6 @@ const resultFields: ResultField[] = [
   "qy",
   "reactions",
 ];
-const plotModes: PlotMode[] = ["results", "structure", "mesh"];
 const constraintOptionsByDof: Record<Dof, Exclude<ConstraintType, "pinned">[]> = {
   uz: ["free", "fixed", "spring"],
   rx: ["free", "fixed", "spring"],
@@ -1357,9 +1357,9 @@ export const ControlPanel = ({
               }))
             }
           >
-            {plotModes.map((plotMode) => (
-              <option key={plotMode} value={plotMode}>
-                {plotMode.toUpperCase()}
+            {PLOT_MODE_OPTIONS.map(({ value, controlLabel }) => (
+              <option key={value} value={value}>
+                {controlLabel}
               </option>
             ))}
           </select>

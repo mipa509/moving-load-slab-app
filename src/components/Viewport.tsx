@@ -5,6 +5,7 @@ import {
   formatViewportValue,
 } from "./viewportHelpers";
 import { ViewerCanvas } from "../viewer/ViewerCanvas";
+import { getViewerContour } from "../viewer/viewerPresentation";
 
 interface ViewportProps {
   model: SlabModel;
@@ -31,7 +32,7 @@ const plotModeLabel: Record<PlotMode, string> = {
 
 export const Viewport = ({ model, results, selectedField, onModelChange }: ViewportProps) => {
   const plotMode = model.display.plotMode;
-  const contour = selectedField === "reactions" ? undefined : results.contours[selectedField];
+  const contour = getViewerContour(results, selectedField);
   const totalReactionText = `${results.reactionTotals.uz.toFixed(3)} kN`;
   const contourSpan = contour ? Math.abs(contour.max - contour.min) : 0;
   const layerVisibility = deriveViewportLayerVisibility(plotMode, model.display, Boolean(contour));
@@ -52,7 +53,7 @@ export const Viewport = ({ model, results, selectedField, onModelChange }: Viewp
               contourSpan,
             )} ${contour.units}`,
             detail: contourExtrema
-              ? `Extrema sampled from element-centre values`
+              ? "Range and extrema derived from nodal contour values"
               : "Run a valid analysis to populate this plot",
           }
         : {
