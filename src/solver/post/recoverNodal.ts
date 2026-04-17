@@ -1,16 +1,5 @@
 import { computeMindlinConstitutive, evaluateMindlinQ4At } from "../core/element";
-import type { MaterialDefinition, MeshElement, MeshNode, StructuredMesh } from "../model/types";
-
-export interface NodalFieldValues {
-  nodeId: number;
-  x: number;
-  y: number;
-  deflection: number;
-  mx: number;
-  my: number;
-  qx: number;
-  qy: number;
-}
+import type { MaterialDefinition, MeshElement, MeshNode, NodalFieldValues, StructuredMesh } from "../model/types";
 
 // Local corner coordinates for Q4 nodes 0-3 (bottom-left, bottom-right, top-right, top-left)
 const CORNER_COORDS: [number, number][] = [

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 
 export interface ProbeHit {
   x: number;
@@ -6,15 +6,20 @@ export interface ProbeHit {
   value: number;
 }
 
-export interface ViewerState {
+export interface UseViewerStateReturn {
   deformScale: number;
   setDeformScale: (scale: number) => void;
   probeHit: ProbeHit | null;
   setProbeHit: (hit: ProbeHit | null) => void;
 }
 
-export function useViewerState(): ViewerState {
-  const [deformScale, setDeformScale] = useState(30);
+export function useViewerState(): UseViewerStateReturn {
+  const [deformScale, setDeformScaleRaw] = useState(30);
   const [probeHit, setProbeHit] = useState<ProbeHit | null>(null);
+
+  const setDeformScale = useCallback((scale: number) => {
+    setDeformScaleRaw(Math.max(0.1, scale));
+  }, []);
+
   return { deformScale, setDeformScale, probeHit, setProbeHit };
 }

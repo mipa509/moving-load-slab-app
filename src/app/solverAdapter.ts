@@ -61,8 +61,8 @@ const normalizeContours = (
     result[field] = {
       field,
       points,
-      min: toNumber(obj.min, Math.min(...points.map((p) => p.value), 0)),
-      max: toNumber(obj.max, Math.max(...points.map((p) => p.value), 0)),
+      min: toNumber(obj.min, Math.min(...points.map((p) => p.value))),
+      max: toNumber(obj.max, Math.max(...points.map((p) => p.value))),
       units: typeof obj.units === "string" ? obj.units : defaultUnits[field],
     };
   });
@@ -91,8 +91,8 @@ const normalizeNodalContours = (
     result[field] = {
       field,
       points,
-      min: toNumber(obj.min, Math.min(...points.map((p) => p.value), 0)),
-      max: toNumber(obj.max, Math.max(...points.map((p) => p.value), 0)),
+      min: toNumber(obj.min, Math.min(...points.map((p) => p.value))),
+      max: toNumber(obj.max, Math.max(...points.map((p) => p.value))),
       units: typeof obj.units === "string" ? obj.units : defaultUnits[field],
     };
   });
@@ -147,12 +147,14 @@ export const runFixedAnalysis = async (model: SlabModel): Promise<AnalysisResult
           }))
         : [],
       meshElements: Array.isArray(payload.meshElements)
-        ? payload.meshElements.map((e) => ({
-            id: toNumber((e as { id?: unknown }).id),
-            nodeIds: Array.isArray((e as { nodeIds?: unknown }).nodeIds)
-              ? ((e as { nodeIds: unknown[] }).nodeIds.map((v) => toNumber(v)) as [number, number, number, number])
-              : [0, 0, 0, 0],
-          }))
+        ? payload.meshElements.map((e) => {
+            const rawIds = (e as { nodeIds?: unknown }).nodeIds;
+            const ids = Array.isArray(rawIds) ? rawIds.map((v) => toNumber(v)) : [];
+            return {
+              id: toNumber((e as { id?: unknown }).id),
+              nodeIds: ids.length === 4 ? (ids as [number, number, number, number]) : [0, 0, 0, 0],
+            };
+          })
         : [],
       nodalDisplacements: Array.isArray(payload.nodalDisplacements)
         ? payload.nodalDisplacements.map((nd) => ({

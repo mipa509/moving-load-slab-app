@@ -1,5 +1,5 @@
 import { recoverNodalFields } from "./post/recoverNodal";
-import type { NodalFieldValues } from "./post/recoverNodal";
+import type { NodalFieldValues } from "./model/types";
 import type { ContourData, NodalContourData, RectOverlay, SlabModel } from "../app/types";
 import { fromAppModel } from "./model/fromAppModel";
 import { runFixedPositionAnalysis as runInternalFixedPositionAnalysis } from "./runFixedPositionAnalysis";
@@ -86,14 +86,20 @@ export function runFixedPositionAnalysis(model: SlabModel): SolverPayload {
         yMinM: patch.originalBounds.yMin,
         yMaxM: patch.originalBounds.yMax,
       })),
-    reactions: result.supportReactions.map((reaction) => ({
-      supportId: reaction.supportId,
-      nodeId: reaction.nodeId,
-      dof: reaction.dof === "w" ? "uz" : reaction.dof,
-      type: reaction.type,
-      value: reaction.value,
-      units: reaction.dof === "w" ? "kN" : "kN*m",
-    })),
+    reactions: result.supportReactions.map((reaction) => {
+      const mappedDof = reaction.dof === "w" ? "uz" : reaction.dof;
+      if (mappedDof !== "uz" && mappedDof !== "rx" && mappedDof !== "ry") {
+        throw new Error(`Unexpected DOF key from solver: "${reaction.dof}"`);
+      }
+      return {
+        supportId: reaction.supportId,
+        nodeId: reaction.nodeId,
+        dof: mappedDof,
+        type: reaction.type,
+        value: reaction.value,
+        units: mappedDof === "uz" ? "kN" : "kN*m",
+      };
+    }),
     summary: {
       maxDeflectionMm:
         Math.max(Math.abs(result.summary.minDeflection), Math.abs(result.summary.maxDeflection)) *
@@ -160,6 +166,9 @@ function toNodalContour(
     yM: node.y,
     value: pick(node),
   }));
+  if (points.length === 0) {
+    return { field, points, min: 0, max: 0, units };
+  }
   return {
     field,
     points,

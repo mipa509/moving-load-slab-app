@@ -219,6 +219,18 @@ export interface NodalDisplacement {
   ry: number;
 }
 
+/** Averaged field values at a single mesh node (one entry per node, not per element centre). */
+export interface NodalFieldValues {
+  nodeId: number;
+  x: number;
+  y: number;
+  deflection: number;
+  mx: number;
+  my: number;
+  qx: number;
+  qy: number;
+}
+
 export interface SupportReaction {
   supportId: string;
   nodeId: number;
