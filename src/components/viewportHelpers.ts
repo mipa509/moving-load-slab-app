@@ -25,10 +25,16 @@ export function deriveViewportLayerVisibility(
   hasContour: boolean,
 ): ViewportLayerVisibility {
   return {
-    showContours: plotMode === "results" && display.contours && hasContour,
-    showMesh: plotMode === "mesh" ? true : display.mesh,
-    showSupports: plotMode === "structure" || plotMode === "mesh" ? true : display.supports,
-    showWheelPatches: plotMode === "structure" ? true : display.wheelPatches,
+    showContours:
+      (plotMode === "results" || plotMode === "deformed") && display.contours && hasContour,
+    showMesh:
+      plotMode === "mesh" || plotMode === "deformed" ? true : display.mesh,
+    showSupports:
+      plotMode === "structure" || plotMode === "mesh" || plotMode === "deformed"
+        ? true
+        : display.supports,
+    showWheelPatches:
+      plotMode === "structure" || plotMode === "deformed" ? true : display.wheelPatches,
   };
 }
 

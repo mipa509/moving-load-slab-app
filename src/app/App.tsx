@@ -332,7 +332,7 @@ export const App = () => {
         onLoadJsonClick={handleLoadJsonClick}
         onExportPdf={handleExportPdf}
       />
-      <Viewport model={model} results={results} selectedField={selectedResultField} />
+      <Viewport model={model} results={results} selectedField={selectedResultField} onModelChange={setModel} />
     </div>
   );
 };

@@ -75,4 +75,20 @@ describe("viewport helpers", () => {
     expect(extrema?.max.value).toBe(4.1);
     expect(extrema?.samePoint).toBe(false);
   });
+
+  it("deformed mode shows contours, mesh, supports, and wheels", () => {
+    const display: DisplayToggles = {
+      plotMode: "deformed",
+      mesh: false,
+      supports: false,
+      wheelPatches: false,
+      contours: true,
+      tables: false,
+    };
+    const v = deriveViewportLayerVisibility("deformed", display, true);
+    expect(v.showContours).toBe(true);
+    expect(v.showMesh).toBe(true);
+    expect(v.showSupports).toBe(true);
+    expect(v.showWheelPatches).toBe(true);
+  });
 });
