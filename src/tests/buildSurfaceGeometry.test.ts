@@ -70,4 +70,11 @@ describe("buildSurfaceGeometry", () => {
     expect(positions.length).toBe(6 * 3);
     expect(indices.length).toBe(2 * 6);
   });
+
+  it("throws when zDisplacements is shorter than node count", () => {
+    const zDisplacements = new Float32Array([0.1, 0.2]); // only 2 values for 4 nodes
+    expect(() => buildSurfaceGeometry(singleQuad(), { zDisplacements })).toThrow(
+      /zDisplacements length/,
+    );
+  });
 });

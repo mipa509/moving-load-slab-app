@@ -1,8 +1,17 @@
 export interface MeshTopology {
+  /**
+   * Nodes must have dense, contiguous ids starting at 0.
+   * i.e. node.id === index in the nodes array.
+   * This is guaranteed by the solver's mesh builder (mesh.ts).
+   */
   nodes: { id: number; x: number; y: number }[];
   elements: { id: number; nodeIds: [number, number, number, number] }[];
 }
 
+/**
+ * Nodes must have dense, contiguous ids starting at 0 (i.e. node.id === index in nodes array).
+ * This is guaranteed by the solver's mesh builder (mesh.ts).
+ */
 export interface SurfaceGeometryOptions {
   zDisplacements?: Float32Array;
   deformScale?: number;
@@ -20,6 +29,12 @@ export function buildSurfaceGeometry(
   const { zDisplacements, deformScale = 1 } = options;
   const nodeCount = mesh.nodes.length;
   const elementCount = mesh.elements.length;
+
+  if (zDisplacements && zDisplacements.length < nodeCount) {
+    throw new Error(
+      `zDisplacements length (${zDisplacements.length}) < node count (${nodeCount})`,
+    );
+  }
 
   const positions = new Float32Array(nodeCount * 3);
   for (const node of mesh.nodes) {
