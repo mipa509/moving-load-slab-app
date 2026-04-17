@@ -4,19 +4,21 @@ import { createContourScale } from "../app/contourScale";
 import type { AnalysisResults, ResultField, SlabModel } from "../app/types";
 import { useViewerState } from "./hooks/useViewerState";
 import { SlabScene } from "./scene/SlabScene";
+import { ViewerToolbar } from "./ViewerToolbar";
+import { LegendDock } from "./LegendDock";
 
 interface ViewerCanvasProps {
   model: SlabModel;
   results: AnalysisResults;
   selectedField: ResultField;
-  // TODO: used by toolbar in Task 7+ for model updates (e.g. display toggles)
-  onModelChange?: (model: SlabModel) => void;
+  onModelChange: (model: SlabModel) => void;
 }
 
 export const ViewerCanvas = ({
   model,
   results,
   selectedField,
+  onModelChange,
 }: ViewerCanvasProps) => {
   const { deformScale, setDeformScale, probeHit, setProbeHit } = useViewerState();
   const contour =
@@ -28,8 +30,14 @@ export const ViewerCanvas = ({
 
   return (
     <div className="viewer-shell">
+      <ViewerToolbar
+        model={model}
+        onModelChange={onModelChange}
+        deformScale={deformScale}
+        onDeformScaleChange={setDeformScale}
+      />
       <div className="viewer-canvas-wrap">
-        <Canvas className="viewer-canvas">
+        <Canvas style={{ background: "#1b2027" }}>
           <SlabScene
             model={model}
             // TODO: results used by ResultSurface layer in Task 7
@@ -40,6 +48,9 @@ export const ViewerCanvas = ({
             onProbeHit={setProbeHit}
           />
         </Canvas>
+        {contourScale && contour && (
+          <LegendDock contourScale={contourScale} units={contour.units} />
+        )}
         {probeHit && contour && (
           <div className="viewer-probe-overlay">
             x {probeHit.x.toFixed(2)} m, y {probeHit.y.toFixed(2)} m —{" "}
