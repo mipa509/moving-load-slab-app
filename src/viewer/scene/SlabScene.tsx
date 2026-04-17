@@ -10,6 +10,7 @@ import type { ProbeHit } from "../hooks/useViewerState";
 import { ResultSurface } from "./ResultSurface";
 import { StructureOverlay } from "./StructureOverlay";
 import { MeshOverlay } from "./MeshOverlay";
+import { ExtremaMarkers } from "./ExtremaMarkers";
 
 interface SlabSceneProps {
   model: SlabModel;
@@ -88,6 +89,14 @@ export const SlabScene = ({
           <MeshOverlay
             meshNodes={results.meshNodes}
             meshElements={results.meshElements}
+          />
+        )}
+
+      {(plotMode === "results" || plotMode === "deformed") &&
+        selectedField !== "reactions" && (
+          <ExtremaMarkers
+            contour={results.nodalContours[selectedField]}
+            radius={maxDim * 0.013}
           />
         )}
     </>
