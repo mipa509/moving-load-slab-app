@@ -252,6 +252,87 @@ export const Viewport = ({ model, results, selectedField }: ViewportProps) => {
             <span>X+</span>
             <span>Y+</span>
           </div>
+          {showLegend && contour && contourScale ? (
+            <div className="legend-panel" aria-label={`${resultLabel[selectedField]} legend`}>
+              <div className="legend-title">Scale</div>
+              <div className="legend-subtitle">{contour.units}</div>
+              <div className="legend-scale-wrap">
+                <svg
+                  viewBox="0 0 112 100"
+                  preserveAspectRatio="none"
+                  className="legend-scale"
+                  aria-hidden="true"
+                >
+                  <defs>
+                    <linearGradient id={legendGradientId} x1="0" y1="1" x2="0" y2="0">
+                      {legendStops.map((stop) => (
+                        <stop
+                          key={stop.key}
+                          offset={stop.offset}
+                          stopColor={stop.color}
+                        />
+                      ))}
+                    </linearGradient>
+                  </defs>
+                  <rect
+                    x={1}
+                    y={1}
+                    width={22}
+                    height={98}
+                    fill={`url(#${legendGradientId})`}
+                    stroke="none"
+                  />
+                  <rect
+                    x={1}
+                    y={1}
+                    width={22}
+                    height={98}
+                    fill="none"
+                    stroke="rgba(23, 33, 43, 0.2)"
+                  />
+                  {legendTicks.map((tick) => (
+                    <g key={tick.key}>
+                      <line
+                        x1={27}
+                        y1={tick.y}
+                        x2={42}
+                        y2={tick.y}
+                        stroke="rgba(23, 33, 43, 0.45)"
+                        strokeWidth={1}
+                      />
+                      <text
+                        x={50}
+                        y={tick.y + 3.1}
+                        fontSize={10.5}
+                        fontWeight={700}
+                        fill="#17212b"
+                      >
+                        {tick.label}
+                      </text>
+                    </g>
+                  ))}
+                  {contourScale.hasZeroTick && contourScale.zeroOffsetPercent !== null ? (
+                    <>
+                      <line
+                        x1={2}
+                        y1={100 - contourScale.zeroOffsetPercent}
+                        x2={23}
+                        y2={100 - contourScale.zeroOffsetPercent}
+                        stroke="rgba(23, 33, 43, 0.7)"
+                        strokeDasharray="1.2 1"
+                        strokeWidth={0.5}
+                      />
+                    </>
+                  ) : null}
+                </svg>
+              </div>
+              <div className="legend-footnote">
+                {contourScale.hasZeroTick ? "Symmetric colour scale" : "Direct field scale"}
+              </div>
+            </div>
+          ) : null}
+        </div>
+        <div className="viewport-shell-footer">
           <div className="viewport-overlay">
             <p className="viewport-overlay-label">Viewport Status</p>
             <h4>{resultLabel[selectedField]} view</h4>
@@ -314,84 +395,6 @@ export const Viewport = ({ model, results, selectedField }: ViewportProps) => {
               <p className="viewport-overlay-summary">No contour values available for this field yet.</p>
             )}
           </div>
-          {showLegend && contour && contourScale ? (
-            <div className="legend-panel" aria-label={`${resultLabel[selectedField]} legend`}>
-              <div className="legend-title">Scale</div>
-              <div className="legend-subtitle">{contour.units}</div>
-              <div className="legend-scale-wrap">
-                <svg
-                  viewBox="0 0 54 100"
-                  preserveAspectRatio="none"
-                  className="legend-scale"
-                  aria-hidden="true"
-                >
-                  <defs>
-                    <linearGradient id={legendGradientId} x1="0" y1="1" x2="0" y2="0">
-                      {legendStops.map((stop) => (
-                        <stop
-                          key={stop.key}
-                          offset={stop.offset}
-                          stopColor={stop.color}
-                        />
-                      ))}
-                    </linearGradient>
-                  </defs>
-                  <rect
-                    x={1}
-                    y={1}
-                    width={16}
-                    height={98}
-                    fill={`url(#${legendGradientId})`}
-                    stroke="none"
-                  />
-                  <rect
-                    x={1}
-                    y={1}
-                    width={16}
-                    height={98}
-                    fill="none"
-                    stroke="rgba(23, 33, 43, 0.2)"
-                  />
-                  {legendTicks.map((tick) => (
-                    <g key={tick.key}>
-                      <line
-                        x1={18}
-                        y1={tick.y}
-                        x2={24}
-                        y2={tick.y}
-                        stroke="rgba(23, 33, 43, 0.45)"
-                        strokeWidth={0.7}
-                      />
-                      <text
-                        x={27}
-                        y={tick.y + 1.6}
-                        fontSize={5}
-                        fill="#17212b"
-                      >
-                        {tick.label}
-                      </text>
-                    </g>
-                  ))}
-                  {contourScale.hasZeroTick && contourScale.zeroOffsetPercent !== null ? (
-                    <>
-                      <line
-                        x1={2}
-                        y1={100 - contourScale.zeroOffsetPercent}
-                        x2={17}
-                        y2={100 - contourScale.zeroOffsetPercent}
-                        stroke="rgba(23, 33, 43, 0.7)"
-                        strokeDasharray="1.2 1"
-                        strokeWidth={0.5}
-                      />
-                    </>
-                  ) : null}
-                </svg>
-              </div>
-              <div className="legend-footnote">
-                {contourScale.hasZeroTick ? "Symmetric colour scale" : "Direct field scale"}
-              </div>
-            </div>
-          ) : null}
         </div>
       </section>
 

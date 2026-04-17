@@ -39,6 +39,10 @@
   background: linear-gradient(180deg, #ffffff, #f5f8fb);
 }
 
+.section-card-collapsed {
+  padding-bottom: 0.75rem;
+}
+
 .section-card-sticky {
   position: sticky;
   top: 0;
@@ -59,10 +63,72 @@
   font-size: 0.8rem;
 }
 
+.section-header-collapsible {
+  margin-bottom: 0;
+}
+
+.section-heading {
+  margin: 0;
+}
+
+.section-card:not(.section-card-collapsed) .section-header-collapsible {
+  margin-bottom: 0.7rem;
+}
+
+.section-toggle {
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 0.2rem 0.1rem;
+  min-height: 2.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.8rem;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.section-toggle-copy {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.section-toggle-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.section-toggle-subtitle {
+  color: var(--ink-muted);
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.section-toggle-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 1px solid rgba(36, 95, 156, 0.18);
+  border-radius: 999px;
+  background: rgba(237, 243, 249, 0.95);
+  color: var(--accent-2);
+  font-size: 1rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
 .section-body,
 .stack {
   display: grid;
   gap: 0.55rem;
+}
+
+.section-body[hidden] {
+  display: none;
 }
 
 .field {
@@ -145,10 +211,20 @@
   gap: 0.45rem;
 }
 
+.sub-card-emphasis {
+  border-style: solid;
+  border-color: rgba(36, 95, 156, 0.22);
+  background: linear-gradient(180deg, #f9fbfe, #edf4fb);
+}
+
 .sub-card-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.field-slider {
+  gap: 0.35rem;
 }
 
 .grid-2 {
@@ -405,10 +481,10 @@
 }
 
 .wheel-patch {
-  fill: rgba(183, 106, 15, 0.12);
-  stroke: #9c5c0d;
-  stroke-width: 0.04;
-  stroke-dasharray: 0.16 0.08;
+  fill: rgba(225, 171, 24, 0.12);
+  stroke: #0f2940;
+  stroke-width: 0.055;
+  stroke-dasharray: 0.14 0.06;
 }
 
 .viewport-axis-badge {
@@ -458,8 +534,8 @@
 }
 
 .viewport-canvas.mode-structure .wheel-patch {
-  fill: rgba(156, 92, 13, 0.16);
-  stroke-width: 0.05;
+  fill: rgba(225, 171, 24, 0.14);
+  stroke-width: 0.06;
 }
 
 .viewport-canvas.mode-mesh .slab-domain {
@@ -480,16 +556,18 @@
   opacity: 0.55;
 }
 
+.viewport-shell-footer {
+  padding: 0 0.9rem 0.9rem;
+  background: linear-gradient(180deg, #f6f8fb, #f3f7fb);
+}
+
 .viewport-overlay {
-  position: absolute;
-  left: 0.9rem;
-  bottom: 0.9rem;
-  width: min(520px, calc(100% - 7.8rem));
+  width: 100%;
   background: rgba(253, 254, 255, 0.96);
   border: 1px solid rgba(23, 58, 99, 0.18);
   border-radius: 10px;
   padding: 0.85rem 0.9rem;
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(4px);
   box-shadow: 0 12px 30px rgba(23, 33, 43, 0.12);
 }
 
@@ -550,8 +628,8 @@
   position: absolute;
   top: 0.9rem;
   right: 0.9rem;
-  width: 122px;
-  height: min(240px, calc(100% - 1.8rem));
+  width: 184px;
+  height: min(280px, calc(100% - 1.8rem));
   background: rgba(253, 254, 255, 0.96);
   border: 1px solid rgba(23, 58, 99, 0.18);
   border-radius: 10px;
@@ -567,14 +645,14 @@
 }
 
 .legend-title {
-  font-size: 0.72rem;
+  font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.12em;
   color: var(--ink-muted);
 }
 
 .legend-subtitle {
-  font-size: 0.82rem;
+  font-size: 1rem;
   color: var(--accent-2);
   font-weight: 600;
 }
@@ -607,7 +685,7 @@
 }
 
 .legend-footnote {
-  font-size: 0.7rem;
+  font-size: 0.82rem;
   line-height: 1.3;
   color: var(--ink-muted);
 }
@@ -765,7 +843,7 @@ th {
   }
 
   .viewport-overlay {
-    width: calc(100% - 1.8rem);
+    width: 100%;
   }
 
   .viewport-overlay-grid {
@@ -773,8 +851,8 @@ th {
   }
 
   .legend-panel {
-    width: 114px;
-    height: 190px;
+    width: 164px;
+    height: 220px;
   }
 }
 
@@ -807,6 +885,11 @@ th {
     forced-color-adjust: none;
   }
 
+  .viewport-shell-footer {
+    padding: 0.6rem;
+    background: none;
+  }
+
   .slab-viewport {
     position: static;
     inset: auto;
@@ -819,11 +902,6 @@ th {
   }
 
   .viewport-overlay {
-    position: static;
-    left: auto;
-    right: auto;
-    top: auto;
-    bottom: auto;
     width: 100%;
     margin: 0;
     background: #fff;
@@ -837,8 +915,8 @@ th {
     position: absolute;
     top: 0.7rem;
     right: 0.7rem;
-    width: 110px;
-    height: 150px;
+    width: 150px;
+    height: 176px;
     background: #fff;
     border-radius: 6px;
   }
