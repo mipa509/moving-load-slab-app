@@ -1,10 +1,16 @@
-import type { ContourData, RectOverlay, SlabModel } from "../app/types";
+import { recoverNodalFields } from "./post/recoverNodal";
+import type { NodalFieldValues } from "./post/recoverNodal";
+import type { ContourData, NodalContourData, RectOverlay, SlabModel } from "../app/types";
 import { fromAppModel } from "./model/fromAppModel";
 import { runFixedPositionAnalysis as runInternalFixedPositionAnalysis } from "./runFixedPositionAnalysis";
 
 type SolverPayload = {
   contours: Record<string, ContourData>;
+  nodalContours: Record<string, NodalContourData>;
   mesh: { xCoordsM: number[]; yCoordsM: number[] };
+  meshNodes: { id: number; xM: number; yM: number }[];
+  meshElements: { id: number; nodeIds: [number, number, number, number] }[];
+  nodalDisplacements: { nodeId: number; wM: number }[];
   wheelPatches: RectOverlay[];
   reactions: {
     supportId: string;
@@ -23,7 +29,32 @@ type SolverPayload = {
 };
 
 export function runFixedPositionAnalysis(model: SlabModel): SolverPayload {
-  const result = runInternalFixedPositionAnalysis(fromAppModel(model));
+  const internalModel = fromAppModel(model);
+  const result = runInternalFixedPositionAnalysis(internalModel);
+
+  // Reconstruct the full global displacement vector from per-node data
+  const nodeCount = result.mesh.nodes.length;
+  const fullDisp = new Float64Array(nodeCount * 3);
+  for (const nd of result.nodalDisplacements) {
+    fullDisp[nd.nodeId * 3] = nd.w;
+    fullDisp[nd.nodeId * 3 + 1] = nd.rx;
+    fullDisp[nd.nodeId * 3 + 2] = nd.ry;
+  }
+
+  const nodalFields = recoverNodalFields(
+    result.mesh,
+    internalModel.material,
+    internalModel.slab.thickness,
+    fullDisp,
+  );
+
+  const nodalContours: Record<string, NodalContourData> = {
+    deflection: toNodalContour("deflection", nodalFields, (n) => n.deflection * 1000, "mm"),
+    mx: toNodalContour("mx", nodalFields, (n) => n.mx, "kN*m/m"),
+    my: toNodalContour("my", nodalFields, (n) => n.my, "kN*m/m"),
+    qx: toNodalContour("qx", nodalFields, (n) => n.qx, "kN/m"),
+    qy: toNodalContour("qy", nodalFields, (n) => n.qy, "kN/m"),
+  };
 
   return {
     contours: {
@@ -33,10 +64,20 @@ export function runFixedPositionAnalysis(model: SlabModel): SolverPayload {
       qx: toContour("qx", result, (item) => item.shears.qx, "kN/m"),
       qy: toContour("qy", result, (item) => item.shears.qy, "kN/m"),
     },
+    nodalContours,
     mesh: {
       xCoordsM: result.mesh.xCoords,
       yCoordsM: result.mesh.yCoords,
     },
+    meshNodes: result.mesh.nodes.map((n) => ({ id: n.id, xM: n.x, yM: n.y })),
+    meshElements: result.mesh.elements.map((e) => ({
+      id: e.id,
+      nodeIds: e.nodeIds,
+    })),
+    nodalDisplacements: result.nodalDisplacements.map((nd) => ({
+      nodeId: nd.nodeId,
+      wM: nd.w,
+    })),
     wheelPatches: result.wheelPatches
       .filter((patch) => patch.clippedBounds)
       .map((patch) => ({
@@ -103,6 +144,27 @@ function toContour(
     points,
     min: Math.min(...points.map((point) => point.value)),
     max: Math.max(...points.map((point) => point.value)),
+    units,
+  };
+}
+
+function toNodalContour(
+  field: NodalContourData["field"],
+  nodes: NodalFieldValues[],
+  pick: (node: NodalFieldValues) => number,
+  units: string,
+): NodalContourData {
+  const points = nodes.map((node) => ({
+    nodeId: node.nodeId,
+    xM: node.x,
+    yM: node.y,
+    value: pick(node),
+  }));
+  return {
+    field,
+    points,
+    min: Math.min(...points.map((p) => p.value)),
+    max: Math.max(...points.map((p) => p.value)),
     units,
   };
 }

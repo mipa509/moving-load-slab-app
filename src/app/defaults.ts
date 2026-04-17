@@ -14,7 +14,7 @@ import type {
 } from "./types";
 
 const isPlotMode = (input: unknown): input is DisplayToggles["plotMode"] =>
-  input === "results" || input === "structure" || input === "mesh";
+  input === "results" || input === "structure" || input === "mesh" || input === "deformed";
 
 const defaultConstraintSet = (): ConstraintSet => ({
   uz: { type: "fixed" },
@@ -104,6 +104,10 @@ export const idleResults = (): AnalysisResults => ({
   status: "idle",
   source: "solver",
   contours: {},
+  nodalContours: {},
+  meshNodes: [],
+  meshElements: [],
+  nodalDisplacements: [],
   mesh: undefined,
   wheelPatches: [],
   reactions: [],

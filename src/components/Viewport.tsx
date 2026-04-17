@@ -36,6 +36,7 @@ const plotModeLabel: Record<PlotMode, string> = {
   results: "Result View",
   structure: "Structure View",
   mesh: "Mesh View",
+  deformed: "Deformed View",
 };
 
 export const Viewport = ({ model, results, selectedField }: ViewportProps) => {

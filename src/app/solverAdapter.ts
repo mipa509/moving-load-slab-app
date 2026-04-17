@@ -5,6 +5,7 @@ import type {
   ResultField,
   ReactionRow,
   SlabModel,
+  NodalContourData,
 } from "./types";
 import { summarizeReactions } from "./reactionSummary";
 import { runFixedPositionAnalysis } from "../solver";
@@ -69,6 +70,36 @@ const normalizeContours = (
   return result;
 };
 
+const normalizeNodalContours = (
+  rawContours: unknown,
+): AnalysisResults["nodalContours"] => {
+  if (!rawContours || typeof rawContours !== "object") return {};
+  const asRecord = rawContours as Record<string, unknown>;
+  const result: AnalysisResults["nodalContours"] = {};
+
+  contourFields.forEach((field) => {
+    const rawField = asRecord[field];
+    if (!rawField || typeof rawField !== "object") return;
+    const obj = rawField as Partial<NodalContourData>;
+    if (!Array.isArray(obj.points)) return;
+    const points = obj.points.map((p) => ({
+      nodeId: toNumber((p as { nodeId?: unknown }).nodeId),
+      xM: toNumber((p as { xM?: unknown }).xM),
+      yM: toNumber((p as { yM?: unknown }).yM),
+      value: toNumber((p as { value?: unknown }).value),
+    }));
+    result[field] = {
+      field,
+      points,
+      min: toNumber(obj.min, Math.min(...points.map((p) => p.value), 0)),
+      max: toNumber(obj.max, Math.max(...points.map((p) => p.value), 0)),
+      units: typeof obj.units === "string" ? obj.units : defaultUnits[field],
+    };
+  });
+
+  return result;
+};
+
 export const runFixedAnalysis = async (model: SlabModel): Promise<AnalysisResults> => {
   const start = performance.now();
 
@@ -77,6 +108,7 @@ export const runFixedAnalysis = async (model: SlabModel): Promise<AnalysisResult
     const elapsedMs = performance.now() - start;
     const payload = (raw ?? {}) as Record<string, unknown>;
     const contours = normalizeContours(payload.contours);
+    const nodalContours = normalizeNodalContours(payload.nodalContours);
     const hasContourData = contourFields.some(
       (field) => (contours[field]?.points.length ?? 0) > 0,
     );
@@ -106,6 +138,28 @@ export const runFixedAnalysis = async (model: SlabModel): Promise<AnalysisResult
       status: "success",
       source: "solver",
       contours,
+      nodalContours,
+      meshNodes: Array.isArray(payload.meshNodes)
+        ? payload.meshNodes.map((n) => ({
+            id: toNumber((n as { id?: unknown }).id),
+            xM: toNumber((n as { xM?: unknown }).xM),
+            yM: toNumber((n as { yM?: unknown }).yM),
+          }))
+        : [],
+      meshElements: Array.isArray(payload.meshElements)
+        ? payload.meshElements.map((e) => ({
+            id: toNumber((e as { id?: unknown }).id),
+            nodeIds: Array.isArray((e as { nodeIds?: unknown }).nodeIds)
+              ? ((e as { nodeIds: unknown[] }).nodeIds.map((v) => toNumber(v)) as [number, number, number, number])
+              : [0, 0, 0, 0],
+          }))
+        : [],
+      nodalDisplacements: Array.isArray(payload.nodalDisplacements)
+        ? payload.nodalDisplacements.map((nd) => ({
+            nodeId: toNumber((nd as { nodeId?: unknown }).nodeId),
+            wM: toNumber((nd as { wM?: unknown }).wM),
+          }))
+        : [],
       mesh:
         payload.mesh && typeof payload.mesh === "object"
           ? {
@@ -152,6 +206,10 @@ export const runFixedAnalysis = async (model: SlabModel): Promise<AnalysisResult
       status: "error",
       source: "solver",
       contours: {},
+      nodalContours: {},
+      meshNodes: [],
+      meshElements: [],
+      nodalDisplacements: [],
       mesh: undefined,
       wheelPatches: [],
       reactions: [],

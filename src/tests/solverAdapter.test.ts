@@ -33,6 +33,10 @@ describe("solver adapter", () => {
   it("rejects empty contour payloads instead of inventing fallback results", async () => {
     runFixedPositionAnalysisMock.mockResolvedValue({
       contours: {},
+      nodalContours: {},
+      meshNodes: [],
+      meshElements: [],
+      nodalDisplacements: [],
       mesh: {
         xCoordsM: [0, 1],
         yCoordsM: [0, 1],
@@ -83,6 +87,10 @@ describe("solver adapter", () => {
           units: "mm",
         },
       },
+      nodalContours: {},
+      meshNodes: [],
+      meshElements: [],
+      nodalDisplacements: [],
       mesh: {
         xCoordsM: [0, 1],
         yCoordsM: [0, 1],
