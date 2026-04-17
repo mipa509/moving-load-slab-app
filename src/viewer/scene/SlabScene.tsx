@@ -7,6 +7,7 @@ import {
 import type { ContourScale } from "../../app/contourScale";
 import type { AnalysisResults, ResultField, SlabModel } from "../../app/types";
 import type { ProbeHit } from "../hooks/useViewerState";
+import { ResultSurface } from "./ResultSurface";
 
 interface SlabSceneProps {
   model: SlabModel;
@@ -61,6 +62,17 @@ export const SlabScene = ({
       )}
 
       {/* Layers mounted in subsequent tasks */}
+      {(plotMode === "results" || plotMode === "deformed") &&
+        contourScale !== null &&
+        results.meshElements.length > 0 && (
+          <ResultSurface
+            results={results}
+            selectedField={selectedField}
+            contourScale={contourScale}
+            deformScale={plotMode === "deformed" ? deformScale : 0}
+            onProbeHit={onProbeHit}
+          />
+        )}
     </>
   );
 };
