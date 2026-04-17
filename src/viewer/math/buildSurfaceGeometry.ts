@@ -8,10 +8,6 @@ export interface MeshTopology {
   elements: { id: number; nodeIds: [number, number, number, number] }[];
 }
 
-/**
- * Nodes must have dense, contiguous ids starting at 0 (i.e. node.id === index in nodes array).
- * This is guaranteed by the solver's mesh builder (mesh.ts).
- */
 export interface SurfaceGeometryOptions {
   zDisplacements?: Float32Array;
   deformScale?: number;
