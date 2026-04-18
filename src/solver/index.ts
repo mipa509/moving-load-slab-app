@@ -1,4 +1,5 @@
 import { recoverNodalFields } from "./post/recoverNodal";
+import { assertFiniteNodalFieldValues } from "./analysisGuards";
 import type { NodalFieldValues } from "./model/types";
 import type { ContourData, NodalContourData, RectOverlay, SlabModel } from "../app/types";
 import { fromAppModel } from "./model/fromAppModel";
@@ -47,6 +48,7 @@ export function runFixedPositionAnalysis(model: SlabModel): SolverPayload {
     internalModel.slab.thickness,
     fullDisp,
   );
+  assertFiniteNodalFieldValues(nodalFields);
 
   const nodalContours: Record<string, NodalContourData> = {
     deflection: toNodalContour("deflection", nodalFields, (n) => n.deflection * 1000, "mm"),

@@ -1,5 +1,9 @@
 import type { PlotMode, SlabModel } from "../app/types";
 import { PLOT_MODE_OPTIONS } from "../app/plotModes";
+import {
+  DEFORM_MULTIPLIER_MAX,
+  DEFORM_MULTIPLIER_MIN,
+} from "./viewerPresentation";
 
 type BoolToggleKey = "mesh" | "supports" | "wheelPatches" | "contours";
 
@@ -14,6 +18,8 @@ interface ViewerToolbarProps {
   model: SlabModel;
   onModelChange: (model: SlabModel) => void;
   deformScale: number;
+  effectiveExaggeration: number;
+  hasVisibleDeformation: boolean;
   onDeformScaleChange: (scale: number) => void;
 }
 
@@ -21,6 +27,8 @@ export const ViewerToolbar = ({
   model,
   onModelChange,
   deformScale,
+  effectiveExaggeration,
+  hasVisibleDeformation,
   onDeformScaleChange,
 }: ViewerToolbarProps) => {
   const { plotMode } = model.display;
@@ -62,13 +70,19 @@ export const ViewerToolbar = ({
       {plotMode === "deformed" && (
         <div className="viewer-toolbar-deform">
           <label>
-            Scale ×{deformScale}
+            {hasVisibleDeformation
+              ? `Shape ${deformScale.toFixed(2)}x (effective ${formatExaggeration(
+                  effectiveExaggeration,
+                )})`
+              : "Shape unavailable (no finite deflection)"}
             <input
               type="range"
-              min={1}
-              max={200}
+              min={DEFORM_MULTIPLIER_MIN}
+              max={DEFORM_MULTIPLIER_MAX}
+              step={0.05}
               value={deformScale}
-              onChange={(e) => onDeformScaleChange(Number(e.target.value))}
+              disabled={!hasVisibleDeformation}
+              onChange={(event) => onDeformScaleChange(Number(event.target.value))}
             />
           </label>
         </div>
@@ -76,3 +90,13 @@ export const ViewerToolbar = ({
     </div>
   );
 };
+
+function formatExaggeration(value: number): string {
+  if (value >= 1000) {
+    return `${value.toFixed(0)}x`;
+  }
+  if (value >= 100) {
+    return `${value.toFixed(1)}x`;
+  }
+  return `${value.toFixed(2)}x`;
+}

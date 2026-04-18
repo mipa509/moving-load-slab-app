@@ -89,7 +89,7 @@ export interface VehicleAxleDefinition {
   spacingToNext?: number;
   offset?: number;
   wheelCount?: number;
-  wheelTrack?: number;
+  transverseSpacing?: number;
   leftLoadFraction?: number;
   rightLoadFraction?: number;
   patchLength?: number;
@@ -102,7 +102,7 @@ export interface AxleBuilderVehicleDefinition {
   reference: VehicleReferencePoint;
   referenceKind?: AxleReferenceKind;
   transverseOffset?: number;
-  defaultWheelTrack: number;
+  defaultTransverseSpacing: number;
   defaultPatchLength: number;
   defaultPatchWidth: number;
   axles: VehicleAxleDefinition[];

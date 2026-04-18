@@ -7,6 +7,7 @@ import type {
   SlabModel,
   NodalContourData,
 } from "./types";
+import { errorResults } from "./defaults";
 import { summarizeReactions } from "./reactionSummary";
 import { runFixedPositionAnalysis } from "../solver";
 
@@ -110,10 +111,10 @@ export const runFixedAnalysis = async (model: SlabModel): Promise<AnalysisResult
     const contours = normalizeContours(payload.contours);
     const nodalContours = normalizeNodalContours(payload.nodalContours);
     const hasContourData = contourFields.some(
-      (field) => (contours[field]?.points.length ?? 0) > 0,
+      (field) => (nodalContours[field]?.points.length ?? 0) > 0,
     );
     if (!hasContourData) {
-      throw new Error("Solver returned no contour field data.");
+      throw new Error("Solver returned no nodal contour field data.");
     }
 
     const reactions: ReactionRow[] = Array.isArray(payload.reactions)
@@ -204,30 +205,9 @@ export const runFixedAnalysis = async (model: SlabModel): Promise<AnalysisResult
       warning: typeof payload.warning === "string" ? payload.warning : undefined,
     };
   } catch (error) {
-    return {
-      status: "error",
-      source: "solver",
-      contours: {},
-      nodalContours: {},
-      meshNodes: [],
-      meshElements: [],
-      nodalDisplacements: [],
-      mesh: undefined,
-      wheelPatches: [],
-      reactions: [],
-      reactionSummaryBySupport: [],
-      reactionTotals: {
-        uz: 0,
-        rx: 0,
-        ry: 0,
-      },
-      summary: {
-        maxDeflectionMm: 0,
-        maxAbsMomentKnmPerM: 0,
-        maxAbsShearKnPerM: 0,
-      },
-      elapsedMs: performance.now() - start,
-      error: error instanceof Error ? error.message : "Unknown solver error",
-    };
+    return errorResults(
+      error instanceof Error ? error.message : "Unknown solver error",
+      { elapsedMs: performance.now() - start },
+    );
   }
 };

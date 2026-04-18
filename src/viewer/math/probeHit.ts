@@ -17,8 +17,10 @@ export interface NodalValuePoint {
 export interface ProbeGrid {
   nodes: MeshNode2D[];
   valueByNode: Map<number, number>;
-  grid: Map<string, number>;
+  grid: Map<string, number[]>;
   cellSize: number;
+  xMin: number;
+  yMin: number;
 }
 
 /**
@@ -41,17 +43,20 @@ export function buildProbeGrid(
   const Ly = yMax - yMin;
   const cellSize = Math.max(Lx, Ly) / Math.max(Math.sqrt(nodes.length), 2);
 
-  const grid = new Map<string, number>();
+  const grid = new Map<string, number[]>();
   for (const node of nodes) {
     const gx = Math.floor((node.xM - xMin) / cellSize);
     const gy = Math.floor((node.yM - yMin) / cellSize);
     const key = `${gx},${gy}`;
-    if (!grid.has(key)) {
-      grid.set(key, node.id);
+    const bucket = grid.get(key);
+    if (bucket) {
+      bucket.push(node.id);
+      continue;
     }
+    grid.set(key, [node.id]);
   }
 
-  return { nodes, valueByNode, grid, cellSize };
+  return { nodes, valueByNode, grid, cellSize, xMin, yMin };
 }
 
 /**
@@ -66,18 +71,16 @@ export function probeNearestValue(
   const { nodes, valueByNode, cellSize } = grid;
 
   // Determine grid cell
-  const xMin = Math.min(...nodes.map((n) => n.xM));
-  const yMin = Math.min(...nodes.map((n) => n.yM));
-  const gx = Math.floor((x - xMin) / cellSize);
-  const gy = Math.floor((y - yMin) / cellSize);
+  const gx = Math.floor((x - grid.xMin) / cellSize);
+  const gy = Math.floor((y - grid.yMin) / cellSize);
 
   // Collect candidate node IDs from target cell + 8 neighbours
   const candidates = new Set<number>();
   for (let dx = -1; dx <= 1; dx++) {
     for (let dy = -1; dy <= 1; dy++) {
       const key = `${gx + dx},${gy + dy}`;
-      const nodeId = grid.grid.get(key);
-      if (nodeId !== undefined) candidates.add(nodeId);
+      const nodeIds = grid.grid.get(key);
+      nodeIds?.forEach((nodeId) => candidates.add(nodeId));
     }
   }
 

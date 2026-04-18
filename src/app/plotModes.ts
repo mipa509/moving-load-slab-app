@@ -6,7 +6,6 @@ export const PLOT_MODE_OPTIONS: {
   toolbarLabel: string;
 }[] = [
   { value: "structure", controlLabel: "STRUCTURE", toolbarLabel: "Structure" },
-  { value: "mesh", controlLabel: "MESH", toolbarLabel: "Mesh" },
   { value: "results", controlLabel: "RESULTS", toolbarLabel: "Results 2D" },
   { value: "deformed", controlLabel: "DEFORMED", toolbarLabel: "Deformed 3D" },
 ];

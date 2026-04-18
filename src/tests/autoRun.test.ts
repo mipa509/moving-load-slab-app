@@ -10,7 +10,7 @@ describe("auto-run signature", () => {
       projectName: "Viewport review only",
       display: {
         ...base.display,
-        plotMode: "mesh" as const,
+        plotMode: "structure" as const,
         mesh: false,
         supports: false,
         wheelPatches: false,

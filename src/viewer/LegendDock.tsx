@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { buildLegendTicks } from "../components/viewportHelpers";
+import { buildLegendTicks, formatViewportValue } from "../components/viewportHelpers";
 import type { ContourScale } from "../app/contourScale";
 
 interface LegendDockProps {
@@ -12,6 +12,14 @@ export const LegendDock = ({ contourScale, units }: LegendDockProps) => {
     () => buildLegendTicks(contourScale.domainMin, contourScale.domainMax),
     [contourScale.domainMin, contourScale.domainMax],
   );
+  const zeroLabel = useMemo(
+    () =>
+      formatViewportValue(
+        0,
+        Math.abs(contourScale.domainMax - contourScale.domainMin),
+      ),
+    [contourScale.domainMax, contourScale.domainMin],
+  );
 
   return (
     <div className="viewer-legend-dock" aria-label="Colour scale legend">
@@ -20,8 +28,23 @@ export const LegendDock = ({ contourScale, units }: LegendDockProps) => {
         <div
           className="viewer-legend-bar"
           style={{ background: contourScale.gradientCss }}
-        />
+        >
+          {contourScale.hasZeroTick && contourScale.zeroOffsetPercent !== null && (
+            <div
+              className="viewer-legend-zero-line"
+              style={{ bottom: `${contourScale.zeroOffsetPercent}%` }}
+            />
+          )}
+        </div>
         <div className="viewer-legend-ticks">
+          {contourScale.hasZeroTick && contourScale.zeroOffsetPercent !== null && (
+            <div
+              className="viewer-legend-tick viewer-legend-tick-zero"
+              style={{ top: `${100 - contourScale.zeroOffsetPercent}%` }}
+            >
+              {zeroLabel}
+            </div>
+          )}
           {ticks.map((tick) => (
             <div
               key={tick.key}

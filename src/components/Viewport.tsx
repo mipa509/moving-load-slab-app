@@ -26,7 +26,6 @@ const resultLabel: Record<ResultField, string> = {
 const plotModeLabel: Record<PlotMode, string> = {
   results: "Result View",
   structure: "Structure View",
-  mesh: "Mesh View",
   deformed: "Deformed View",
 };
 

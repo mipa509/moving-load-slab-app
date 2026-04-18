@@ -829,16 +829,19 @@ export const ControlPanel = ({
         </label>
 
         <label className="field">
-          <span>Wheel Track (m)</span>
+          <span>Transverse wheel spacing (m)</span>
           <input
             type="number"
-            value={model.vehicle.trackM}
+            value={model.vehicle.transverseSpacingM}
             onChange={(e) =>
               setModel((curr) => ({
                 ...curr,
                 vehicle: {
                   ...curr.vehicle,
-                  trackM: parseNumericInput(e.target.value, curr.vehicle.trackM),
+                  transverseSpacingM: parseNumericInput(
+                    e.target.value,
+                    curr.vehicle.transverseSpacingM,
+                  ),
                 },
               }))
             }
@@ -915,7 +918,7 @@ export const ControlPanel = ({
           {model.vehicle.mode === "axle" ? (
             <>
               <p className="field-note">
-                Keep this beside the vehicle builder when you are checking different axle positions.
+                This range follows the full vehicle envelope, so the whole vehicle can move fully on and off the slab.
               </p>
               <label className="field">
                 <span>Travel direction</span>
@@ -960,7 +963,7 @@ export const ControlPanel = ({
                     }
                   />
                   <small className="field-note">
-                    Travel-axis live control: {sliderConfig.value.toFixed(2)} m
+                    Vehicle reference centre on travel axis: {sliderConfig.value.toFixed(2)} m
                   </small>
                 </label>
               ) : null}
@@ -1365,7 +1368,7 @@ export const ControlPanel = ({
           </select>
         </label>
         <p className="field-note">
-          Structure and mesh views suppress contour filling so layer review stays readable.
+          Structure view suppresses contour filling; mesh now acts as an overlay toggle in every view.
         </p>
         <label className="field">
           <span>Primary Result</span>

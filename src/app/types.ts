@@ -5,7 +5,7 @@ export type Dof = "uz" | "rx" | "ry";
 export type ConstraintType = "free" | "fixed" | "pinned" | "spring";
 export type VehicleInputMode = "axle" | "direct";
 export type TravelDirection = "x+" | "x-" | "y+" | "y-";
-export type PlotMode = "results" | "structure" | "mesh" | "deformed";
+export type PlotMode = "results" | "structure" | "deformed";
 
 export interface SlabGeometry {
   lengthM: number;
@@ -72,7 +72,7 @@ export interface DirectWheelInput {
 export interface VehicleDefinition {
   name: string;
   mode: VehicleInputMode;
-  trackM: number;
+  transverseSpacingM: number;
   wheelsPerAxle: number;
   wheelPatchLongM: number;
   wheelPatchTransM: number;

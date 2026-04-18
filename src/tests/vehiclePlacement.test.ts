@@ -25,7 +25,7 @@ function buildBaseAppModel(): SlabModel {
     vehicle: {
       name: "test vehicle",
       mode: "axle",
-      trackM: 2,
+      transverseSpacingM: 2,
       wheelsPerAxle: 2,
       wheelPatchLongM: 0.4,
       wheelPatchTransM: 0.25,
@@ -107,19 +107,34 @@ describe("vehicle placement semantics", () => {
     expect(patches[0].center.y).toBeCloseTo(0.8, 8);
   });
 
+  it("uses adjacent transverse spacing for multi-wheel axles", () => {
+    const appModel = buildBaseAppModel();
+    appModel.vehicle.wheelsPerAxle = 4;
+    appModel.vehicle.transverseSpacingM = 1;
+    appModel.vehicle.axleInputs = [{ id: "A1", spacingFromPreviousM: 0, axleLoadKn: 120 }];
+
+    const analysisModel = fromAppModel(appModel);
+    if (analysisModel.vehicle.kind !== "axle-builder") {
+      throw new Error("Expected axle-builder vehicle");
+    }
+
+    const patches = generateWheelPatches(analysisModel.vehicle, analysisModel.slab);
+    const centersY = patches.map((patch) => patch.center.y).sort((a, b) => a - b);
+
+    expect(centersY).toEqual([1, 2, 3, 4]);
+  });
+
   it("maps the live slider to X when travel runs along the x axis", () => {
     const appModel = buildBaseAppModel();
     appModel.placement.travelDirection = "x-";
 
     const slider = getTravelAxisSliderConfig(appModel);
 
-    expect(slider).toMatchObject({
-      axis: "x",
-      field: "centerXM",
-      min: 0,
-      max: appModel.geometry.lengthM,
-      value: appModel.placement.centerXM,
-    });
+    expect(slider?.axis).toBe("x");
+    expect(slider?.field).toBe("centerXM");
+    expect(slider?.min).toBeCloseTo(-2.2, 8);
+    expect(slider?.max).toBeCloseTo(12.2, 8);
+    expect(slider?.value).toBe(appModel.placement.centerXM);
   });
 
   it("maps the live slider to Y when travel runs along the y axis", () => {
@@ -128,13 +143,11 @@ describe("vehicle placement semantics", () => {
 
     const slider = getTravelAxisSliderConfig(appModel);
 
-    expect(slider).toMatchObject({
-      axis: "y",
-      field: "centerYM",
-      min: 0,
-      max: appModel.geometry.widthM,
-      value: appModel.placement.centerYM,
-    });
+    expect(slider?.axis).toBe("y");
+    expect(slider?.field).toBe("centerYM");
+    expect(slider?.min).toBeCloseTo(-2.2, 8);
+    expect(slider?.max).toBeCloseTo(7.2, 8);
+    expect(slider?.value).toBe(appModel.placement.centerYM);
   });
 
   it("does not expose the travel-axis slider in direct-wheel mode", () => {

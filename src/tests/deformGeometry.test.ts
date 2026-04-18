@@ -37,6 +37,12 @@ describe("buildZDisplacements", () => {
     expect(result![3]).toBeCloseTo(0.004);
   });
 
+  it("can invert displacement sign for viewer-space deformation", () => {
+    const result = buildZDisplacements(2, 1, [{ nodeId: 0, wM: 0.002 }], -1);
+    expect(result![0]).toBeCloseTo(-0.002);
+    expect(result![1]).toBe(0);
+  });
+
   it("unmapped nodes remain zero", () => {
     const displacements = [{ nodeId: 0, wM: 0.005 }];
     const result = buildZDisplacements(4, 1, displacements);

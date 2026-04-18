@@ -1,24 +1,43 @@
 import { useMemo } from "react";
 import { BufferAttribute, BufferGeometry } from "three";
-import type { MeshElementOverlay, MeshNodeOverlay } from "../../app/types";
+import type {
+  MeshElementOverlay,
+  MeshNodeOverlay,
+  NodalDisplacementOverlay,
+} from "../../app/types";
 
 interface MeshOverlayProps {
   meshNodes: MeshNodeOverlay[];
   meshElements: MeshElementOverlay[];
+  nodalDisplacements?: NodalDisplacementOverlay[];
+  deformScale?: number;
+  color?: string;
+  opacity?: number;
 }
 
-export const MeshOverlay = ({ meshNodes, meshElements }: MeshOverlayProps) => {
+export const MeshOverlay = ({
+  meshNodes,
+  meshElements,
+  nodalDisplacements = [],
+  deformScale = 0,
+  color = "#4f6480",
+  opacity = 0.45,
+}: MeshOverlayProps) => {
   const geometry = useMemo(() => {
-    if (meshNodes.length === 0) return new BufferGeometry();
+    if (meshNodes.length === 0) {
+      return new BufferGeometry();
+    }
 
-    // Build a unique set of edges from the quad elements
     const edgeSet = new Set<number>();
     const edgePairs: [number, number][] = [];
 
-    for (const el of meshElements) {
-      const [n0, n1, n2, n3] = el.nodeIds;
+    for (const element of meshElements) {
+      const [n0, n1, n2, n3] = element.nodeIds;
       const quads: [number, number][] = [
-        [n0, n1], [n1, n2], [n2, n3], [n3, n0],
+        [n0, n1],
+        [n1, n2],
+        [n2, n3],
+        [n3, n0],
       ];
       for (const [a, b] of quads) {
         const key = a < b ? a * 100000 + b : b * 100000 + a;
@@ -29,28 +48,37 @@ export const MeshOverlay = ({ meshNodes, meshElements }: MeshOverlayProps) => {
       }
     }
 
-    const nodeById = new Map(meshNodes.map((n) => [n.id, n]));
+    const nodeById = new Map(meshNodes.map((node) => [node.id, node]));
+    const zById = new Map(
+      nodalDisplacements
+        .filter((item) => Number.isFinite(item.wM))
+        .map((item) => [item.nodeId, -item.wM * deformScale]),
+    );
+
     const verts = new Float32Array(edgePairs.length * 6);
-    for (let i = 0; i < edgePairs.length; i++) {
-      const [a, b] = edgePairs[i];
-      const na = nodeById.get(a)!;
-      const nb = nodeById.get(b)!;
-      verts[i * 6] = na.xM;
-      verts[i * 6 + 1] = na.yM;
-      verts[i * 6 + 2] = 0.015;
-      verts[i * 6 + 3] = nb.xM;
-      verts[i * 6 + 4] = nb.yM;
-      verts[i * 6 + 5] = 0.015;
+    for (let index = 0; index < edgePairs.length; index += 1) {
+      const [a, b] = edgePairs[index];
+      const nodeA = nodeById.get(a);
+      const nodeB = nodeById.get(b);
+      if (!nodeA || !nodeB) {
+        continue;
+      }
+      verts[index * 6] = nodeA.xM;
+      verts[index * 6 + 1] = nodeA.yM;
+      verts[index * 6 + 2] = (zById.get(a) ?? 0) + 0.012;
+      verts[index * 6 + 3] = nodeB.xM;
+      verts[index * 6 + 4] = nodeB.yM;
+      verts[index * 6 + 5] = (zById.get(b) ?? 0) + 0.012;
     }
 
-    const geo = new BufferGeometry();
-    geo.setAttribute("position", new BufferAttribute(verts, 3));
-    return geo;
-  }, [meshNodes, meshElements]);
+    const nextGeometry = new BufferGeometry();
+    nextGeometry.setAttribute("position", new BufferAttribute(verts, 3));
+    return nextGeometry;
+  }, [deformScale, meshElements, meshNodes, nodalDisplacements]);
 
   return (
     <lineSegments geometry={geometry}>
-      <lineBasicMaterial color="#4a5568" transparent opacity={0.6} />
+      <lineBasicMaterial color={color} transparent opacity={opacity} />
     </lineSegments>
   );
 };

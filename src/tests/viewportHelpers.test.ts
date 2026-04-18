@@ -17,7 +17,7 @@ const baseDisplay: DisplayToggles = {
 };
 
 describe("viewport helpers", () => {
-  it("derives layer visibility for structure and mesh modes", () => {
+  it("derives layer visibility directly from the shared display toggles", () => {
     expect(
       deriveViewportLayerVisibility(
         "structure",
@@ -27,19 +27,19 @@ describe("viewport helpers", () => {
     ).toEqual({
       showContours: false,
       showMesh: false,
-      showSupports: true,
-      showWheelPatches: true,
+      showSupports: false,
+      showWheelPatches: false,
     });
 
     expect(
       deriveViewportLayerVisibility(
-        "mesh",
-        { ...baseDisplay, mesh: false, supports: false, wheelPatches: false },
+        "deformed",
+        { ...baseDisplay, mesh: false, supports: true, wheelPatches: false },
         true,
       ),
     ).toEqual({
-      showContours: false,
-      showMesh: true,
+      showContours: true,
+      showMesh: false,
       showSupports: true,
       showWheelPatches: false,
     });
@@ -74,21 +74,5 @@ describe("viewport helpers", () => {
     expect(extrema?.min.value).toBe(-1.2);
     expect(extrema?.max.value).toBe(4.1);
     expect(extrema?.samePoint).toBe(false);
-  });
-
-  it("deformed mode shows contours, mesh, supports, and wheels", () => {
-    const display: DisplayToggles = {
-      plotMode: "deformed",
-      mesh: false,
-      supports: false,
-      wheelPatches: false,
-      contours: true,
-      tables: false,
-    };
-    const v = deriveViewportLayerVisibility("deformed", display, true);
-    expect(v.showContours).toBe(true);
-    expect(v.showMesh).toBe(true);
-    expect(v.showSupports).toBe(true);
-    expect(v.showWheelPatches).toBe(true);
   });
 });

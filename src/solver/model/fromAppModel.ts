@@ -39,7 +39,7 @@ export function fromAppModel(model: SlabModel): FixedPositionAnalysisModel {
             },
             referenceKind: "vehicle-center",
             transverseOffset: model.placement.transverseOffsetM,
-            defaultWheelTrack: model.vehicle.trackM,
+            defaultTransverseSpacing: model.vehicle.transverseSpacingM,
             defaultPatchLength: model.vehicle.wheelPatchLongM,
             defaultPatchWidth: model.vehicle.wheelPatchTransM,
             axles: model.vehicle.axleInputs.map((axle, index, all) => ({

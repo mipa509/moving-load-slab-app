@@ -1,6 +1,7 @@
 import { startTransition, useEffect, useRef, useState, type ChangeEvent } from "react";
 import {
   createDefaultModel,
+  errorResults,
   idleResults,
   sanitizeLoadedModel,
   validateModelForRun,
@@ -60,12 +61,7 @@ export const App = () => {
 
     if (issues.length > 0) {
       setRunning(false);
-      setResults((prev) => ({
-        ...prev,
-        status: "error",
-        error: issues.join(" "),
-        warning: undefined,
-      }));
+      setResults(errorResults(issues.join(" ")));
       return;
     }
 
@@ -83,17 +79,7 @@ export const App = () => {
     }
 
     startTransition(() => {
-      setResults((prev) =>
-        nextResults.status === "success"
-          ? nextResults
-          : {
-              ...prev,
-              status: "error",
-              elapsedMs: nextResults.elapsedMs,
-              error: nextResults.error,
-              warning: nextResults.warning,
-            },
-      );
+      setResults(nextResults);
       setRunning(false);
     });
   };
@@ -147,11 +133,7 @@ export const App = () => {
       const parsed = JSON.parse(text) as unknown;
       setModel(sanitizeLoadedModel(parsed));
     } catch {
-      setResults((prev) => ({
-        ...prev,
-        status: "error",
-        error: "Failed to load JSON model file.",
-      }));
+      setResults(errorResults("Failed to load JSON model file."));
     } finally {
       event.target.value = "";
     }

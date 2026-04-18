@@ -14,7 +14,9 @@ import type {
 } from "./types";
 
 const isPlotMode = (input: unknown): input is DisplayToggles["plotMode"] =>
-  input === "results" || input === "structure" || input === "mesh" || input === "deformed";
+  input === "results" || input === "structure" || input === "deformed";
+
+const isLegacyMeshPlotMode = (input: unknown): input is "mesh" => input === "mesh";
 
 const defaultConstraintSet = (): ConstraintSet => ({
   uz: { type: "fixed" },
@@ -67,7 +69,7 @@ export const createDefaultModel = (): SlabModel => ({
   vehicle: {
     name: "Default 2-Axle Vehicle",
     mode: "axle",
-    trackM: 2.0,
+    transverseSpacingM: 2.0,
     wheelsPerAxle: 2,
     wheelPatchLongM: 0.4,
     wheelPatchTransM: 0.25,
@@ -123,6 +125,17 @@ export const idleResults = (): AnalysisResults => ({
     maxAbsShearKnPerM: 0,
   },
   elapsedMs: 0,
+});
+
+export const errorResults = (
+  error: string,
+  options: { elapsedMs?: number; warning?: string } = {},
+): AnalysisResults => ({
+  ...idleResults(),
+  status: "error",
+  elapsedMs: options.elapsedMs ?? 0,
+  error,
+  warning: options.warning,
 });
 
 export const sanitizeLoadedModel = (input: unknown): SlabModel => {
@@ -214,6 +227,13 @@ function sanitizeVehicle(input: unknown, fallback: VehicleDefinition): VehicleDe
     return fallback;
   }
 
+  const wheelsPerAxle = Math.max(
+    1,
+    Math.round(positiveNumber(input.wheelsPerAxle, fallback.wheelsPerAxle)),
+  );
+  const legacyTrackFactor = Math.max(wheelsPerAxle - 1, 1);
+  const legacyTransverseSpacingM =
+    positiveNumber(input.trackM, fallback.transverseSpacingM * legacyTrackFactor) / legacyTrackFactor;
   const axleInputs = Array.isArray(input.axleInputs)
     ? input.axleInputs
         .map((item, index) => sanitizeAxleInput(item, fallback.axleInputs[index] ?? fallback.axleInputs[0], index))
@@ -233,8 +253,8 @@ function sanitizeVehicle(input: unknown, fallback: VehicleDefinition): VehicleDe
         ? input.name
         : fallback.name,
     mode: input.mode === "direct" ? "direct" : "axle",
-    trackM: positiveNumber(input.trackM, fallback.trackM),
-    wheelsPerAxle: Math.max(1, Math.round(positiveNumber(input.wheelsPerAxle, fallback.wheelsPerAxle))),
+    transverseSpacingM: positiveNumber(input.transverseSpacingM, legacyTransverseSpacingM),
+    wheelsPerAxle,
     wheelPatchLongM: positiveNumber(input.wheelPatchLongM, fallback.wheelPatchLongM),
     wheelPatchTransM: positiveNumber(input.wheelPatchTransM, fallback.wheelPatchTransM),
     axleInputs: axleInputs.length > 0 ? axleInputs : fallback.axleInputs,
@@ -262,9 +282,15 @@ function sanitizeDisplay(input: unknown, fallback: DisplayToggles): DisplayToggl
   if (!isRecord(input)) {
     return fallback;
   }
+  const legacyMeshMode = isLegacyMeshPlotMode(input.plotMode);
   return {
-    plotMode: isPlotMode(input.plotMode) ? input.plotMode : fallback.plotMode,
-    mesh: booleanValue(input.mesh, fallback.mesh),
+    plotMode:
+      legacyMeshMode
+        ? "structure"
+        : isPlotMode(input.plotMode)
+          ? input.plotMode
+          : fallback.plotMode,
+    mesh: legacyMeshMode ? true : booleanValue(input.mesh, fallback.mesh),
     supports: booleanValue(input.supports, fallback.supports),
     wheelPatches: booleanValue(input.wheelPatches, fallback.wheelPatches),
     contours: booleanValue(input.contours, fallback.contours),

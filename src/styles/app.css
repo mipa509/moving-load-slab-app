@@ -991,6 +991,16 @@ th {
   color: #7a90a8;
 }
 
+.viewer-toolbar-deform label {
+  display: grid;
+  gap: 3px;
+}
+
+.viewer-toolbar-deform input:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .viewer-canvas-wrap {
   position: relative;
   flex: 1;
@@ -1037,6 +1047,8 @@ th {
   height: 140px;
   border-radius: 2px;
   flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
 }
 
 .viewer-legend-ticks {
@@ -1055,11 +1067,23 @@ th {
   white-space: nowrap;
 }
 
+.viewer-legend-zero-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(17, 24, 39, 0.75);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
+.viewer-legend-tick-zero {
+  color: #d6e3f0;
+}
+
 /* ── Probe overlay ────────────────────────────────── */
 .viewer-probe-overlay {
   position: absolute;
-  left: 10px;
-  bottom: 10px;
+  z-index: 4;
   background: rgba(19, 23, 28, 0.82);
   color: #c8d8ea;
   font-size: 11px;
@@ -1068,4 +1092,86 @@ th {
   border-radius: 3px;
   border: 1px solid #2c3542;
   pointer-events: none;
+  white-space: nowrap;
+}
+
+.viewer-error-overlay {
+  position: absolute;
+  inset: auto 18px 18px 18px;
+  z-index: 5;
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: rgba(80, 18, 18, 0.92);
+  border: 1px solid rgba(246, 147, 147, 0.4);
+  box-shadow: 0 14px 30px rgba(7, 10, 15, 0.28);
+  color: #f7d6d3;
+}
+
+.viewer-error-overlay strong {
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.viewer-error-overlay span {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.viewer-support-card {
+  display: grid;
+  gap: 6px;
+  min-width: 118px;
+  padding: 7px 8px;
+  border-radius: 8px;
+  background: rgba(15, 21, 28, 0.88);
+  border: 1px solid rgba(100, 122, 146, 0.42);
+  box-shadow: 0 10px 28px rgba(7, 10, 15, 0.22);
+  backdrop-filter: blur(4px);
+}
+
+.viewer-support-card-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #dce9f5;
+  text-transform: uppercase;
+}
+
+.viewer-support-chip-row {
+  display: flex;
+  gap: 4px;
+}
+
+.viewer-support-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  padding: 2px 5px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  border: 1px solid transparent;
+}
+
+.viewer-support-chip-fixed {
+  background: #39b7de;
+  border-color: rgba(182, 242, 255, 0.7);
+  color: #07202a;
+}
+
+.viewer-support-chip-spring {
+  background: rgba(31, 38, 47, 0.75);
+  border-color: #f0b75b;
+  color: #f7d18d;
+}
+
+.viewer-support-chip-free {
+  background: rgba(86, 99, 114, 0.5);
+  border-color: rgba(134, 148, 165, 0.42);
+  color: #c9d3df;
 }

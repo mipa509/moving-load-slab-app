@@ -7,10 +7,12 @@ import {
 import type { ContourScale } from "../../app/contourScale";
 import type { AnalysisResults, NodalContourData, ResultField, SlabModel } from "../../app/types";
 import type { ProbeHit } from "../hooks/useViewerState";
+import type { ViewerDeformationState } from "../viewerPresentation";
+import { ExtremaMarkers } from "./ExtremaMarkers";
+import { MeshOverlay } from "./MeshOverlay";
+import { ProbeSurface } from "./ProbeSurface";
 import { ResultSurface } from "./ResultSurface";
 import { StructureOverlay } from "./StructureOverlay";
-import { MeshOverlay } from "./MeshOverlay";
-import { ExtremaMarkers } from "./ExtremaMarkers";
 
 interface SlabSceneProps {
   model: SlabModel;
@@ -18,11 +20,12 @@ interface SlabSceneProps {
   selectedField: ResultField;
   contour: NodalContourData | undefined;
   contourScale: ContourScale | null;
-  deformScale: number;
+  deformation: ViewerDeformationState;
   showContours: boolean;
   showMesh: boolean;
   showSupports: boolean;
   showWheelPatches: boolean;
+  showProbe: boolean;
   onProbeHit: (hit: ProbeHit | null) => void;
 }
 
@@ -32,22 +35,29 @@ export const SlabScene = ({
   selectedField,
   contour,
   contourScale,
-  deformScale,
+  deformation,
   showContours,
   showMesh,
   showSupports,
   showWheelPatches,
+  showProbe,
   onProbeHit,
 }: SlabSceneProps) => {
   const { plotMode } = model.display;
   const Lx = model.geometry.lengthM;
   const Ly = model.geometry.widthM;
-  const cx = Lx / 2;
-  const cy = Ly / 2;
+  const cx = Lx * 0.5;
+  const cy = Ly * 0.5;
   const maxDim = Math.max(Lx, Ly);
   const is3D = plotMode === "deformed";
 
-  const cameraZ = Math.max(model.geometry.thicknessM * deformScale * 3, maxDim * 0.4);
+  const cameraDistance = Math.max(maxDim * 1.15, deformation.zSpan * 3.4, maxDim * 0.55);
+  const cameraTarget: [number, number, number] = [cx, cy, deformation.centerZ];
+  const perspectivePosition: [number, number, number] = [
+    cx + maxDim * 0.48,
+    cy - maxDim * 0.92,
+    deformation.centerZ + cameraDistance,
+  ];
 
   return (
     <>
@@ -56,12 +66,8 @@ export const SlabScene = ({
 
       {is3D ? (
         <>
-          <PerspectiveCamera
-            makeDefault
-            position={[cx, cy - maxDim * 0.7, cameraZ + maxDim * 0.5]}
-            fov={50}
-          />
-          <OrbitControls target={[cx, cy, cameraZ / 4]} />
+          <PerspectiveCamera makeDefault position={perspectivePosition} fov={48} />
+          <OrbitControls target={cameraTarget} />
         </>
       ) : (
         <>
@@ -69,8 +75,8 @@ export const SlabScene = ({
             makeDefault
             position={[cx, cy, 100]}
             zoom={Math.min(580 / Lx, 380 / Ly)}
-            near={-200}
-            far={200}
+            near={-400}
+            far={400}
           />
           <MapControls screenSpacePanning />
         </>
@@ -81,7 +87,16 @@ export const SlabScene = ({
           results={results}
           selectedField={selectedField}
           contourScale={contourScale}
-          deformScale={plotMode === "deformed" ? deformScale : 0}
+          deformScale={is3D ? deformation.effectiveExaggeration : 0}
+        />
+      )}
+
+      {showProbe && contour && results.meshNodes.length > 0 && (
+        <ProbeSurface
+          slabLengthM={Lx}
+          slabWidthM={Ly}
+          meshNodes={results.meshNodes}
+          contour={contour}
           onProbeHit={onProbeHit}
         />
       )}
@@ -91,17 +106,22 @@ export const SlabScene = ({
         results={results}
         showSupports={showSupports}
         showWheelPatches={showWheelPatches}
+        showRestraintChips={plotMode === "structure" && showSupports}
       />
 
       {showMesh && results.meshNodes.length > 0 && (
         <MeshOverlay
           meshNodes={results.meshNodes}
           meshElements={results.meshElements}
+          nodalDisplacements={is3D ? results.nodalDisplacements : undefined}
+          deformScale={is3D ? deformation.effectiveExaggeration : 0}
+          color={plotMode === "results" ? "#51657d" : "#6280a3"}
+          opacity={plotMode === "results" ? 0.32 : plotMode === "deformed" ? 0.42 : 0.54}
         />
       )}
 
-      {showContours && (
-        <ExtremaMarkers contour={contour} radius={maxDim * 0.013} />
+      {plotMode === "results" && showContours && (
+        <ExtremaMarkers contour={contour} size={maxDim * 0.008} />
       )}
     </>
   );

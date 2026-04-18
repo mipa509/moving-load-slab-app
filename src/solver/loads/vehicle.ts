@@ -48,20 +48,22 @@ function buildAxleWheelPatches(
   vehicle.axles.forEach((axle, axleIndex) => {
     validateAxle(axle, axleIndex);
     const axleOffset = axleOffsets[axleIndex];
-    const track = axle.wheelTrack ?? vehicle.defaultWheelTrack;
+    const transverseSpacing = axle.transverseSpacing ?? vehicle.defaultTransverseSpacing;
     const patchLength = axle.patchLength ?? vehicle.defaultPatchLength;
     const patchWidth = axle.patchWidth ?? vehicle.defaultPatchWidth;
     const wheelCount = Math.max(1, Math.round(axle.wheelCount ?? 2));
 
-    if (track <= 0 || patchLength <= 0 || patchWidth <= 0) {
-      throw new Error(`Axle ${axleIndex + 1} has non-positive wheel track or patch dimensions.`);
+    if (transverseSpacing <= 0 || patchLength <= 0 || patchWidth <= 0) {
+      throw new Error(
+        `Axle ${axleIndex + 1} has non-positive transverse wheel spacing or patch dimensions.`,
+      );
     }
 
     const axleCenterX = baseCenterX + vectors.along.x * axleOffset;
     const axleCenterY = baseCenterY + vectors.along.y * axleOffset;
     const axleLabel = axle.id ?? `axle-${axleIndex + 1}`;
     const loadPerWheel = axle.axleLoad / wheelCount;
-    const offsets = buildTransverseOffsets(track, wheelCount);
+    const offsets = buildTransverseOffsets(transverseSpacing, wheelCount);
 
     offsets.forEach((offset, wheelIndex) => {
       const centerX = axleCenterX + vectors.transverse.x * offset;
@@ -153,14 +155,13 @@ function getDirectionVectors(direction: AxisDirection): {
   };
 }
 
-function buildTransverseOffsets(track: number, wheelCount: number): number[] {
+function buildTransverseOffsets(transverseSpacing: number, wheelCount: number): number[] {
   if (wheelCount <= 1) {
     return [0];
   }
-  const spacing = track / Math.max(wheelCount - 1, 1);
   return Array.from(
     { length: wheelCount },
-    (_, index) => -0.5 * track + index * spacing,
+    (_, index) => (index - 0.5 * (wheelCount - 1)) * transverseSpacing,
   );
 }
 

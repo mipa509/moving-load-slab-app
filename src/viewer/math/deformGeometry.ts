@@ -17,6 +17,7 @@ export function buildZDisplacements(
   nodeCount: number,
   deformScale: number,
   nodalDisplacements: NodalDisplacement[],
+  zSign: number = 1,
 ): Float32Array | undefined {
   if (deformScale <= 0 || nodalDisplacements.length === 0) {
     return undefined;
@@ -29,7 +30,7 @@ export function buildZDisplacements(
       );
       continue;
     }
-    zd[nd.nodeId] = nd.wM;
+    zd[nd.nodeId] = nd.wM * zSign;
   }
   return zd;
 }
