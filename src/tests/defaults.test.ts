@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { createDefaultModel, sanitizeLoadedModel, validateModelForRun } from "../app/defaults";
+import {
+  createDefaultModel,
+  errorResults,
+  sanitizeLoadedModel,
+  validateModelForRun,
+} from "../app/defaults";
 
 describe("app model sanitization", () => {
   it("normalizes legacy pinned constraints and parses numeric strings", () => {
@@ -35,6 +40,9 @@ describe("app model sanitization", () => {
         axleInputs: [{ id: "A1", spacingFromPreviousM: "0", axleLoadKn: "120" }],
         directWheels: [],
       },
+      display: {
+        plotMode: "mesh",
+      },
     });
 
     expect(model.geometry.lengthM).toBe(12);
@@ -43,9 +51,25 @@ describe("app model sanitization", () => {
     expect(model.supports[0].constraints.uz.type).toBe("fixed");
     expect(model.supports[0].constraints.rx.type).toBe("free");
     expect(model.supports[0].constraints.ry.type).toBe("free");
-    expect(model.vehicle.trackM).toBe(2.5);
+    expect(model.vehicle.transverseSpacingM).toBeCloseTo(2.5 / 3, 8);
     expect(model.vehicle.wheelsPerAxle).toBe(4);
     expect(model.vehicle.axleInputs[0].axleLoadKn).toBe(120);
+    expect(model.display.plotMode).toBe("structure");
+    expect(model.display.mesh).toBe(true);
+  });
+
+  it("prefers explicit transverse spacing when loading current models", () => {
+    const model = sanitizeLoadedModel({
+      vehicle: {
+        mode: "axle",
+        transverseSpacingM: "1.2",
+        trackM: "9.9",
+        wheelsPerAxle: "4",
+      },
+    });
+
+    expect(model.vehicle.transverseSpacingM).toBe(1.2);
+    expect(model.vehicle.wheelsPerAxle).toBe(4);
   });
 
   it("falls back safely when nested arrays contain malformed items", () => {
@@ -69,6 +93,7 @@ describe("app model sanitization", () => {
     }
     expect(model.supports[0].y2).toBe(7.5);
     expect(model.vehicle.directWheels).toEqual(defaults.vehicle.directWheels);
+    expect(model.display.plotMode).toBe(defaults.display.plotMode);
   });
 });
 
@@ -98,5 +123,17 @@ describe("run validation", () => {
 
     expect(issues.some((issue) => /axis-aligned/i.test(issue))).toBe(true);
     expect(issues.some((issue) => /at least one wheel/i.test(issue))).toBe(true);
+  });
+
+  it("creates empty error-state results without stale geometry", () => {
+    const result = errorResults("bad analysis");
+
+    expect(result.status).toBe("error");
+    expect(result.error).toBe("bad analysis");
+    expect(result.contours).toEqual({});
+    expect(result.nodalContours).toEqual({});
+    expect(result.meshNodes).toEqual([]);
+    expect(result.meshElements).toEqual([]);
+    expect(result.wheelPatches).toEqual([]);
   });
 });

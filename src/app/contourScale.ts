@@ -1,9 +1,9 @@
 const DIVERGING_STOPS = [
-  { offset: 0, color: "#2166ac" },
-  { offset: 0.25, color: "#67a9cf" },
-  { offset: 0.5, color: "#f7f7f7" },
-  { offset: 0.75, color: "#ef8a62" },
-  { offset: 1, color: "#b2182b" },
+  { offset: 0, color: "#14518e" },
+  { offset: 0.25, color: "#4e93c3" },
+  { offset: 0.5, color: "#edf1f5" },
+  { offset: 0.75, color: "#de6a4c" },
+  { offset: 1, color: "#a61c2f" },
 ] as const;
 
 type Rgb = {
@@ -23,61 +23,78 @@ export interface ContourScale {
 
 export function createContourScale(min: number, max: number): ContourScale {
   const hasZeroTick = min < 0 && max > 0;
-  const domain =
-    hasZeroTick
-      ? (() => {
-          const bound = Math.max(Math.abs(min), Math.abs(max));
-          return {
-            min: -bound,
-            max: bound,
-            paletteStart: 0,
-            paletteEnd: 1,
-          };
-        })()
-      : max <= 0
-        ? {
-            min,
-            max,
-            paletteStart: 0,
-            paletteEnd: 0.5,
-          }
-        : {
-            min,
-            max,
-            paletteStart: 0.5,
-            paletteEnd: 1,
-          };
+  const domainMin = min;
+  const domainMax = max;
+  const span = domainMax - domainMin;
 
   const zeroOffsetPercent = hasZeroTick
-    ? ((0 - domain.min) / Math.max(domain.max - domain.min, 1e-12)) * 100
+    ? ((0 - domainMin) / Math.max(span, 1e-12)) * 100
     : null;
-  const gradientCss = `linear-gradient(to top, ${DIVERGING_STOPS.map(
-    (stop) => `${stop.color} ${stop.offset * 100}%`,
-  ).join(", ")})`;
+
+  const getPaletteOffset = (value: number): number => {
+    if (Math.abs(span) < 1e-12) {
+      if (value > 0) return 0.75;
+      if (value < 0) return 0.25;
+      return 0.5;
+    }
+
+    if (hasZeroTick) {
+      if (value <= 0) {
+        return clamp((value - domainMin) / Math.max(0 - domainMin, 1e-12), 0, 1) * 0.5;
+      }
+      return 0.5 + clamp(value / Math.max(domainMax, 1e-12), 0, 1) * 0.5;
+    }
+
+    const normalized = clamp((value - domainMin) / span, 0, 1);
+    return max <= 0 ? normalized * 0.5 : 0.5 + normalized * 0.5;
+  };
+
+  const gradientCss = buildGradientCss(
+    domainMin,
+    domainMax,
+    zeroOffsetPercent,
+    getPaletteOffset,
+  );
 
   return {
-    domainMin: domain.min,
-    domainMax: domain.max,
+    domainMin,
+    domainMax,
     gradientCss,
     hasZeroTick,
     zeroOffsetPercent,
     getColor(value: number) {
-      if (Math.abs(domain.max - domain.min) < 1e-12) {
-        return DIVERGING_STOPS[2].color;
-      }
-
-      const normalized = clamp(
-        (value - domain.min) / (domain.max - domain.min),
-        0,
-        1,
-      );
-      const paletteOffset =
-        domain.paletteStart +
-        normalized * (domain.paletteEnd - domain.paletteStart);
-
-      return interpolateColor(paletteOffset);
+      return interpolateColor(getPaletteOffset(value));
     },
   };
+}
+
+function buildGradientCss(
+  domainMin: number,
+  domainMax: number,
+  zeroOffsetPercent: number | null,
+  getPaletteOffset: (value: number) => number,
+): string {
+  if (Math.abs(domainMax - domainMin) < 1e-12) {
+    const color = interpolateColor(getPaletteOffset(domainMin));
+    return `linear-gradient(to top, ${color} 0%, ${color} 100%)`;
+  }
+
+  const positions = new Set<number>(Array.from({ length: 17 }, (_, index) => index / 16));
+  if (zeroOffsetPercent !== null) {
+    positions.add(clamp(zeroOffsetPercent / 100, 0, 1));
+  }
+
+  const stops = Array.from(positions)
+    .sort((a, b) => a - b)
+    .map((position) => {
+      const value =
+        zeroOffsetPercent !== null && Math.abs(position - zeroOffsetPercent / 100) < 1e-9
+          ? 0
+          : domainMin + (domainMax - domainMin) * position;
+      return `${interpolateColor(getPaletteOffset(value))} ${(position * 100).toFixed(3)}%`;
+    });
+
+  return `linear-gradient(to top, ${stops.join(", ")})`;
 }
 
 function interpolateColor(offset: number): string {

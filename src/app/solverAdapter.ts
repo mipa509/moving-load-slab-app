@@ -5,7 +5,9 @@ import type {
   ResultField,
   ReactionRow,
   SlabModel,
+  NodalContourData,
 } from "./types";
+import { errorResults } from "./defaults";
 import { summarizeReactions } from "./reactionSummary";
 import { runFixedPositionAnalysis } from "../solver";
 
@@ -60,8 +62,38 @@ const normalizeContours = (
     result[field] = {
       field,
       points,
-      min: toNumber(obj.min, Math.min(...points.map((p) => p.value), 0)),
-      max: toNumber(obj.max, Math.max(...points.map((p) => p.value), 0)),
+      min: toNumber(obj.min, Math.min(...points.map((p) => p.value))),
+      max: toNumber(obj.max, Math.max(...points.map((p) => p.value))),
+      units: typeof obj.units === "string" ? obj.units : defaultUnits[field],
+    };
+  });
+
+  return result;
+};
+
+const normalizeNodalContours = (
+  rawContours: unknown,
+): AnalysisResults["nodalContours"] => {
+  if (!rawContours || typeof rawContours !== "object") return {};
+  const asRecord = rawContours as Record<string, unknown>;
+  const result: AnalysisResults["nodalContours"] = {};
+
+  contourFields.forEach((field) => {
+    const rawField = asRecord[field];
+    if (!rawField || typeof rawField !== "object") return;
+    const obj = rawField as Partial<NodalContourData>;
+    if (!Array.isArray(obj.points)) return;
+    const points = obj.points.map((p) => ({
+      nodeId: toNumber((p as { nodeId?: unknown }).nodeId),
+      xM: toNumber((p as { xM?: unknown }).xM),
+      yM: toNumber((p as { yM?: unknown }).yM),
+      value: toNumber((p as { value?: unknown }).value),
+    }));
+    result[field] = {
+      field,
+      points,
+      min: toNumber(obj.min, Math.min(...points.map((p) => p.value))),
+      max: toNumber(obj.max, Math.max(...points.map((p) => p.value))),
       units: typeof obj.units === "string" ? obj.units : defaultUnits[field],
     };
   });
@@ -77,11 +109,12 @@ export const runFixedAnalysis = async (model: SlabModel): Promise<AnalysisResult
     const elapsedMs = performance.now() - start;
     const payload = (raw ?? {}) as Record<string, unknown>;
     const contours = normalizeContours(payload.contours);
+    const nodalContours = normalizeNodalContours(payload.nodalContours);
     const hasContourData = contourFields.some(
-      (field) => (contours[field]?.points.length ?? 0) > 0,
+      (field) => (nodalContours[field]?.points.length ?? 0) > 0,
     );
     if (!hasContourData) {
-      throw new Error("Solver returned no contour field data.");
+      throw new Error("Solver returned no nodal contour field data.");
     }
 
     const reactions: ReactionRow[] = Array.isArray(payload.reactions)
@@ -106,6 +139,30 @@ export const runFixedAnalysis = async (model: SlabModel): Promise<AnalysisResult
       status: "success",
       source: "solver",
       contours,
+      nodalContours,
+      meshNodes: Array.isArray(payload.meshNodes)
+        ? payload.meshNodes.map((n) => ({
+            id: toNumber((n as { id?: unknown }).id),
+            xM: toNumber((n as { xM?: unknown }).xM),
+            yM: toNumber((n as { yM?: unknown }).yM),
+          }))
+        : [],
+      meshElements: Array.isArray(payload.meshElements)
+        ? payload.meshElements.map((e) => {
+            const rawIds = (e as { nodeIds?: unknown }).nodeIds;
+            const ids = Array.isArray(rawIds) ? rawIds.map((v) => toNumber(v)) : [];
+            return {
+              id: toNumber((e as { id?: unknown }).id),
+              nodeIds: ids.length === 4 ? (ids as [number, number, number, number]) : [0, 0, 0, 0],
+            };
+          })
+        : [],
+      nodalDisplacements: Array.isArray(payload.nodalDisplacements)
+        ? payload.nodalDisplacements.map((nd) => ({
+            nodeId: toNumber((nd as { nodeId?: unknown }).nodeId),
+            wM: toNumber((nd as { wM?: unknown }).wM),
+          }))
+        : [],
       mesh:
         payload.mesh && typeof payload.mesh === "object"
           ? {
@@ -148,26 +205,9 @@ export const runFixedAnalysis = async (model: SlabModel): Promise<AnalysisResult
       warning: typeof payload.warning === "string" ? payload.warning : undefined,
     };
   } catch (error) {
-    return {
-      status: "error",
-      source: "solver",
-      contours: {},
-      mesh: undefined,
-      wheelPatches: [],
-      reactions: [],
-      reactionSummaryBySupport: [],
-      reactionTotals: {
-        uz: 0,
-        rx: 0,
-        ry: 0,
-      },
-      summary: {
-        maxDeflectionMm: 0,
-        maxAbsMomentKnmPerM: 0,
-        maxAbsShearKnPerM: 0,
-      },
-      elapsedMs: performance.now() - start,
-      error: error instanceof Error ? error.message : "Unknown solver error",
-    };
+    return errorResults(
+      error instanceof Error ? error.message : "Unknown solver error",
+      { elapsedMs: performance.now() - start },
+    );
   }
 };

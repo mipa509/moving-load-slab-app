@@ -89,7 +89,7 @@ export interface VehicleAxleDefinition {
   spacingToNext?: number;
   offset?: number;
   wheelCount?: number;
-  wheelTrack?: number;
+  transverseSpacing?: number;
   leftLoadFraction?: number;
   rightLoadFraction?: number;
   patchLength?: number;
@@ -102,7 +102,7 @@ export interface AxleBuilderVehicleDefinition {
   reference: VehicleReferencePoint;
   referenceKind?: AxleReferenceKind;
   transverseOffset?: number;
-  defaultWheelTrack: number;
+  defaultTransverseSpacing: number;
   defaultPatchLength: number;
   defaultPatchWidth: number;
   axles: VehicleAxleDefinition[];
@@ -217,6 +217,18 @@ export interface NodalDisplacement {
   w: number;
   rx: number;
   ry: number;
+}
+
+/** Averaged field values at a single mesh node (one entry per node, not per element centre). */
+export interface NodalFieldValues {
+  nodeId: number;
+  x: number;
+  y: number;
+  deflection: number;
+  mx: number;
+  my: number;
+  qx: number;
+  qy: number;
 }
 
 export interface SupportReaction {

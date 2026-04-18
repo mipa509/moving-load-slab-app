@@ -33,6 +33,10 @@ describe("solver adapter", () => {
   it("rejects empty contour payloads instead of inventing fallback results", async () => {
     runFixedPositionAnalysisMock.mockResolvedValue({
       contours: {},
+      nodalContours: {},
+      meshNodes: [],
+      meshElements: [],
+      nodalDisplacements: [],
       mesh: {
         xCoordsM: [0, 1],
         yCoordsM: [0, 1],
@@ -65,7 +69,7 @@ describe("solver adapter", () => {
     const result = await runFixedAnalysis(createDefaultModel());
 
     expect(result.status).toBe("error");
-    expect(result.error).toMatch(/no contour field data/i);
+    expect(result.error).toMatch(/no nodal contour field data/i);
     expect(result.reactions).toEqual([]);
     expect(result.reactionSummaryBySupport).toEqual([]);
     expect(result.reactionTotals).toEqual({ uz: 0, rx: 0, ry: 0 });
@@ -83,6 +87,18 @@ describe("solver adapter", () => {
           units: "mm",
         },
       },
+      nodalContours: {
+        deflection: {
+          field: "deflection",
+          points: [{ nodeId: 0, xM: 0.5, yM: 0.5, value: -2 }],
+          min: -2,
+          max: -2,
+          units: "mm",
+        },
+      },
+      meshNodes: [],
+      meshElements: [],
+      nodalDisplacements: [],
       mesh: {
         xCoordsM: [0, 1],
         yCoordsM: [0, 1],

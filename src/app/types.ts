@@ -5,6 +5,7 @@ export type Dof = "uz" | "rx" | "ry";
 export type ConstraintType = "free" | "fixed" | "pinned" | "spring";
 export type VehicleInputMode = "axle" | "direct";
 export type TravelDirection = "x+" | "x-" | "y+" | "y-";
+export type PlotMode = "results" | "structure" | "deformed";
 
 export interface SlabGeometry {
   lengthM: number;
@@ -71,7 +72,7 @@ export interface DirectWheelInput {
 export interface VehicleDefinition {
   name: string;
   mode: VehicleInputMode;
-  trackM: number;
+  transverseSpacingM: number;
   wheelsPerAxle: number;
   wheelPatchLongM: number;
   wheelPatchTransM: number;
@@ -104,6 +105,7 @@ export interface VehiclePlacement {
 }
 
 export interface DisplayToggles {
+  plotMode: PlotMode;
   mesh: boolean;
   supports: boolean;
   wheelPatches: boolean;
@@ -148,6 +150,37 @@ export interface ContourData {
   units: string;
 }
 
+export interface NodalContourPoint {
+  nodeId: number;
+  xM: number;
+  yM: number;
+  value: number;
+}
+
+export interface NodalContourData {
+  field: Exclude<ResultField, "reactions">;
+  points: NodalContourPoint[];
+  min: number;
+  max: number;
+  units: string;
+}
+
+export interface MeshNodeOverlay {
+  id: number;
+  xM: number;
+  yM: number;
+}
+
+export interface MeshElementOverlay {
+  id: number;
+  nodeIds: [number, number, number, number];
+}
+
+export interface NodalDisplacementOverlay {
+  nodeId: number;
+  wM: number;
+}
+
 export interface ReactionRow {
   supportId: string;
   nodeId?: number;
@@ -177,6 +210,10 @@ export interface AnalysisResults {
   status: "idle" | "running" | "success" | "error";
   source: "solver";
   contours: Partial<Record<Exclude<ResultField, "reactions">, ContourData>>;
+  nodalContours: Partial<Record<Exclude<ResultField, "reactions">, NodalContourData>>;
+  meshNodes: MeshNodeOverlay[];
+  meshElements: MeshElementOverlay[];
+  nodalDisplacements: NodalDisplacementOverlay[];
   mesh?: MeshOverlay;
   wheelPatches?: RectOverlay[];
   reactions: ReactionRow[];

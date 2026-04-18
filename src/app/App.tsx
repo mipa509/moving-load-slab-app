@@ -1,10 +1,12 @@
 import { startTransition, useEffect, useRef, useState, type ChangeEvent } from "react";
 import {
   createDefaultModel,
+  errorResults,
   idleResults,
   sanitizeLoadedModel,
   validateModelForRun,
 } from "./defaults";
+import { buildAutoRunSignature } from "./autoRun";
 import { runFixedAnalysis } from "./solverAdapter";
 import {
   cloneVehicleDefinition,
@@ -50,6 +52,7 @@ export const App = () => {
   const vehicleLibraryInputRef = useRef<HTMLInputElement | null>(null);
   const autoRunTimeoutRef = useRef<number | null>(null);
   const activeRunIdRef = useRef(0);
+  const autoRunSignature = buildAutoRunSignature(model);
 
   const handleRunAnalysis = async (nextModel: SlabModel) => {
     const issues = validateModelForRun(nextModel);
@@ -58,12 +61,7 @@ export const App = () => {
 
     if (issues.length > 0) {
       setRunning(false);
-      setResults((prev) => ({
-        ...prev,
-        status: "error",
-        error: issues.join(" "),
-        warning: undefined,
-      }));
+      setResults(errorResults(issues.join(" ")));
       return;
     }
 
@@ -81,17 +79,7 @@ export const App = () => {
     }
 
     startTransition(() => {
-      setResults((prev) =>
-        nextResults.status === "success"
-          ? nextResults
-          : {
-              ...prev,
-              status: "error",
-              elapsedMs: nextResults.elapsedMs,
-              error: nextResults.error,
-              warning: nextResults.warning,
-            },
-      );
+      setResults(nextResults);
       setRunning(false);
     });
   };
@@ -110,7 +98,7 @@ export const App = () => {
         window.clearTimeout(autoRunTimeoutRef.current);
       }
     };
-  }, [model]);
+  }, [autoRunSignature]);
 
   useEffect(() => {
     saveVehicleLibraryToStorage(vehicleLibrary);
@@ -145,11 +133,7 @@ export const App = () => {
       const parsed = JSON.parse(text) as unknown;
       setModel(sanitizeLoadedModel(parsed));
     } catch {
-      setResults((prev) => ({
-        ...prev,
-        status: "error",
-        error: "Failed to load JSON model file.",
-      }));
+      setResults(errorResults("Failed to load JSON model file."));
     } finally {
       event.target.value = "";
     }
@@ -330,7 +314,7 @@ export const App = () => {
         onLoadJsonClick={handleLoadJsonClick}
         onExportPdf={handleExportPdf}
       />
-      <Viewport model={model} results={results} selectedField={selectedResultField} />
+      <Viewport model={model} results={results} selectedField={selectedResultField} onModelChange={setModel} />
     </div>
   );
 };

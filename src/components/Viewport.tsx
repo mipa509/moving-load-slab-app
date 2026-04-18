@@ -1,21 +1,18 @@
-import { useId } from "react";
-import type { AnalysisResults, RectOverlay, ResultField, SlabModel } from "../app/types";
-import { createContourScale } from "../app/contourScale";
+import type { AnalysisResults, PlotMode, ResultField, SlabModel } from "../app/types";
+import {
+  deriveViewportLayerVisibility,
+  findContourExtrema,
+  formatViewportValue,
+} from "./viewportHelpers";
+import { ViewerCanvas } from "../viewer/ViewerCanvas";
+import { getViewerContour } from "../viewer/viewerPresentation";
 
 interface ViewportProps {
   model: SlabModel;
   results: AnalysisResults;
   selectedField: ResultField;
+  onModelChange: (model: SlabModel) => void;
 }
-
-type CellRect = {
-  key: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  value: number;
-};
 
 const resultLabel: Record<ResultField, string> = {
   deflection: "Deflection",
@@ -26,17 +23,43 @@ const resultLabel: Record<ResultField, string> = {
   reactions: "Reactions",
 };
 
-export const Viewport = ({ model, results, selectedField }: ViewportProps) => {
-  const legendGradientId = useId().replace(/:/g, "");
-  const contour = selectedField === "reactions" ? undefined : results.contours[selectedField];
-  const mesh = results.mesh ?? buildFallbackMesh(model);
-  const cells = contour ? buildContourCells(mesh.xCoordsM, mesh.yCoordsM, contour.points) : [];
-  const contourScale = contour ? createContourScale(contour.min, contour.max) : null;
-  const legendStops = contourScale
-    ? buildLegendStops(contourScale.domainMin, contourScale.domainMax, contourScale.getColor)
-    : [];
-  const plotPadding = Math.max(0.5, Math.max(model.geometry.lengthM, model.geometry.widthM) * 0.08);
+const plotModeLabel: Record<PlotMode, string> = {
+  results: "Result View",
+  structure: "Structure View",
+  deformed: "Deformed View",
+};
+
+export const Viewport = ({ model, results, selectedField, onModelChange }: ViewportProps) => {
+  const plotMode = model.display.plotMode;
+  const contour = getViewerContour(results, selectedField);
   const totalReactionText = `${results.reactionTotals.uz.toFixed(3)} kN`;
+  const contourSpan = contour ? Math.abs(contour.max - contour.min) : 0;
+  const layerVisibility = deriveViewportLayerVisibility(plotMode, model.display, Boolean(contour));
+  const { showContours, showMesh, showSupports, showWheelPatches } = layerVisibility;
+  const contourExtrema = contour ? findContourExtrema(contour.points) : null;
+  const activeResultSummary =
+    selectedField === "reactions"
+      ? {
+          title: "Active Plot Summary",
+          value: totalReactionText,
+          detail: `${results.reactionSummaryBySupport.length} support groups in current reaction view`,
+        }
+      : contour
+        ? {
+            title: `${resultLabel[selectedField]} Range`,
+            value: `${formatViewportValue(contour.min, contourSpan)} to ${formatViewportValue(
+              contour.max,
+              contourSpan,
+            )} ${contour.units}`,
+            detail: contourExtrema
+              ? "Range and extrema derived from nodal contour values"
+              : "Run a valid analysis to populate this plot",
+          }
+        : {
+            title: `${resultLabel[selectedField]} Range`,
+            value: "No contour data",
+            detail: "Run a valid analysis to populate this plot",
+          };
 
   return (
     <main className="result-area">
@@ -56,189 +79,67 @@ export const Viewport = ({ model, results, selectedField }: ViewportProps) => {
       </section>
 
       <section className="viewport-shell">
-        <div className="viewport-canvas">
-          <svg
-            viewBox={`${-plotPadding} ${-plotPadding} ${model.geometry.lengthM + plotPadding * 2} ${
-              model.geometry.widthM + plotPadding * 2
-            }`}
-            preserveAspectRatio="xMidYMid meet"
-            className="slab-viewport"
-          >
-            <rect
-              x={0}
-              y={0}
-              width={model.geometry.lengthM}
-              height={model.geometry.widthM}
-              fill="#f8fbf9"
-              stroke="#163827"
-              strokeWidth={0.04}
-            />
-
-            {model.display.contours && contour
-              ? cells.map((cell) => (
-                  <rect
-                    key={cell.key}
-                    x={cell.x}
-                    y={cell.y}
-                    width={cell.width}
-                    height={cell.height}
-                    fill={contourScale?.getColor(cell.value) ?? "#f7f7f7"}
-                    opacity={0.92}
-                  />
-                ))
-              : null}
-
-            {model.display.mesh
-              ? mesh.xCoordsM.map((xCoord) => (
-                  <line
-                    key={`vx-${xCoord}`}
-                    x1={xCoord}
-                    y1={0}
-                    x2={xCoord}
-                    y2={model.geometry.widthM}
-                    className="mesh-line"
-                  />
-                ))
-              : null}
-            {model.display.mesh
-              ? mesh.yCoordsM.map((yCoord) => (
-                  <line
-                    key={`hy-${yCoord}`}
-                    x1={0}
-                    y1={yCoord}
-                    x2={model.geometry.lengthM}
-                    y2={yCoord}
-                    className="mesh-line"
-                  />
-                ))
-              : null}
-
-            {model.display.supports
-              ? model.supports.map((support) =>
-                  support.kind === "line" ? (
-                    <line
-                      key={support.id}
-                      x1={support.x1}
-                      y1={support.y1}
-                      x2={support.x2}
-                      y2={support.y2}
-                      className="support-line"
-                    />
-                  ) : (
-                    <circle
-                      key={support.id}
-                      cx={support.x}
-                      cy={support.y}
-                      r={0.12}
-                      className="support-point"
-                    />
-                  ),
-                )
-              : null}
-
-            {model.display.wheelPatches
-              ? (results.wheelPatches ?? []).map((patch, index) => (
-                  <rect
-                    key={`wheel-${index}`}
-                    x={patch.xMinM}
-                    y={patch.yMinM}
-                    width={patch.xMaxM - patch.xMinM}
-                    height={patch.yMaxM - patch.yMinM}
-                    className="wheel-patch"
-                  />
-                ))
-              : null}
-          </svg>
-
+        <header className="viewport-shell-header">
+          <div className="viewport-shell-heading">
+            <p className="viewport-shell-kicker">Result Plot</p>
+            <h3>{resultLabel[selectedField]}</h3>
+          </div>
+          <div className="viewport-shell-meta" aria-label="Plot metadata">
+            <span>{plotModeLabel[plotMode]}</span>
+            <span>
+              {model.geometry.lengthM.toFixed(2)} m x {model.geometry.widthM.toFixed(2)} m
+            </span>
+          </div>
+        </header>
+        <div className="viewport-canvas mode-webgl" style={{ height: "520px" }}>
+          <ViewerCanvas
+            model={model}
+            results={results}
+            selectedField={selectedField}
+            onModelChange={onModelChange}
+          />
+        </div>
+        <div className="viewport-shell-footer">
           <div className="viewport-overlay">
-            <h3>{resultLabel[selectedField]} View</h3>
-            <p>
-              Contours: {model.display.contours ? "On" : "Off"} | Mesh:{" "}
-              {model.display.mesh ? "On" : "Off"} | Supports:{" "}
-              {model.display.supports ? "On" : "Off"} | Wheels:{" "}
-              {model.display.wheelPatches ? "On" : "Off"}
-            </p>
-            {selectedField === "reactions" ? (
+            <p className="viewport-overlay-label">Viewport Status</p>
+            <h4>{resultLabel[selectedField]} view</h4>
+            <div className="viewport-overlay-grid">
               <p>
+                <span>Contours</span>
+                <strong>{showContours ? "On" : "Off"}</strong>
+              </p>
+              <p>
+                <span>Mesh</span>
+                <strong>{showMesh ? "On" : "Off"}</strong>
+              </p>
+              <p>
+                <span>Supports</span>
+                <strong>{showSupports ? "On" : "Off"}</strong>
+              </p>
+              <p>
+                <span>Wheels</span>
+                <strong>{showWheelPatches ? "On" : "Off"}</strong>
+              </p>
+            </div>
+            {selectedField === "reactions" ? (
+              <p className="viewport-overlay-summary">
                 Support groups: {results.reactionSummaryBySupport.length} | Total vertical reaction:{" "}
                 {totalReactionText}
               </p>
             ) : contour ? (
-              <p>
-                Range: {contour.min.toFixed(3)} to {contour.max.toFixed(3)} {contour.units}
-              </p>
+              <>
+                <p className="viewport-overlay-summary">
+                  Range: {formatViewportValue(contour.min, contourSpan)} to{" "}
+                  {formatViewportValue(contour.max, contourSpan)} {contour.units}
+                </p>
+                <p className="viewport-overlay-summary viewport-overlay-note">
+                  {activeResultSummary.detail}
+                </p>
+              </>
             ) : (
-              <p>No contour values available for this field yet.</p>
+              <p className="viewport-overlay-summary">No contour values available for this field yet.</p>
             )}
           </div>
-          {contour && contourScale ? (
-            <div className="legend-panel" aria-label={`${resultLabel[selectedField]} legend`}>
-              <div className="legend-label legend-label-top">
-                {contour.max.toFixed(3)} {contour.units}
-              </div>
-              <div className="legend-scale-wrap">
-                <svg
-                  viewBox="0 0 20 100"
-                  preserveAspectRatio="none"
-                  className="legend-scale"
-                  aria-hidden="true"
-                >
-                  <defs>
-                    <linearGradient id={legendGradientId} x1="0" y1="1" x2="0" y2="0">
-                      {legendStops.map((stop) => (
-                        <stop
-                          key={stop.key}
-                          offset={stop.offset}
-                          stopColor={stop.color}
-                        />
-                      ))}
-                    </linearGradient>
-                  </defs>
-                  <rect
-                    x={1}
-                    y={1}
-                    width={18}
-                    height={98}
-                    fill={`url(#${legendGradientId})`}
-                    stroke="none"
-                  />
-                  <rect
-                    x={1}
-                    y={1}
-                    width={18}
-                    height={98}
-                    fill="none"
-                    stroke="rgba(18, 32, 25, 0.16)"
-                  />
-                  {contourScale.hasZeroTick && contourScale.zeroOffsetPercent !== null ? (
-                    <>
-                      <line
-                        x1={2}
-                        y1={100 - contourScale.zeroOffsetPercent}
-                        x2={18}
-                        y2={100 - contourScale.zeroOffsetPercent}
-                        stroke="rgba(18, 32, 25, 0.65)"
-                        strokeDasharray="1.2 1"
-                        strokeWidth={0.5}
-                      />
-                      <text
-                        x={10}
-                        y={100 - contourScale.zeroOffsetPercent - 1.5}
-                        textAnchor="middle"
-                        fontSize={5}
-                        fill="#122019"
-                      >
-                        0
-                      </text>
-                    </>
-                  ) : null}
-                </svg>
-              </div>
-              <div className="legend-label legend-label-bottom">
-                {contour.min.toFixed(3)} {contour.units}
-              </div>
-            </div>
-          ) : null}
         </div>
       </section>
 
@@ -254,6 +155,11 @@ export const Viewport = ({ model, results, selectedField }: ViewportProps) => {
         <article className="summary-card">
           <h4>Max |Q|</h4>
           <strong>{results.summary.maxAbsShearKnPerM.toFixed(3)} kN/m</strong>
+        </article>
+        <article className="summary-card summary-card-highlight">
+          <h4>{activeResultSummary.title}</h4>
+          <strong>{activeResultSummary.value}</strong>
+          <small>{activeResultSummary.detail}</small>
         </article>
       </section>
 
@@ -349,76 +255,3 @@ export const Viewport = ({ model, results, selectedField }: ViewportProps) => {
     </main>
   );
 };
-
-function buildFallbackMesh(model: SlabModel): { xCoordsM: number[]; yCoordsM: number[] } {
-  const xDivisions = Math.max(2, Math.round(model.mesh.density));
-  const yDivisions = Math.max(
-    2,
-    Math.round((model.geometry.widthM / Math.max(model.geometry.lengthM, 0.1)) * xDivisions),
-  );
-  return {
-    xCoordsM: Array.from(
-      { length: xDivisions + 1 },
-      (_, index) => (index / xDivisions) * model.geometry.lengthM,
-    ),
-    yCoordsM: Array.from(
-      { length: yDivisions + 1 },
-      (_, index) => (index / yDivisions) * model.geometry.widthM,
-    ),
-  };
-}
-
-function buildContourCells(
-  xCoords: number[],
-  yCoords: number[],
-  points: { xM: number; yM: number; value: number }[],
-): CellRect[] {
-  const cells: CellRect[] = [];
-  points.forEach((point, index) => {
-    const i = findSegmentIndex(xCoords, point.xM);
-    const j = findSegmentIndex(yCoords, point.yM);
-    if (i < 0 || j < 0 || i >= xCoords.length - 1 || j >= yCoords.length - 1) {
-      return;
-    }
-    cells.push({
-      key: `cell-${index}`,
-      x: xCoords[i],
-      y: yCoords[j],
-      width: xCoords[i + 1] - xCoords[i],
-      height: yCoords[j + 1] - yCoords[j],
-      value: point.value,
-    });
-  });
-  return cells;
-}
-
-function findSegmentIndex(axis: number[], coordinate: number): number {
-  for (let index = 0; index < axis.length - 1; index += 1) {
-    if (coordinate >= axis[index] && coordinate <= axis[index + 1]) {
-      return index;
-    }
-  }
-  return -1;
-}
-
-function buildLegendStops(
-  domainMin: number,
-  domainMax: number,
-  getColor: (value: number) => string,
-  stopCount: number = 16,
-): { key: string; offset: string; color: string }[] {
-  if (stopCount <= 1) {
-    return [];
-  }
-
-  return Array.from({ length: stopCount }, (_, index) => {
-    const fraction = index / (stopCount - 1);
-    const sampleValue = domainMin + (domainMax - domainMin) * fraction;
-
-    return {
-      key: `legend-stop-${index}`,
-      offset: `${fraction * 100}%`,
-      color: getColor(sampleValue),
-    };
-  });
-}

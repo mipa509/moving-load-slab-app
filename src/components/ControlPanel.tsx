@@ -3,12 +3,14 @@ import type {
   ConstraintType,
   Dof,
   DirectWheelInput,
+  PlotMode,
   ResultField,
   SlabModel,
   Support,
   VehicleLibraryItem,
 } from "../app/types";
 import { deriveMeshResolution } from "../app/meshSizing";
+import { PLOT_MODE_OPTIONS } from "../app/plotModes";
 import { getTravelAxisSliderConfig } from "../app/placementControls";
 import { SectionCard } from "./SectionCard";
 
@@ -183,7 +185,7 @@ export const ControlPanel = ({
         <p>kN, m, MPa | linear elastic plate model</p>
       </header>
 
-      <SectionCard title="Run" className="section-card-sticky">
+      <SectionCard title="Run" className="section-card-sticky" collapsible={false}>
         <div className="inline-actions">
           <button className="button button-primary" onClick={onRunAnalysis} disabled={running}>
             {running ? "Running..." : "Re-run Analysis"}
@@ -195,7 +197,7 @@ export const ControlPanel = ({
         <p className="field-note">Valid changes auto-run after a 150 ms debounce.</p>
       </SectionCard>
 
-      <SectionCard title="Project">
+      <SectionCard title="Project" defaultCollapsed>
         <label className="field">
           <span>Project Name</span>
           <input
@@ -218,6 +220,7 @@ export const ControlPanel = ({
       <SectionCard
         title="Vehicle Library"
         subtitle="Save reusable vehicle definitions in browser storage and recall them later"
+        defaultCollapsed
       >
         <label className="field">
           <span>Saved vehicles</span>
@@ -347,7 +350,7 @@ export const ControlPanel = ({
         </label>
       </SectionCard>
 
-      <SectionCard title="Material">
+      <SectionCard title="Material" defaultCollapsed>
         <label className="field">
           <span>E (MPa)</span>
           <input
@@ -434,7 +437,11 @@ export const ControlPanel = ({
         </p>
       </SectionCard>
 
-      <SectionCard title="Supports" subtitle="Line and point supports with explicit uz/rx/ry constraints">
+      <SectionCard
+        title="Supports"
+        subtitle="Line and point supports with explicit uz/rx/ry constraints"
+        defaultCollapsed
+      >
         <p className="field-note">
           Line supports are axis-aligned only in v1. The editor below keeps each line support
           horizontal or vertical.
@@ -822,16 +829,19 @@ export const ControlPanel = ({
         </label>
 
         <label className="field">
-          <span>Wheel Track (m)</span>
+          <span>Transverse wheel spacing (m)</span>
           <input
             type="number"
-            value={model.vehicle.trackM}
+            value={model.vehicle.transverseSpacingM}
             onChange={(e) =>
               setModel((curr) => ({
                 ...curr,
                 vehicle: {
                   ...curr.vehicle,
-                  trackM: parseNumericInput(e.target.value, curr.vehicle.trackM),
+                  transverseSpacingM: parseNumericInput(
+                    e.target.value,
+                    curr.vehicle.transverseSpacingM,
+                  ),
                 },
               }))
             }
@@ -899,6 +909,92 @@ export const ControlPanel = ({
               />
             </div>
           </label>
+        </div>
+
+        <div className="sub-card sub-card-emphasis">
+          <div className="sub-card-head">
+            <strong>Live Position Control</strong>
+          </div>
+          {model.vehicle.mode === "axle" ? (
+            <>
+              <p className="field-note">
+                This range follows the full vehicle envelope, so the whole vehicle can move fully on and off the slab.
+              </p>
+              <label className="field">
+                <span>Travel direction</span>
+                <select
+                  value={model.placement.travelDirection}
+                  onChange={(e) =>
+                    setModel((curr) => ({
+                      ...curr,
+                      placement: {
+                        ...curr.placement,
+                        travelDirection: e.target.value as SlabModel["placement"]["travelDirection"],
+                      },
+                    }))
+                  }
+                >
+                  <option value="x+">+X</option>
+                  <option value="x-">-X</option>
+                  <option value="y+">+Y</option>
+                  <option value="y-">-Y</option>
+                </select>
+              </label>
+              {sliderConfig ? (
+                <label className="field field-slider">
+                  <span>{sliderConfig.label}</span>
+                  <input
+                    type="range"
+                    min={sliderConfig.min}
+                    max={sliderConfig.max}
+                    step={sliderConfig.step}
+                    value={sliderConfig.value}
+                    onChange={(e) =>
+                      setModel((curr) => ({
+                        ...curr,
+                        placement: {
+                          ...curr.placement,
+                          [sliderConfig.field]: parseNumericInput(
+                            e.target.value,
+                            curr.placement[sliderConfig.field],
+                          ),
+                        },
+                      }))
+                    }
+                  />
+                  <small className="field-note">
+                    Vehicle reference centre on travel axis: {sliderConfig.value.toFixed(2)} m
+                  </small>
+                </label>
+              ) : null}
+            </>
+          ) : (
+            <>
+              <p className="field-note">
+                Travel direction controls wheel patch orientation in direct-wheel mode.
+              </p>
+              <label className="field">
+                <span>Travel direction (patch orientation)</span>
+                <select
+                  value={model.placement.travelDirection}
+                  onChange={(e) =>
+                    setModel((curr) => ({
+                      ...curr,
+                      placement: {
+                        ...curr.placement,
+                        travelDirection: e.target.value as SlabModel["placement"]["travelDirection"],
+                      },
+                    }))
+                  }
+                >
+                  <option value="x+">+X</option>
+                  <option value="x-">-X</option>
+                  <option value="y+">+Y</option>
+                  <option value="y-">-Y</option>
+                </select>
+              </label>
+            </>
+          )}
         </div>
 
         {model.vehicle.mode === "axle" ? (
@@ -1113,7 +1209,7 @@ export const ControlPanel = ({
         )}
       </SectionCard>
 
-      <SectionCard title="Fixed Placement">
+      <SectionCard title="Placement Details">
         {model.vehicle.mode === "axle" ? (
           <>
             <p className="field-note">
@@ -1176,85 +1272,18 @@ export const ControlPanel = ({
                   }
                 />
               </label>
-              <label className="field">
-                <span>Travel direction</span>
-                <select
-                  value={model.placement.travelDirection}
-                  onChange={(e) =>
-                    setModel((curr) => ({
-                      ...curr,
-                      placement: {
-                        ...curr.placement,
-                        travelDirection: e.target.value as SlabModel["placement"]["travelDirection"],
-                      },
-                    }))
-                  }
-                >
-                  <option value="x+">+X</option>
-                  <option value="x-">-X</option>
-                  <option value="y+">+Y</option>
-                  <option value="y-">-Y</option>
-                </select>
-              </label>
             </div>
-            {sliderConfig ? (
-              <label className="field">
-                <span>{sliderConfig.label}</span>
-                <input
-                  type="range"
-                  min={sliderConfig.min}
-                  max={sliderConfig.max}
-                  step={sliderConfig.step}
-                  value={sliderConfig.value}
-                  onChange={(e) =>
-                    setModel((curr) => ({
-                      ...curr,
-                      placement: {
-                        ...curr.placement,
-                        [sliderConfig.field]: parseNumericInput(
-                          e.target.value,
-                          curr.placement[sliderConfig.field],
-                        ),
-                      },
-                    }))
-                  }
-                />
-                <small className="field-note">
-                  Travel-axis live control: {sliderConfig.value.toFixed(2)} m
-                </small>
-              </label>
-            ) : null}
           </>
         ) : (
           <>
             <p className="field-note">
-              Travel direction only controls wheel patch orientation in direct-wheel mode.
+              Direct-wheel coordinates remain in global slab coordinates.
             </p>
-            <label className="field">
-              <span>Travel direction (patch orientation)</span>
-              <select
-                value={model.placement.travelDirection}
-                onChange={(e) =>
-                  setModel((curr) => ({
-                    ...curr,
-                    placement: {
-                      ...curr.placement,
-                      travelDirection: e.target.value as SlabModel["placement"]["travelDirection"],
-                    },
-                  }))
-                }
-              >
-                <option value="x+">+X</option>
-                <option value="x-">-X</option>
-                <option value="y+">+Y</option>
-                <option value="y-">-Y</option>
-              </select>
-            </label>
           </>
         )}
       </SectionCard>
 
-      <SectionCard title="Display Toggles">
+      <SectionCard title="Display Toggles" defaultCollapsed>
         <label className="check">
           <input
             type="checkbox"
@@ -1320,6 +1349,27 @@ export const ControlPanel = ({
       </SectionCard>
 
       <SectionCard title="Result Control">
+        <label className="field">
+          <span>Plot Mode</span>
+          <select
+            value={model.display.plotMode}
+            onChange={(e) =>
+              setModel((curr) => ({
+                ...curr,
+                display: { ...curr.display, plotMode: e.target.value as PlotMode },
+              }))
+            }
+          >
+            {PLOT_MODE_OPTIONS.map(({ value, controlLabel }) => (
+              <option key={value} value={value}>
+                {controlLabel}
+              </option>
+            ))}
+          </select>
+        </label>
+        <p className="field-note">
+          Structure view suppresses contour filling; mesh now acts as an overlay toggle in every view.
+        </p>
         <label className="field">
           <span>Primary Result</span>
           <select

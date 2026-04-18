@@ -1,6 +1,10 @@
 import { computeMindlinQ4ElementStiffness } from "./core/element";
 import { generateStructuredMesh } from "./core/mesh";
 import {
+  assertStableSupportConfiguration,
+  assertValidSolverState,
+} from "./analysisGuards";
+import {
   mapSupportsToMesh,
 } from "./core/supports";
 import {
@@ -53,6 +57,7 @@ export function runFixedPositionAnalysis(
     model.supports,
     model.mesh.tolerance,
   );
+  assertStableSupportConfiguration(mappedSupports.assignments);
   for (const [globalDof, stiffness] of mappedSupports.springStiffnessByDof) {
     addToSparseDiagonal(globalK, globalDof, stiffness);
   }
@@ -97,7 +102,16 @@ export function runFixedPositionAnalysis(
   );
 
   const summary = buildSummary(loadAssembly.totalWheelLoad, loadAssembly.totalAppliedLoadToSlab, nodalDisplacements, elementResults, supportReactions);
-  const warnings = collectWarnings(model, mappedSupports.fixedDofs.size, mappedSupports.springStiffnessByDof.size, solveResult.converged);
+  assertValidSolverState({
+    converged: solveResult.converged,
+    residualNorm: solveResult.residualNorm,
+    initialResidualNorm: solveResult.initialResidualNorm,
+    nodalDisplacements,
+    elementResults,
+    supportReactions,
+    summary,
+  });
+  const warnings = collectWarnings(model);
 
   return {
     units: {
@@ -292,17 +306,8 @@ function buildSummary(
 
 function collectWarnings(
   model: FixedPositionAnalysisModel,
-  fixedDofCount: number,
-  springCount: number,
-  converged: boolean,
 ): string[] {
   const warnings: string[] = [];
-  if (fixedDofCount === 0 && springCount === 0) {
-    warnings.push("No supports were mapped. The stiffness matrix may be singular.");
-  }
-  if (!converged) {
-    warnings.push("Linear solver did not converge within the configured iteration limit.");
-  }
   if (model.slab.thickness < 0.1) {
     warnings.push("Very thin slab thickness may require a finer mesh for stable Mindlin behavior.");
   }
