@@ -926,15 +926,17 @@ export const ControlPanel = ({
             <div className="compound-input">
               <input
                 type="number"
+                step="0.05"
+                min="0.05"
                 value={model.vehicle.wheelPatchLongM}
                 onChange={(e) =>
                   setModel((curr) => ({
                     ...curr,
                     vehicle: {
                       ...curr.vehicle,
-                      wheelPatchLongM: parseNumericInput(
-                        e.target.value,
-                        curr.vehicle.wheelPatchLongM,
+                      wheelPatchLongM: Math.max(
+                        0.05,
+                        parseNumericInput(e.target.value, curr.vehicle.wheelPatchLongM),
                       ),
                     },
                   }))
@@ -942,15 +944,17 @@ export const ControlPanel = ({
               />
               <input
                 type="number"
+                step="0.05"
+                min="0.05"
                 value={model.vehicle.wheelPatchTransM}
                 onChange={(e) =>
                   setModel((curr) => ({
                     ...curr,
                     vehicle: {
                       ...curr.vehicle,
-                      wheelPatchTransM: parseNumericInput(
-                        e.target.value,
-                        curr.vehicle.wheelPatchTransM,
+                      wheelPatchTransM: Math.max(
+                        0.05,
+                        parseNumericInput(e.target.value, curr.vehicle.wheelPatchTransM),
                       ),
                     },
                   }))
@@ -1209,13 +1213,18 @@ export const ControlPanel = ({
                     <div className="compound-input">
                       <input
                         type="number"
+                        step="0.05"
+                        min="0.05"
                         value={wheel.patchLongM}
                         onChange={(e) =>
                           setModel((curr) => {
                             const directWheels = [...curr.vehicle.directWheels];
                             directWheels[idx] = {
                               ...directWheels[idx],
-                              patchLongM: parseNumericInput(e.target.value, wheel.patchLongM),
+                              patchLongM: Math.max(
+                                0.05,
+                                parseNumericInput(e.target.value, wheel.patchLongM),
+                              ),
                             };
                             return { ...curr, vehicle: { ...curr.vehicle, directWheels } };
                           })
@@ -1223,13 +1232,18 @@ export const ControlPanel = ({
                       />
                       <input
                         type="number"
+                        step="0.05"
+                        min="0.05"
                         value={wheel.patchTransM}
                         onChange={(e) =>
                           setModel((curr) => {
                             const directWheels = [...curr.vehicle.directWheels];
                             directWheels[idx] = {
                               ...directWheels[idx],
-                              patchTransM: parseNumericInput(e.target.value, wheel.patchTransM),
+                              patchTransM: Math.max(
+                                0.05,
+                                parseNumericInput(e.target.value, wheel.patchTransM),
+                              ),
                             };
                             return { ...curr, vehicle: { ...curr.vehicle, directWheels } };
                           })

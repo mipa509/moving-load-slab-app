@@ -77,6 +77,34 @@ const formatTick = (value: number, span: number): string => {
   return value.toFixed(3);
 };
 
+const formatValue = (value: number): string => {
+  if (!Number.isFinite(value)) return "0";
+  const absV = Math.abs(value);
+  if (absV >= 100) return value.toFixed(1);
+  if (absV >= 10) return value.toFixed(2);
+  return value.toFixed(3);
+};
+
+interface PeakSample {
+  distanceM: number;
+  value: number;
+}
+
+const findPeak = (
+  samples: { distanceM: number; value: number }[],
+  mode: "max" | "min",
+): PeakSample | null => {
+  if (samples.length === 0) return null;
+  let best = samples[0];
+  for (let i = 1; i < samples.length; i += 1) {
+    const candidate = samples[i];
+    if (mode === "max" ? candidate.value > best.value : candidate.value < best.value) {
+      best = candidate;
+    }
+  }
+  return best;
+};
+
 interface CurveScale {
   toX: (distanceM: number) => number;
   toY: (value: number) => number;
@@ -401,6 +429,88 @@ export const SectionPlot = ({
             strokeWidth={1.6}
           />
         ) : null}
+        {scale && current && current.samples.length > 0
+          ? (() => {
+              const peakMax = findPeak(current.samples, "max");
+              const peakMin = findPeak(current.samples, "min");
+              const labels: JSX.Element[] = [];
+              const drawMarker = (
+                peak: PeakSample,
+                color: string,
+                anchor: "max" | "min",
+                key: string,
+              ) => {
+                const x = scale.toX(peak.distanceM);
+                const y = scale.toY(peak.value);
+                // Position label above the peak when sagging-positive (which renders below
+                // the zero line) and below the peak otherwise. With the inverted y-axis,
+                // "above the peak" means lower y in SVG.
+                const dy = anchor === "max" ? 14 : -8;
+                const labelY = y + dy;
+                const labelText = `${anchor === "max" ? "max" : "min"} ${formatValue(peak.value)} @ ${peak.distanceM.toFixed(2)} m`;
+                const textWidth = Math.max(64, labelText.length * 5.4);
+                const clampedX = Math.min(
+                  Math.max(x, innerLeft + textWidth / 2 + 2),
+                  innerRight - textWidth / 2 - 2,
+                );
+                labels.push(
+                  <g key={key}>
+                    <line
+                      x1={x}
+                      x2={x}
+                      y1={scale.toY(0)}
+                      y2={y}
+                      stroke={color}
+                      strokeWidth={0.6}
+                      strokeDasharray="2 2"
+                    />
+                    <circle cx={x} cy={y} r={3} fill={color} stroke="#ffffff" strokeWidth={0.8} />
+                    <rect
+                      x={clampedX - textWidth / 2}
+                      y={labelY - 9}
+                      width={textWidth}
+                      height={13}
+                      fill="#ffffff"
+                      stroke={color}
+                      strokeWidth={0.5}
+                      rx={2}
+                    />
+                    <text
+                      x={clampedX}
+                      y={labelY + 1}
+                      fontSize={9.5}
+                      fontWeight={600}
+                      textAnchor="middle"
+                      fill={color}
+                    >
+                      {labelText}
+                    </text>
+                  </g>,
+                );
+              };
+              if (peakMax && peakMax.value > 0) drawMarker(peakMax, "#b04a3a", "max", "peak-max");
+              if (peakMin && peakMin.value < 0) drawMarker(peakMin, "#23507a", "min", "peak-min");
+              if (
+                peakMax &&
+                peakMax.value <= 0 &&
+                peakMin &&
+                peakMin.value < 0 &&
+                peakMax !== peakMin
+              ) {
+                drawMarker(peakMax, "#b04a3a", "max", "peak-max-neg");
+              }
+              if (
+                peakMin &&
+                peakMin.value >= 0 &&
+                peakMax &&
+                peakMax.value > 0 &&
+                peakMax !== peakMin
+              ) {
+                drawMarker(peakMin, "#23507a", "min", "peak-min-pos");
+              }
+              return <>{labels}</>;
+            })()
+          : null}
         <text
           x={(innerLeft + innerRight) / 2}
           y={height - 6}
