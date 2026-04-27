@@ -113,8 +113,18 @@ export interface DisplayToggles {
   tables: boolean;
 }
 
+export type SectionAxisMode = "auto" | "x" | "y";
+
+export interface SectionSettings {
+  axis: SectionAxisMode;
+  centerPerpM: number;
+  widthM: number;
+}
+
 export interface SlabModel {
   projectName: string;
+  description: string;
+  assumptions: string;
   geometry: SlabGeometry;
   material: MaterialProps;
   mesh: MeshSettings;
@@ -122,6 +132,7 @@ export interface SlabModel {
   vehicle: VehicleDefinition;
   placement: VehiclePlacement;
   display: DisplayToggles;
+  section: SectionSettings;
 }
 
 export interface ContourPoint {
@@ -206,6 +217,38 @@ export interface AnalysisSummary {
   maxAbsShearKnPerM: number;
 }
 
+export type EnvelopeField = "deflection" | "mx" | "my";
+
+export interface EnvelopePerNode {
+  nodeId: number;
+  xM: number;
+  yM: number;
+  max: number;
+  min: number;
+}
+
+export interface EnvelopeFieldData {
+  field: EnvelopeField;
+  points: EnvelopePerNode[];
+  max: number;
+  min: number;
+  absMax: number;
+  units: string;
+}
+
+export interface EnvelopeData {
+  stationsRun: number;
+  pathStartM: number;
+  pathEndM: number;
+  pathStepM: number;
+  travelDirection: TravelDirection;
+  computedAtIso: string;
+  signature: string;
+  mx: EnvelopeFieldData;
+  my: EnvelopeFieldData;
+  deflection: EnvelopeFieldData;
+}
+
 export interface AnalysisResults {
   status: "idle" | "running" | "success" | "error";
   source: "solver";
@@ -220,6 +263,7 @@ export interface AnalysisResults {
   reactionSummaryBySupport: ReactionSummaryRow[];
   reactionTotals: ReactionComponentTotals;
   summary: AnalysisSummary;
+  envelope?: EnvelopeData;
   elapsedMs: number;
   warning?: string;
   error?: string;

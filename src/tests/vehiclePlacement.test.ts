@@ -7,6 +7,9 @@ import { fromAppModel } from "../solver/model/fromAppModel";
 function buildBaseAppModel(): SlabModel {
   return {
     projectName: "test",
+    description: "",
+    assumptions: "",
+    section: { axis: "auto", centerPerpM: 2.5, widthM: 1 },
     geometry: {
       lengthM: 10,
       widthM: 5,

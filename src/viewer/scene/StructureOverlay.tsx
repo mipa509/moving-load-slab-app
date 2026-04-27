@@ -9,11 +9,20 @@ interface StructureOverlayProps {
   showSupports: boolean;
   showWheelPatches: boolean;
   showRestraintChips: boolean;
+  showSectionStrip?: boolean;
 }
 
 const SUPPORT_FILL = "#76ddff";
 const SUPPORT_LINE = "#98ebff";
 const SUPPORT_CHIP_OFFSET_M = 0.34;
+const PATCH_FILL = "#e85d2c";
+const PATCH_FILL_OPACITY = 0.55;
+const PATCH_OUTLINE = "#3a1206";
+const PATCH_OUTLINE_WIDTH = 1.4;
+const SECTION_FILL = "#5fc9c1";
+const SECTION_FILL_OPACITY = 0.16;
+const SECTION_OUTLINE = "#0e524d";
+const SECTION_OUTLINE_WIDTH = 1.2;
 
 const SupportGlyph = ({
   position,
@@ -40,9 +49,38 @@ export const StructureOverlay = ({
   showSupports,
   showWheelPatches,
   showRestraintChips,
+  showSectionStrip = true,
 }: StructureOverlayProps) => {
   const Lx = model.geometry.lengthM;
   const Ly = model.geometry.widthM;
+  const sectionAxisIsX =
+    model.section.axis === "x" ||
+    (model.section.axis === "auto" &&
+      (model.placement.travelDirection === "x+" ||
+        model.placement.travelDirection === "x-"));
+  const halfStrip = model.section.widthM / 2;
+  const sectionRect = sectionAxisIsX
+    ? {
+        xMin: 0,
+        xMax: Lx,
+        yMin: Math.max(0, model.section.centerPerpM - halfStrip),
+        yMax: Math.min(Ly, model.section.centerPerpM + halfStrip),
+      }
+    : {
+        xMin: Math.max(0, model.section.centerPerpM - halfStrip),
+        xMax: Math.min(Lx, model.section.centerPerpM + halfStrip),
+        yMin: 0,
+        yMax: Ly,
+      };
+  const sectionWidth = sectionRect.xMax - sectionRect.xMin;
+  const sectionHeight = sectionRect.yMax - sectionRect.yMin;
+  const sectionOutline: [number, number, number][] = [
+    [sectionRect.xMin, sectionRect.yMin, 0.022],
+    [sectionRect.xMax, sectionRect.yMin, 0.022],
+    [sectionRect.xMax, sectionRect.yMax, 0.022],
+    [sectionRect.xMin, sectionRect.yMax, 0.022],
+    [sectionRect.xMin, sectionRect.yMin, 0.022],
+  ];
   const maxDim = Math.max(Lx, Ly);
   const pointGlyphSize = clamp(maxDim * 0.04, 0.16, 0.28);
   const lineGlyphSize = pointGlyphSize * 0.8;
@@ -65,6 +103,33 @@ export const StructureOverlay = ({
   return (
     <>
       <Line points={boundaryPoints} color="#e3ebf5" lineWidth={1.5} />
+
+      {showSectionStrip && sectionWidth > 0 && sectionHeight > 0 ? (
+        <group>
+          <mesh
+            position={[
+              sectionRect.xMin + sectionWidth / 2,
+              sectionRect.yMin + sectionHeight / 2,
+              0.018,
+            ]}
+          >
+            <planeGeometry args={[sectionWidth, sectionHeight]} />
+            <meshBasicMaterial
+              color={SECTION_FILL}
+              transparent
+              opacity={SECTION_FILL_OPACITY}
+            />
+          </mesh>
+          <Line
+            points={sectionOutline}
+            color={SECTION_OUTLINE}
+            lineWidth={SECTION_OUTLINE_WIDTH}
+            dashed
+            dashSize={0.2}
+            gapSize={0.12}
+          />
+        </group>
+      ) : null}
 
       {showSupports &&
         supportVisuals.map((visual) => (
@@ -120,14 +185,21 @@ export const StructureOverlay = ({
         (results.wheelPatches ?? []).map((patch, index) => {
           const width = patch.xMaxM - patch.xMinM;
           const height = patch.yMaxM - patch.yMinM;
+          const outline: [number, number, number][] = [
+            [patch.xMinM, patch.yMinM, 0.025],
+            [patch.xMaxM, patch.yMinM, 0.025],
+            [patch.xMaxM, patch.yMaxM, 0.025],
+            [patch.xMinM, patch.yMaxM, 0.025],
+            [patch.xMinM, patch.yMinM, 0.025],
+          ];
           return (
-            <mesh
-              key={`wp-${index}`}
-              position={[patch.xMinM + width / 2, patch.yMinM + height / 2, 0.02]}
-            >
-              <planeGeometry args={[width, height]} />
-              <meshBasicMaterial color="#f4b534" transparent opacity={0.34} />
-            </mesh>
+            <group key={`wp-${index}`}>
+              <mesh position={[patch.xMinM + width / 2, patch.yMinM + height / 2, 0.02]}>
+                <planeGeometry args={[width, height]} />
+                <meshBasicMaterial color={PATCH_FILL} transparent opacity={PATCH_FILL_OPACITY} />
+              </mesh>
+              <Line points={outline} color={PATCH_OUTLINE} lineWidth={PATCH_OUTLINE_WIDTH} />
+            </group>
           );
         })}
     </>
