@@ -21,6 +21,11 @@ interface ControlPanelProps {
   vehicleLibraryStatus?: string;
   selectedResultField: ResultField;
   running: boolean;
+  envelopeRunning: boolean;
+  envelopeProgress: { current: number; total: number } | null;
+  envelopeStationCount: number;
+  hasEnvelope: boolean;
+  envelopeStale: boolean;
   onModelChange: (next: SlabModel) => void;
   onVehicleLibrarySelectionChange: (vehicleLibraryId: string) => void;
   onSaveVehicleToLibrary: () => void;
@@ -32,6 +37,7 @@ interface ControlPanelProps {
   onImportVehicleLibraryClick: () => void;
   onResultFieldChange: (field: ResultField) => void;
   onRunAnalysis: () => void;
+  onRunEnvelope: () => void;
   onSaveJson: () => void;
   onLoadJsonClick: () => void;
   onExportPdf: () => void;
@@ -128,6 +134,11 @@ export const ControlPanel = ({
   vehicleLibraryStatus,
   selectedResultField,
   running,
+  envelopeRunning,
+  envelopeProgress,
+  envelopeStationCount,
+  hasEnvelope,
+  envelopeStale,
   onModelChange,
   onVehicleLibrarySelectionChange,
   onSaveVehicleToLibrary,
@@ -139,6 +150,7 @@ export const ControlPanel = ({
   onImportVehicleLibraryClick,
   onResultFieldChange,
   onRunAnalysis,
+  onRunEnvelope,
   onSaveJson,
   onLoadJsonClick,
   onExportPdf,
@@ -190,11 +202,28 @@ export const ControlPanel = ({
           <button className="button button-primary" onClick={onRunAnalysis} disabled={running}>
             {running ? "Running..." : "Re-run Analysis"}
           </button>
+          <button
+            className="button"
+            onClick={onRunEnvelope}
+            disabled={envelopeRunning || running}
+            title="Sweep the vehicle along the defined path and accumulate per-node max/min."
+          >
+            {envelopeRunning && envelopeProgress
+              ? `Envelope ${envelopeProgress.current}/${envelopeProgress.total}…`
+              : `Run Envelope (${envelopeStationCount} stations)`}
+          </button>
           <button className="button" onClick={onExportPdf}>
             Export PDF (Print)
           </button>
         </div>
         <p className="field-note">Valid changes auto-run after a 150 ms debounce.</p>
+        {hasEnvelope && !envelopeRunning ? (
+          <p className={`field-note ${envelopeStale ? "muted" : ""}`}>
+            {envelopeStale
+              ? "Envelope is stale — inputs changed. Re-run to refresh."
+              : "Envelope ready. The section plot shows max/min curves."}
+          </p>
+        ) : null}
       </SectionCard>
 
       <SectionCard title="Project" defaultCollapsed>
@@ -204,6 +233,26 @@ export const ControlPanel = ({
             value={model.projectName}
             onChange={(e) =>
               setModel((curr) => ({ ...curr, projectName: e.target.value }))
+            }
+          />
+        </label>
+        <label className="field">
+          <span>Description (printed on the engineering note)</span>
+          <textarea
+            rows={3}
+            value={model.description}
+            onChange={(e) =>
+              setModel((curr) => ({ ...curr, description: e.target.value }))
+            }
+          />
+        </label>
+        <label className="field">
+          <span>Assumptions (semicolon- or newline-separated)</span>
+          <textarea
+            rows={4}
+            value={model.assumptions}
+            onChange={(e) =>
+              setModel((curr) => ({ ...curr, assumptions: e.target.value }))
             }
           />
         </label>
@@ -877,15 +926,17 @@ export const ControlPanel = ({
             <div className="compound-input">
               <input
                 type="number"
+                step="0.05"
+                min="0.05"
                 value={model.vehicle.wheelPatchLongM}
                 onChange={(e) =>
                   setModel((curr) => ({
                     ...curr,
                     vehicle: {
                       ...curr.vehicle,
-                      wheelPatchLongM: parseNumericInput(
-                        e.target.value,
-                        curr.vehicle.wheelPatchLongM,
+                      wheelPatchLongM: Math.max(
+                        0.05,
+                        parseNumericInput(e.target.value, curr.vehicle.wheelPatchLongM),
                       ),
                     },
                   }))
@@ -893,15 +944,17 @@ export const ControlPanel = ({
               />
               <input
                 type="number"
+                step="0.05"
+                min="0.05"
                 value={model.vehicle.wheelPatchTransM}
                 onChange={(e) =>
                   setModel((curr) => ({
                     ...curr,
                     vehicle: {
                       ...curr.vehicle,
-                      wheelPatchTransM: parseNumericInput(
-                        e.target.value,
-                        curr.vehicle.wheelPatchTransM,
+                      wheelPatchTransM: Math.max(
+                        0.05,
+                        parseNumericInput(e.target.value, curr.vehicle.wheelPatchTransM),
                       ),
                     },
                   }))
@@ -1160,13 +1213,18 @@ export const ControlPanel = ({
                     <div className="compound-input">
                       <input
                         type="number"
+                        step="0.05"
+                        min="0.05"
                         value={wheel.patchLongM}
                         onChange={(e) =>
                           setModel((curr) => {
                             const directWheels = [...curr.vehicle.directWheels];
                             directWheels[idx] = {
                               ...directWheels[idx],
-                              patchLongM: parseNumericInput(e.target.value, wheel.patchLongM),
+                              patchLongM: Math.max(
+                                0.05,
+                                parseNumericInput(e.target.value, wheel.patchLongM),
+                              ),
                             };
                             return { ...curr, vehicle: { ...curr.vehicle, directWheels } };
                           })
@@ -1174,13 +1232,18 @@ export const ControlPanel = ({
                       />
                       <input
                         type="number"
+                        step="0.05"
+                        min="0.05"
                         value={wheel.patchTransM}
                         onChange={(e) =>
                           setModel((curr) => {
                             const directWheels = [...curr.vehicle.directWheels];
                             directWheels[idx] = {
                               ...directWheels[idx],
-                              patchTransM: parseNumericInput(e.target.value, wheel.patchTransM),
+                              patchTransM: Math.max(
+                                0.05,
+                                parseNumericInput(e.target.value, wheel.patchTransM),
+                              ),
                             };
                             return { ...curr, vehicle: { ...curr.vehicle, directWheels } };
                           })
@@ -1273,6 +1336,67 @@ export const ControlPanel = ({
                 />
               </label>
             </div>
+            <h4 className="field-subhead">Path sweep (used by Run Envelope)</h4>
+            <div className="grid-2">
+              <label className="field">
+                <span>Path start (m)</span>
+                <input
+                  type="number"
+                  value={model.placement.pathStartM}
+                  onChange={(e) =>
+                    setModel((curr) => ({
+                      ...curr,
+                      placement: {
+                        ...curr.placement,
+                        pathStartM: parseNumericInput(e.target.value, curr.placement.pathStartM),
+                      },
+                    }))
+                  }
+                />
+              </label>
+              <label className="field">
+                <span>Path end (m)</span>
+                <input
+                  type="number"
+                  value={model.placement.pathEndM}
+                  onChange={(e) =>
+                    setModel((curr) => ({
+                      ...curr,
+                      placement: {
+                        ...curr.placement,
+                        pathEndM: parseNumericInput(e.target.value, curr.placement.pathEndM),
+                      },
+                    }))
+                  }
+                />
+              </label>
+              <label className="field">
+                <span>Path step (m)</span>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0.05"
+                  value={model.placement.pathStepM}
+                  onChange={(e) =>
+                    setModel((curr) => ({
+                      ...curr,
+                      placement: {
+                        ...curr.placement,
+                        pathStepM: Math.max(
+                          0.05,
+                          parseNumericInput(e.target.value, curr.placement.pathStepM),
+                        ),
+                      },
+                    }))
+                  }
+                />
+              </label>
+            </div>
+            <p className="field-note">
+              Envelope sweeps the vehicle reference centre from start to end in the travel
+              direction; {envelopeStationCount} station{envelopeStationCount === 1 ? "" : "s"} at the
+              current step.
+            </p>
           </>
         ) : (
           <>
@@ -1281,6 +1405,89 @@ export const ControlPanel = ({
             </p>
           </>
         )}
+      </SectionCard>
+
+      <SectionCard
+        title="Longitudinal Section"
+        subtitle="1 m strip averaged for the section moment plot"
+      >
+        {(() => {
+          const isXAxis =
+            model.section.axis === "x" ||
+            (model.section.axis === "auto" &&
+              (model.placement.travelDirection === "x+" ||
+                model.placement.travelDirection === "x-"));
+          const perpExtent = isXAxis ? model.geometry.widthM : model.geometry.lengthM;
+          const perpLabel = isXAxis ? "Y" : "X";
+          const sectionAxisLabel = isXAxis ? "along X" : "along Y";
+          return (
+            <>
+              <p className="field-note">
+                Section axis: {sectionAxisLabel} (follows travel direction). Centre slides on the{" "}
+                {perpLabel}-axis.
+              </p>
+              <label className="field field-slider">
+                <span>
+                  Centre {perpLabel} (m): {model.section.centerPerpM.toFixed(2)}
+                </span>
+                <input
+                  type="range"
+                  min={0}
+                  max={perpExtent}
+                  step={0.05}
+                  value={Math.min(perpExtent, Math.max(0, model.section.centerPerpM))}
+                  onChange={(e) =>
+                    setModel((curr) => ({
+                      ...curr,
+                      section: {
+                        ...curr.section,
+                        centerPerpM: parseNumericInput(e.target.value, curr.section.centerPerpM),
+                      },
+                    }))
+                  }
+                />
+              </label>
+              <label className="field field-slider">
+                <span>Strip width (m): {model.section.widthM.toFixed(2)}</span>
+                <input
+                  type="range"
+                  min={0.2}
+                  max={Math.max(0.4, perpExtent)}
+                  step={0.1}
+                  value={Math.min(perpExtent, Math.max(0.2, model.section.widthM))}
+                  onChange={(e) =>
+                    setModel((curr) => ({
+                      ...curr,
+                      section: {
+                        ...curr.section,
+                        widthM: parseNumericInput(e.target.value, curr.section.widthM),
+                      },
+                    }))
+                  }
+                />
+              </label>
+              <label className="field">
+                <span>Axis override</span>
+                <select
+                  value={model.section.axis}
+                  onChange={(e) =>
+                    setModel((curr) => ({
+                      ...curr,
+                      section: {
+                        ...curr.section,
+                        axis: e.target.value as SlabModel["section"]["axis"],
+                      },
+                    }))
+                  }
+                >
+                  <option value="auto">Auto (follow travel)</option>
+                  <option value="x">Along X</option>
+                  <option value="y">Along Y</option>
+                </select>
+              </label>
+            </>
+          );
+        })()}
       </SectionCard>
 
       <SectionCard title="Display Toggles" defaultCollapsed>

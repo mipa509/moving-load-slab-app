@@ -1159,6 +1159,8 @@ git commit -m "feat: add R3F viewer shell with camera management"
 
 ## Task 7: Results 2D — smooth contour surface
 
+**Status:** ✅ Done — commits `3f9b7fe` + `94545e3` (refactor extracting probe hit & deform geometry to testable modules). Not yet reviewed by subagent-driven-development gates.
+
 **Files:**
 - Create: `src/viewer/scene/ResultSurface.tsx`
 - Modify: `src/viewer/scene/SlabScene.tsx`
@@ -1339,7 +1341,7 @@ git commit -m "feat: add smooth contour result surface (Results 2D mode)"
 
 ## Task 8: Structure and Mesh overlay layers
 
-**Status:** ✅ Done — commit pending. Deviation from plan: used drei `<Line>` component instead of raw `line_` intrinsic to avoid JSX type errors.
+**Status:** ✅ Done — commit `1beec03` (not yet reviewed by subagent-driven-development gates). Deviation from plan: used drei `<Line>` component instead of raw `line_` intrinsic to avoid JSX type errors.
 
 **Reviewer notes:**
 - (I1) `lineWidth` on drei `Line` may not render >1px in Chromium browsers — WebGL's `gl.lineWidth` is deprecated. Lines will render at 1px regardless of the value. This is a known three.js/WebGL limitation, not fixable without custom shaders or thicker geometry (e.g. fat lines from drei). Acceptable for now.

@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import type { AnalysisResults, PlotMode, ResultField, SlabModel } from "../app/types";
 import {
   deriveViewportLayerVisibility,
@@ -6,12 +7,19 @@ import {
 } from "./viewportHelpers";
 import { ViewerCanvas } from "../viewer/ViewerCanvas";
 import { getViewerContour } from "../viewer/viewerPresentation";
+import { SectionPlot } from "./SectionPlot";
+import {
+  computeEnvelopeSectionCurves,
+  computeSectionCurve,
+  resolveSectionAxis,
+} from "../app/sectionCurve";
 
 interface ViewportProps {
   model: SlabModel;
   results: AnalysisResults;
   selectedField: ResultField;
   onModelChange: (model: SlabModel) => void;
+  onCanvasReady?: (canvas: HTMLCanvasElement) => void;
 }
 
 const resultLabel: Record<ResultField, string> = {
@@ -29,7 +37,7 @@ const plotModeLabel: Record<PlotMode, string> = {
   deformed: "Deformed View",
 };
 
-export const Viewport = ({ model, results, selectedField, onModelChange }: ViewportProps) => {
+export const Viewport = ({ model, results, selectedField, onModelChange, onCanvasReady }: ViewportProps) => {
   const plotMode = model.display.plotMode;
   const contour = getViewerContour(results, selectedField);
   const totalReactionText = `${results.reactionTotals.uz.toFixed(3)} kN`;
@@ -97,6 +105,7 @@ export const Viewport = ({ model, results, selectedField, onModelChange }: Viewp
             results={results}
             selectedField={selectedField}
             onModelChange={onModelChange}
+            onCanvasReady={onCanvasReady}
           />
         </div>
         <div className="viewport-shell-footer">
@@ -142,6 +151,8 @@ export const Viewport = ({ model, results, selectedField, onModelChange }: Viewp
           </div>
         </div>
       </section>
+
+      <SectionPlotPanel model={model} results={results} />
 
       <section className="summary-grid">
         <article className="summary-card">
@@ -253,5 +264,76 @@ export const Viewport = ({ model, results, selectedField, onModelChange }: Viewp
       {results.warning ? <p className="notice warning">{results.warning}</p> : null}
       {results.error ? <p className="notice error">{results.error}</p> : null}
     </main>
+  );
+};
+
+interface SectionPlotPanelProps {
+  model: SlabModel;
+  results: AnalysisResults;
+}
+
+const SectionPlotPanel = ({ model, results }: SectionPlotPanelProps) => {
+  const axis = resolveSectionAxis(model.placement.travelDirection, model.section.axis);
+  const targetField = axis === "x" ? "mx" : "my";
+  const contour = results.nodalContours[targetField];
+  const envelopeData = results.envelope;
+  const envelope = envelopeData ? envelopeData[targetField] : undefined;
+
+  const currentCurve = useMemo(() => {
+    if (!contour) return null;
+    return computeSectionCurve(
+      contour,
+      axis,
+      model.section.centerPerpM,
+      model.section.widthM,
+    );
+  }, [contour, axis, model.section.centerPerpM, model.section.widthM]);
+
+  const envelopeCurves = useMemo(() => {
+    if (!envelope) return null;
+    return computeEnvelopeSectionCurves(
+      envelope,
+      axis,
+      model.section.centerPerpM,
+      model.section.widthM,
+    );
+  }, [envelope, axis, model.section.centerPerpM, model.section.widthM]);
+
+  const valueLabel = targetField === "mx" ? "Mxx" : "Myy";
+  const axisLabel = axis === "x" ? "Distance along X (m)" : "Distance along Y (m)";
+  const perpLabel = axis === "x" ? "Y" : "X";
+  const subtitle = `Strip ${model.section.widthM.toFixed(2)} m wide centred at ${perpLabel} = ${model.section.centerPerpM.toFixed(2)} m${
+    envelopeData
+      ? ` · envelope from ${envelopeData.stationsRun} stations`
+      : ""
+  }`;
+
+  return (
+    <section className="section-plot-panel">
+      <header className="section-plot-header">
+        <div>
+          <p className="viewport-shell-kicker">Longitudinal section</p>
+          <h3>{valueLabel} along {axis === "x" ? "X" : "Y"}</h3>
+        </div>
+        <div className="section-plot-legend">
+          <span className="section-plot-legend-current">— current placement</span>
+          {envelope ? (
+            <>
+              <span className="section-plot-legend-max">— — envelope max</span>
+              <span className="section-plot-legend-min">— — envelope min</span>
+            </>
+          ) : null}
+        </div>
+      </header>
+      <SectionPlot
+        current={currentCurve}
+        envelopeMax={envelopeCurves?.max ?? null}
+        envelopeMin={envelopeCurves?.min ?? null}
+        axisLabel={axisLabel}
+        valueUnits={contour?.units ?? envelope?.units ?? "kN*m/m"}
+        valueLabel={valueLabel}
+        subtitle={subtitle}
+      />
+    </section>
   );
 };

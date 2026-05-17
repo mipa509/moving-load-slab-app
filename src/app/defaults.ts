@@ -4,6 +4,8 @@ import type {
   ConstraintSetting,
   DisplayToggles,
   MeshSettings,
+  SectionAxisMode,
+  SectionSettings,
   SlabGeometry,
   MaterialProps,
   SlabModel,
@@ -49,8 +51,16 @@ const defaultSupports = (widthM: number): Support[] => [
   },
 ];
 
+const DEFAULT_DESCRIPTION =
+  "Linear-elastic plate analysis of a slab subjected to vehicular wheel loads. Maximum reactions, moments and deflections are extracted from a parametric sweep of the load along the defined travel path.";
+
+const DEFAULT_ASSUMPTIONS =
+  "Kirchhoff thin-plate theory; small deformations; linear-elastic isotropic material; rigid supports at restrained DOFs as defined; self-weight excluded unless added explicitly; wheel patches modelled as uniformly distributed pressure over the contact rectangle.";
+
 export const createDefaultModel = (): SlabModel => ({
   projectName: "Moving Load Slab V1",
+  description: DEFAULT_DESCRIPTION,
+  assumptions: DEFAULT_ASSUMPTIONS,
   geometry: {
     lengthM: 10,
     widthM: 5,
@@ -99,6 +109,11 @@ export const createDefaultModel = (): SlabModel => ({
     wheelPatches: true,
     contours: true,
     tables: true,
+  },
+  section: {
+    axis: "auto",
+    centerPerpM: 2.5,
+    widthM: 1.0,
   },
 });
 
@@ -153,6 +168,10 @@ export const sanitizeLoadedModel = (input: unknown): SlabModel => {
       typeof candidate.projectName === "string" && candidate.projectName.trim().length > 0
         ? candidate.projectName
         : defaults.projectName,
+    description:
+      typeof candidate.description === "string" ? candidate.description : defaults.description,
+    assumptions:
+      typeof candidate.assumptions === "string" ? candidate.assumptions : defaults.assumptions,
     geometry,
     material: sanitizeMaterial(candidate.material, defaults.material),
     mesh: sanitizeMesh(candidate.mesh, defaults.mesh),
@@ -160,6 +179,7 @@ export const sanitizeLoadedModel = (input: unknown): SlabModel => {
     placement: sanitizePlacement(candidate.placement, defaults.placement),
     display: sanitizeDisplay(candidate.display, defaults.display),
     supports: sanitizeSupports(candidate.supports, defaultSupports(geometry.widthM)),
+    section: sanitizeSection(candidate.section, defaults.section),
   };
 };
 
@@ -295,6 +315,19 @@ function sanitizeDisplay(input: unknown, fallback: DisplayToggles): DisplayToggl
     wheelPatches: booleanValue(input.wheelPatches, fallback.wheelPatches),
     contours: booleanValue(input.contours, fallback.contours),
     tables: booleanValue(input.tables, fallback.tables),
+  };
+}
+
+function sanitizeSection(input: unknown, fallback: SectionSettings): SectionSettings {
+  if (!isRecord(input)) {
+    return fallback;
+  }
+  const axis: SectionAxisMode =
+    input.axis === "x" || input.axis === "y" || input.axis === "auto" ? input.axis : fallback.axis;
+  return {
+    axis,
+    centerPerpM: finiteNumber(input.centerPerpM, fallback.centerPerpM),
+    widthM: positiveNumber(input.widthM, fallback.widthM),
   };
 }
 

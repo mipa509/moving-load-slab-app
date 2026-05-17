@@ -1,4 +1,4 @@
-import { startTransition, useEffect, useRef, useState, type ChangeEvent } from "react";
+import { startTransition, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import {
   createDefaultModel,
   errorResults,
@@ -8,6 +8,7 @@ import {
 } from "./defaults";
 import { buildAutoRunSignature } from "./autoRun";
 import { runFixedAnalysis } from "./solverAdapter";
+import { runPathEnvelope, type EnvelopeProgress } from "./runPathEnvelope";
 import {
   cloneVehicleDefinition,
   createVehicleLibraryItem,
@@ -25,6 +26,7 @@ import type {
 } from "./types";
 import { ControlPanel } from "../components/ControlPanel";
 import { Viewport } from "../components/Viewport";
+import { ReportNote } from "../components/ReportNote";
 
 const downloadFile = (filename: string, text: string, mimeType: string) => {
   const blob = new Blob([text], { type: mimeType });
@@ -48,10 +50,14 @@ export const App = () => {
   const [results, setResults] = useState<AnalysisResults>(() => idleResults());
   const [selectedResultField, setSelectedResultField] = useState<ResultField>("deflection");
   const [running, setRunning] = useState(false);
+  const [envelopeRunning, setEnvelopeRunning] = useState(false);
+  const [envelopeProgress, setEnvelopeProgress] = useState<EnvelopeProgress | null>(null);
+  const [reportImages, setReportImages] = useState<{ mx?: string; my?: string }>({});
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const vehicleLibraryInputRef = useRef<HTMLInputElement | null>(null);
   const autoRunTimeoutRef = useRef<number | null>(null);
   const activeRunIdRef = useRef(0);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const autoRunSignature = buildAutoRunSignature(model);
 
   const handleRunAnalysis = async (nextModel: SlabModel) => {
@@ -78,11 +84,60 @@ export const App = () => {
       return;
     }
 
+    const previousEnvelope = results.envelope;
+    const previousSignature = previousEnvelope?.signature;
+    const nextSignature = buildAutoRunSignature(nextModel);
+    const carryEnvelope =
+      previousEnvelope && previousSignature === nextSignature
+        ? previousEnvelope
+        : undefined;
+
     startTransition(() => {
-      setResults(nextResults);
+      setResults({ ...nextResults, envelope: carryEnvelope });
       setRunning(false);
     });
   };
+
+  const handleRunEnvelope = async () => {
+    if (envelopeRunning || running) return;
+    const issues = validateModelForRun(model);
+    if (issues.length > 0) {
+      setResults(errorResults(issues.join(" ")));
+      return;
+    }
+    setEnvelopeRunning(true);
+    setEnvelopeProgress(null);
+    try {
+      const envelope = await runPathEnvelope(model, (progress) => {
+        setEnvelopeProgress(progress);
+      });
+      setResults((prev) => ({ ...prev, envelope }));
+    } catch (error) {
+      setResults((prev) => ({
+        ...prev,
+        warning:
+          error instanceof Error
+            ? `Envelope failed: ${error.message}`
+            : "Envelope failed.",
+      }));
+    } finally {
+      setEnvelopeRunning(false);
+      setEnvelopeProgress(null);
+    }
+  };
+
+  const envelopeStationCount = useMemo(() => {
+    const { pathStartM, pathEndM, pathStepM } = model.placement;
+    const span = Math.abs(pathEndM - pathStartM);
+    if (span <= 1e-9) return 1;
+    const step = Math.max(Math.abs(pathStepM), 0.05);
+    return Math.max(1, Math.floor(span / step + 1e-9)) + 1;
+  }, [model.placement.pathStartM, model.placement.pathEndM, model.placement.pathStepM]);
+
+  const envelopeSignatureMatchesModel =
+    results.envelope?.signature === buildAutoRunSignature(model);
+  const hasEnvelope = Boolean(results.envelope);
+  const envelopeStale = hasEnvelope && !envelopeSignatureMatchesModel;
 
   useEffect(() => {
     if (autoRunTimeoutRef.current !== null) {
@@ -139,8 +194,46 @@ export const App = () => {
     }
   };
 
-  const handleExportPdf = () => {
-    window.print();
+  const waitFrames = (count: number) =>
+    new Promise<void>((resolve) => {
+      let remaining = count;
+      const tick = () => {
+        remaining -= 1;
+        if (remaining <= 0) {
+          resolve();
+        } else {
+          window.requestAnimationFrame(tick);
+        }
+      };
+      window.requestAnimationFrame(tick);
+    });
+
+  const handleExportPdf = async () => {
+    if (results.status !== "success") {
+      window.print();
+      return;
+    }
+
+    const prevField = selectedResultField;
+    const prevPlotMode = model.display.plotMode;
+
+    try {
+      setSelectedResultField("mx");
+      setModel((curr) => ({ ...curr, display: { ...curr.display, plotMode: "results" } }));
+      await waitFrames(4);
+      const mxPng = canvasRef.current?.toDataURL("image/png");
+
+      setSelectedResultField("my");
+      await waitFrames(4);
+      const myPng = canvasRef.current?.toDataURL("image/png");
+
+      setReportImages({ mx: mxPng, my: myPng });
+      await waitFrames(2);
+      window.print();
+    } finally {
+      setSelectedResultField(prevField);
+      setModel((curr) => ({ ...curr, display: { ...curr.display, plotMode: prevPlotMode } }));
+    }
   };
 
   const getSelectedVehicleLibraryItem = (): VehicleLibraryItem | undefined =>
@@ -291,6 +384,11 @@ export const App = () => {
         vehicleLibraryStatus={vehicleLibraryStatus}
         selectedResultField={selectedResultField}
         running={running}
+        envelopeRunning={envelopeRunning}
+        envelopeProgress={envelopeProgress}
+        envelopeStationCount={envelopeStationCount}
+        hasEnvelope={hasEnvelope}
+        envelopeStale={envelopeStale}
         onModelChange={setModel}
         onVehicleLibrarySelectionChange={(vehicleLibraryId) => {
           setSelectedVehicleLibraryId(vehicleLibraryId);
@@ -310,11 +408,23 @@ export const App = () => {
           }
           void handleRunAnalysis(model);
         }}
+        onRunEnvelope={() => {
+          void handleRunEnvelope();
+        }}
         onSaveJson={handleSaveJson}
         onLoadJsonClick={handleLoadJsonClick}
         onExportPdf={handleExportPdf}
       />
-      <Viewport model={model} results={results} selectedField={selectedResultField} onModelChange={setModel} />
+      <Viewport
+        model={model}
+        results={results}
+        selectedField={selectedResultField}
+        onModelChange={setModel}
+        onCanvasReady={(canvas) => {
+          canvasRef.current = canvas;
+        }}
+      />
+      <ReportNote model={model} results={results} images={reportImages} />
     </div>
   );
 };

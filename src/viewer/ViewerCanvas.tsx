@@ -20,6 +20,7 @@ interface ViewerCanvasProps {
   results: AnalysisResults;
   selectedField: ResultField;
   onModelChange: (model: SlabModel) => void;
+  onCanvasReady?: (canvas: HTMLCanvasElement) => void;
 }
 
 export const ViewerCanvas = ({
@@ -27,6 +28,7 @@ export const ViewerCanvas = ({
   results,
   selectedField,
   onModelChange,
+  onCanvasReady,
 }: ViewerCanvasProps) => {
   const { deformScale, setDeformScale, probeHit, setProbeHit } = useViewerState();
   const wrapRef = useRef<HTMLDivElement | null>(null);
@@ -75,7 +77,13 @@ export const ViewerCanvas = ({
         onDeformScaleChange={setDeformScale}
       />
       <div ref={wrapRef} className="viewer-canvas-wrap">
-        <Canvas style={{ background: "#1b2027" }}>
+        <Canvas
+          style={{ background: "#1b2027" }}
+          gl={{ preserveDrawingBuffer: true }}
+          onCreated={({ gl }) => {
+            onCanvasReady?.(gl.domElement);
+          }}
+        >
           <SlabScene
             model={model}
             results={results}

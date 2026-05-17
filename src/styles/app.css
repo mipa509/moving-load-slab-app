@@ -856,69 +856,270 @@ th {
   }
 }
 
+/* Section plot (screen) */
+.section-plot-panel {
+  margin-top: 0.8rem;
+  background: #f8fafc;
+  border: 1px solid rgba(23, 58, 99, 0.16);
+  border-radius: 6px;
+  padding: 0.75rem 0.9rem;
+}
+
+.section-plot-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-bottom: 0.4rem;
+}
+
+.section-plot-header h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.section-plot-legend {
+  display: flex;
+  gap: 0.7rem;
+  font-size: 0.78rem;
+  color: #2b3340;
+}
+
+.section-plot-legend-current {
+  color: #11161d;
+}
+
+.section-plot-legend-max {
+  color: #b04a3a;
+}
+
+.section-plot-legend-min {
+  color: #23507a;
+}
+
+.section-plot {
+  margin: 0;
+}
+
+.section-plot-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.section-plot-caption {
+  font-size: 0.85rem;
+  color: #2b3340;
+  margin-bottom: 0.3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.field-subhead {
+  margin: 0.6rem 0 0.3rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #5a6573;
+}
+
+/* Engineering note (screen — hidden, shown only on print) */
+.report-note {
+  display: none;
+}
+
+@page {
+  size: A4 portrait;
+  margin: 16mm 14mm 16mm 14mm;
+}
+
 @media print {
-  .control-panel {
-    display: none;
+  .app-shell > *:not(.report-note) {
+    display: none !important;
   }
 
   .app-shell {
     display: block;
     padding: 0;
+    background: #ffffff;
   }
 
-  .result-area {
-    border: none;
-    box-shadow: none;
+  body,
+  html,
+  #root {
+    background: #ffffff !important;
   }
 
-  .viewport-canvas {
+  .report-note {
+    display: block;
+    color: #11161d;
+    font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.4;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .report-note-header {
     display: flex;
-    flex-wrap: wrap;
-    align-items: flex-start;
-    gap: 0.6rem;
-    height: auto;
-    min-height: 0;
-    padding: 0.6rem;
-    background: none;
-    print-color-adjust: exact;
-    -webkit-print-color-adjust: exact;
-    forced-color-adjust: none;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-bottom: 1.5pt solid #11161d;
+    padding-bottom: 6pt;
+    margin-bottom: 12pt;
   }
 
-  .viewport-shell-footer {
-    padding: 0.6rem;
-    background: none;
-  }
-
-  .slab-viewport {
-    position: static;
-    inset: auto;
-    width: 100%;
-    height: 320px;
-    flex: 1 0 100%;
-    print-color-adjust: exact;
-    -webkit-print-color-adjust: exact;
-    forced-color-adjust: none;
-  }
-
-  .viewport-overlay {
-    width: 100%;
+  .report-note-kicker {
     margin: 0;
-    background: #fff;
-    border-color: rgba(23, 58, 99, 0.18);
-    backdrop-filter: none;
-    order: 2;
-    box-shadow: none;
+    font-size: 8.5pt;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #5a6573;
   }
 
-  .legend-panel {
-    position: absolute;
-    top: 0.7rem;
-    right: 0.7rem;
-    width: 150px;
-    height: 176px;
-    background: #fff;
-    border-radius: 6px;
+  .report-note-header h1 {
+    margin: 2pt 0 0;
+    font-size: 18pt;
+    font-weight: 600;
+  }
+
+  .report-note-meta {
+    margin: 0;
+    display: grid;
+    grid-template-columns: auto auto;
+    gap: 2pt 12pt;
+    font-size: 9pt;
+  }
+
+  .report-note-meta div {
+    display: contents;
+  }
+
+  .report-note-meta dt {
+    color: #5a6573;
+    text-transform: uppercase;
+    font-size: 8pt;
+    letter-spacing: 0.04em;
+  }
+
+  .report-note-meta dd {
+    margin: 0;
+    text-align: right;
+  }
+
+  .report-note-section {
+    page-break-inside: avoid;
+    margin-bottom: 10pt;
+  }
+
+  .report-note-section h2 {
+    font-size: 12pt;
+    margin: 8pt 0 4pt;
+    padding-bottom: 2pt;
+    border-bottom: 0.5pt solid #b3bcc7;
+    font-weight: 600;
+  }
+
+  .report-note-section h3 {
+    font-size: 10.5pt;
+    margin: 8pt 0 3pt;
+    font-weight: 600;
+  }
+
+  .report-note-section p {
+    margin: 3pt 0;
+  }
+
+  .report-note-section ul {
+    margin: 4pt 0;
+    padding-left: 16pt;
+  }
+
+  .report-note-section li {
+    margin: 1pt 0;
+  }
+
+  .report-note-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 4pt 0 6pt;
+    font-size: 9.5pt;
+  }
+
+  .report-note-table th,
+  .report-note-table td {
+    border: 0.4pt solid #b3bcc7;
+    padding: 3pt 5pt;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .report-note-table thead th {
+    background: #eef2f7;
+    font-weight: 600;
+  }
+
+  .report-note-table tbody th {
+    background: #f5f7fa;
+    width: 32%;
+    font-weight: 600;
+  }
+
+  .report-note-total-row td {
+    background: #eef2f7;
+    font-weight: 600;
+  }
+
+  .report-note-figures figure {
+    margin: 6pt 0 8pt;
+    page-break-inside: avoid;
+  }
+
+  .report-note-figures figcaption {
+    font-size: 9.5pt;
+    margin-bottom: 3pt;
+    color: #2b3340;
+  }
+
+  .report-note-figures img {
+    width: 100%;
+    max-height: 90mm;
+    object-fit: contain;
+    border: 0.4pt solid #b3bcc7;
+    background: #ffffff;
+  }
+
+  .report-note-section-plots .section-plot {
+    page-break-inside: avoid;
+    margin: 4pt 0 8pt;
+  }
+
+  .report-note-section-plots .section-plot-svg {
+    width: 100%;
+    max-height: 70mm;
+    border: 0.4pt solid #b3bcc7;
+    background: #ffffff;
+    print-color-adjust: exact;
+  }
+
+  .report-note-section-plots .section-plot-caption {
+    font-size: 9pt;
+    margin-bottom: 2pt;
+  }
+
+  .report-note-missing {
+    color: #b04a3a;
+    font-style: italic;
+  }
+
+  .report-note-footer {
+    margin-top: 12pt;
+    padding-top: 4pt;
+    border-top: 0.4pt solid #b3bcc7;
+    font-size: 8.5pt;
+    color: #5a6573;
+    text-align: center;
   }
 }
 
