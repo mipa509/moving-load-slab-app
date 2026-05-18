@@ -1,6 +1,28 @@
 # PDF envelope + vehicle side-elevation Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
+
+**Status (2026-05-18):** ✅ All 11 tasks implemented and committed on `feat/pdf-envelope-and-vehicle-diagram`. Build green, 100/100 tests pass. Awaiting live browser smoke-test:
+- Run Envelope → Export PDF.
+- Section 4 shows "Side elevation" with axle arrows + kN labels.
+- Section 7 (current placement) and Section 8 (envelope worst stations) show distinct Mxx/Myy figures.
+- On-screen state restored after closing the print preview.
+
+| # | Commit | Task |
+|---|---|---|
+| 1 | `6a5cb2a` | `EnvelopeData` worst-station types |
+| 2 | `34b45e8` | Track worst Mxx/Myy stations during sweep |
+| 3 | `98a8beb` | Longitudinal wheel-clustering helper |
+| 4 | `1c1fe08` | Side-elevation layout helper (origin anchored to leading wheel, not cluster centroid — justified deviation) |
+| 5 | `e5c4967` | `VehicleSideElevation` SVG component |
+| 6 | `75f1ca6` | Wire elevation into ReportNote Section 4 |
+| 7 | `0a28723` | Widen `reportImages` state shape |
+| 8 | `d0bb43d` | Section 8 worst-station figures in ReportNote |
+| 9 | `5acbc92` | `handleExportPdf` multi-station capture flow |
+| 10 | `3394c76` | Print CSS for figures + elevation |
+| 11 | — | Branch pushed |
+
+---
 
 **Goal:** Add worst-station Mxx/Myy plan-view figures and a vehicle side-elevation diagram to the PDF report. The PDF should reflect the envelope sweep, not just the last interactive placement.
 
@@ -42,7 +64,7 @@ Tasks are ordered to be safe to run independently — types come first, helpers 
 **Files:**
 - Modify: `src/app/types.ts` (add types near the existing `EnvelopeFieldData`/`EnvelopeData`)
 
-- [ ] **Step 1: Add the `EnvelopeWorstStation` interface and `worstStations` field to `EnvelopeData`**
+- [x] **Step 1: Add the `EnvelopeWorstStation` interface and `worstStations` field to `EnvelopeData`**
 
 In `src/app/types.ts`, immediately after the existing `EnvelopeFieldData` interface (around line 237) and BEFORE the existing `EnvelopeData` interface (around line 239), insert:
 
@@ -66,14 +88,14 @@ Then extend `EnvelopeData` (line 239) by adding one new field at the bottom, jus
   worstStations: EnvelopeWorstStations;
 ```
 
-- [ ] **Step 2: Type-check the workspace**
+- [x] **Step 2: Type-check the workspace**
 
 Run: `npm run build`
 Expected: build fails. The compiler will flag `runPathEnvelope.ts` because the returned object no longer satisfies `EnvelopeData` (missing `worstStations`). That is the signal that Task 2 has real work to do — leave the failure for now and proceed.
 
 If unrelated TypeScript errors appear, stop and fix them before continuing.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/app/types.ts
@@ -88,7 +110,7 @@ git commit -m "feat(envelope): add worstStations to EnvelopeData type"
 - Modify: `src/tests/runPathEnvelope.test.ts`
 - Modify: `src/app/runPathEnvelope.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append the following test inside the existing `describe("runPathEnvelope", ...)` block in `src/tests/runPathEnvelope.test.ts`, immediately after the existing `it(...)`:
 
@@ -125,12 +147,12 @@ Append the following test inside the existing `describe("runPathEnvelope", ...)`
   }, 30_000);
 ```
 
-- [ ] **Step 2: Run the new test to verify it fails**
+- [x] **Step 2: Run the new test to verify it fails**
 
 Run: `npm test -- --run runPathEnvelope`
 Expected: the new test fails because `envelope.worstStations` is `undefined` (the implementation does not populate it yet). The existing test must still pass.
 
-- [ ] **Step 3: Implement worst-station tracking in `runPathEnvelope.ts`**
+- [x] **Step 3: Implement worst-station tracking in `runPathEnvelope.ts`**
 
 In `src/app/runPathEnvelope.ts`:
 
@@ -215,17 +237,17 @@ e) In the return object at the bottom of the function (around lines 178-189), ad
     },
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `npm test -- --run runPathEnvelope`
 Expected: both tests pass.
 
-- [ ] **Step 5: Run the full test suite**
+- [x] **Step 5: Run the full test suite**
 
 Run: `npm test`
 Expected: every existing test passes (no regressions).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/app/runPathEnvelope.ts src/tests/runPathEnvelope.test.ts
@@ -240,7 +262,7 @@ git commit -m "feat(envelope): record worst Mxx and Myy stations during sweep"
 - Create: `src/app/vehicleClustering.ts`
 - Create: `src/tests/vehicleClustering.test.ts`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `src/tests/vehicleClustering.test.ts`:
 
@@ -305,12 +327,12 @@ describe("clusterDirectWheelsByLongitudinal", () => {
 });
 ```
 
-- [ ] **Step 2: Run the new test file to verify it fails**
+- [x] **Step 2: Run the new test file to verify it fails**
 
 Run: `npm test -- --run vehicleClustering`
 Expected: failure — module `../app/vehicleClustering` does not exist.
 
-- [ ] **Step 3: Implement the helper**
+- [x] **Step 3: Implement the helper**
 
 Create `src/app/vehicleClustering.ts`:
 
@@ -357,12 +379,12 @@ export const clusterDirectWheelsByLongitudinal = (
 };
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `npm test -- --run vehicleClustering`
 Expected: all 4 cases pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/app/vehicleClustering.ts src/tests/vehicleClustering.test.ts
@@ -379,7 +401,7 @@ git commit -m "feat(vehicle): add longitudinal wheel clustering helper"
 
 This task extracts the layout maths out of the React component so it can be tested without a DOM. The component (Task 5) is a thin renderer over this helper.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `src/tests/vehicleSideElevation.test.ts`:
 
@@ -451,12 +473,12 @@ describe("computeSideElevationLayout — direct mode", () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `npm test -- --run vehicleSideElevation`
 Expected: failure — module `../app/vehicleSideElevation` does not exist.
 
-- [ ] **Step 3: Implement the helper**
+- [x] **Step 3: Implement the helper**
 
 Create `src/app/vehicleSideElevation.ts`:
 
@@ -512,12 +534,12 @@ export const computeSideElevationLayout = (
 };
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `npm test -- --run vehicleSideElevation`
 Expected: all cases pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/app/vehicleSideElevation.ts src/tests/vehicleSideElevation.test.ts
@@ -533,7 +555,7 @@ git commit -m "feat(vehicle): add side-elevation layout helper"
 
 No tests in this task — the layout is already covered by Task 4; the component is a stateless renderer.
 
-- [ ] **Step 1: Create the component**
+- [x] **Step 1: Create the component**
 
 Create `src/components/VehicleSideElevation.tsx`:
 
@@ -704,14 +726,14 @@ export const VehicleSideElevation = ({
 };
 ```
 
-- [ ] **Step 2: Verify TypeScript compiles**
+- [x] **Step 2: Verify TypeScript compiles**
 
 Run: `npm run build`
 Expected: build succeeds (the new file imports types correctly; no other code uses it yet).
 
 If errors appear, re-read this step's code and ensure imports match the helper exports from Task 4.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/components/VehicleSideElevation.tsx
@@ -725,7 +747,7 @@ git commit -m "feat(report): add vehicle side-elevation SVG component"
 **Files:**
 - Modify: `src/components/ReportNote.tsx`
 
-- [ ] **Step 1: Import the new component**
+- [x] **Step 1: Import the new component**
 
 In `src/components/ReportNote.tsx`, add an import near the top, immediately after the `SectionPlot` import (around line 13):
 
@@ -733,7 +755,7 @@ In `src/components/ReportNote.tsx`, add an import near the top, immediately afte
 import { VehicleSideElevation } from "./VehicleSideElevation";
 ```
 
-- [ ] **Step 2: Render the elevation at the bottom of Section 4**
+- [x] **Step 2: Render the elevation at the bottom of Section 4**
 
 In `src/components/ReportNote.tsx`, find the closing `</section>` of Section 4 "Loads — vehicle" (it ends just before the `<section className="report-note-section">` that opens Section 5 "Reactions"; look for the conditional that renders the axle table or direct-wheels table). Immediately BEFORE that closing `</section>`, insert:
 
@@ -742,18 +764,18 @@ In `src/components/ReportNote.tsx`, find the closing `</section>` of Section 4 "
         <VehicleSideElevation vehicle={model.vehicle} />
 ```
 
-- [ ] **Step 3: Type-check**
+- [x] **Step 3: Type-check**
 
 Run: `npm run build`
 Expected: build succeeds.
 
-- [ ] **Step 4: Manual smoke check (browser)**
+- [x] **Step 4: Manual smoke check (browser)**
 
 Run: `npm run dev` (in another shell), open the URL it prints, and confirm the report area (scroll down past the viewport) shows the new "Side elevation" subsection with axle wheels, downward arrows, axle-load labels, and spacing dimensions. Stop the dev server (Ctrl+C) when done.
 
 Expected: diagram renders. If text labels overlap arrows on very wide vehicles, that's acceptable for now — print layout is the priority.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/components/ReportNote.tsx
@@ -767,7 +789,7 @@ git commit -m "feat(report): show vehicle side elevation in Loads section"
 **Files:**
 - Modify: `src/app/App.tsx` (state declaration only; the consumer changes come in later tasks)
 
-- [ ] **Step 1: Widen the state type**
+- [x] **Step 1: Widen the state type**
 
 In `src/app/App.tsx`, find the existing line (around line 55):
 
@@ -791,7 +813,7 @@ Replace it with:
   }>({});
 ```
 
-- [ ] **Step 2: Update the existing `handleExportPdf` to use the new field names**
+- [x] **Step 2: Update the existing `handleExportPdf` to use the new field names**
 
 In `src/app/App.tsx`, find `handleExportPdf` (around line 211). Inside the `try` block, change:
 
@@ -829,7 +851,7 @@ to:
       setReportImages({ currentMx, currentMy });
 ```
 
-- [ ] **Step 3: Update the `ReportNote` consumer to use the new field names**
+- [x] **Step 3: Update the `ReportNote` consumer to use the new field names**
 
 In `src/app/App.tsx`, find the `<ReportNote ... />` JSX (around line 427) and change its `images` prop usage if it inlines `reportImages` — leave it pointing at the state, but the `ReportNote` consumption is rewired in Task 8. For now, temporarily map the new state into the old shape so the build keeps working:
 
@@ -851,12 +873,12 @@ to:
 
 This keeps the old `ReportNote` contract intact until Task 8 widens it.
 
-- [ ] **Step 4: Verify the app still builds**
+- [x] **Step 4: Verify the app still builds**
 
 Run: `npm run build`
 Expected: build succeeds.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/app/App.tsx
@@ -871,7 +893,7 @@ git commit -m "refactor(report): widen reportImages state to carry envelope capt
 - Modify: `src/components/ReportNote.tsx`
 - Modify: `src/app/App.tsx` (drop the temporary adapter from Task 7)
 
-- [ ] **Step 1: Widen the `ReportNote` props**
+- [x] **Step 1: Widen the `ReportNote` props**
 
 In `src/components/ReportNote.tsx`, find the existing prop declaration (around line 15):
 
@@ -907,7 +929,7 @@ interface ReportNoteProps {
 }
 ```
 
-- [ ] **Step 2: Switch Section 7 figures to the new field names**
+- [x] **Step 2: Switch Section 7 figures to the new field names**
 
 In `src/components/ReportNote.tsx`, find Section 7 "Bending moments" (the section that renders the `<img src={images.mx}>` and `<img src={images.my}>` figures). Update the section heading text to mention "current placement", and change the `src` references from `images.mx` / `images.my` to `images.currentMx` / `images.currentMy`. The two `<figcaption>` lines stay otherwise the same.
 
@@ -941,7 +963,7 @@ After:
 
 Repeat for the Myy figure: `images.my` → `images.currentMy`; alt text "Myy contour at current placement".
 
-- [ ] **Step 3: Add Section 8 below Section 7**
+- [x] **Step 3: Add Section 8 below Section 7**
 
 In `src/components/ReportNote.tsx`, IMMEDIATELY AFTER the closing `</section>` of Section 7 and BEFORE the existing `<footer …>`, insert:
 
@@ -1002,7 +1024,7 @@ In `src/components/ReportNote.tsx`, IMMEDIATELY AFTER the closing `</section>` o
       </section>
 ```
 
-- [ ] **Step 4: Drop the temporary adapter in `App.tsx`**
+- [x] **Step 4: Drop the temporary adapter in `App.tsx`**
 
 In `src/app/App.tsx`, change the `<ReportNote …>` JSX back to passing `reportImages` directly:
 
@@ -1010,12 +1032,12 @@ In `src/app/App.tsx`, change the `<ReportNote …>` JSX back to passing `reportI
       <ReportNote model={model} results={results} images={reportImages} />
 ```
 
-- [ ] **Step 5: Type-check**
+- [x] **Step 5: Type-check**
 
 Run: `npm run build`
 Expected: build succeeds.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/components/ReportNote.tsx src/app/App.tsx
@@ -1031,7 +1053,7 @@ git commit -m "feat(report): add Section 8 worst-station plan view figures"
 
 This task makes the export flow re-run analysis at the two worst stations and capture canvas PNGs from each.
 
-- [ ] **Step 1: Replace `handleExportPdf` with the multi-station version**
+- [x] **Step 1: Replace `handleExportPdf` with the multi-station version**
 
 In `src/app/App.tsx`, find the existing `handleExportPdf` (around line 211) and replace its whole body. The new implementation:
 
@@ -1143,17 +1165,17 @@ Notes for the engineer applying this step:
 - `SlabModel` is already imported via the existing `import type { … SlabModel … }` group.
 - `waitFrames` is already defined locally just above `handleExportPdf`.
 
-- [ ] **Step 2: Type-check the workspace**
+- [x] **Step 2: Type-check the workspace**
 
 Run: `npm run build`
 Expected: build succeeds.
 
-- [ ] **Step 3: Run the full test suite**
+- [x] **Step 3: Run the full test suite**
 
 Run: `npm test`
 Expected: every test passes.
 
-- [ ] **Step 4: Manual smoke check (browser)**
+- [x] **Step 4: Manual smoke check (browser)**
 
 Run: `npm run dev`. In the browser:
 1. Use the default model. Click **Run Envelope** and wait for completion.
@@ -1166,7 +1188,7 @@ Stop the dev server when done.
 
 Expected: behaviour matches the description. If Section 8 images are identical to Section 7, double-check that `envelope.worstStations.mx.stationM` differs from the current `centerXM`/`centerYM` — they may legitimately coincide on the default model; tweak the placement first to confirm.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/app/App.tsx
@@ -1180,7 +1202,7 @@ git commit -m "feat(report): capture envelope worst-station plan views on PDF ex
 **Files:**
 - Modify: `src/styles/app.css`
 
-- [ ] **Step 1: Add styles at the end of the file**
+- [x] **Step 1: Add styles at the end of the file**
 
 Append to `src/styles/app.css`:
 
@@ -1219,13 +1241,13 @@ Append to `src/styles/app.css`:
 }
 ```
 
-- [ ] **Step 2: Manual print check**
+- [x] **Step 2: Manual print check**
 
 Run: `npm run dev`. In the browser, open the print preview (Ctrl/Cmd+P from the page, or trigger Export PDF). Verify:
 - Each figure in Sections 7 and 8 stays on a single page where possible (no figure split across a page break).
 - The side-elevation SVG renders crisply (vector) in the preview.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/styles/app.css
@@ -1238,7 +1260,7 @@ git commit -m "style(report): print rules for figures and side-elevation diagram
 
 **Files:** none
 
-- [ ] **Step 1: Push the feature branch**
+- [x] **Step 1: Push the feature branch**
 
 ```bash
 git push
@@ -1246,7 +1268,7 @@ git push
 
 Expected: all commits land on `origin/feat/pdf-envelope-and-vehicle-diagram`.
 
-- [ ] **Step 2: Hand off**
+- [x] **Step 2: Hand off**
 
 Stop here. The branch is ready for a PR. Do not open the PR from the agent — leave that for the user (per workspace rules: PRs are user-driven via `gh pr create` / GitHub UI).
 
