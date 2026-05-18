@@ -11,6 +11,7 @@ import {
   resolveSectionAxis,
 } from "../app/sectionCurve";
 import { SectionPlot } from "./SectionPlot";
+import { VehicleSideElevation } from "./VehicleSideElevation";
 
 interface ReportNoteProps {
   model: SlabModel;
@@ -264,6 +265,8 @@ export const ReportNote = ({ model, results, images, preparedBy }: ReportNotePro
             </tbody>
           </table>
         )}
+        <h3>Side elevation</h3>
+        <VehicleSideElevation vehicle={model.vehicle} />
       </section>
 
       <section className="report-note-section">
