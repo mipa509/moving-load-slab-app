@@ -6,6 +6,7 @@ import type {
   EnvelopeField,
   EnvelopeFieldData,
   EnvelopePerNode,
+  EnvelopeWorstStation,
   SlabModel,
 } from "./types";
 
@@ -126,6 +127,44 @@ const buildFieldData = (
   };
 };
 
+interface WorstAccum {
+  stationM: number;
+  peakValue: number;
+  peakAbs: number;
+  nodeId: number;
+}
+
+const initWorst = (): WorstAccum => ({
+  stationM: 0,
+  peakValue: 0,
+  peakAbs: -Infinity,
+  nodeId: -1,
+});
+
+const updateWorst = (
+  worst: WorstAccum,
+  contour: AnalysisResults["nodalContours"]["mx"],
+  stationM: number,
+): void => {
+  if (!contour) return;
+  for (const point of contour.points) {
+    const abs = Math.abs(point.value);
+    if (abs > worst.peakAbs) {
+      worst.peakAbs = abs;
+      worst.peakValue = point.value;
+      worst.stationM = stationM;
+      worst.nodeId = point.nodeId;
+    }
+  }
+};
+
+const finalizeWorst = (worst: WorstAccum): EnvelopeWorstStation => ({
+  stationM: worst.stationM,
+  peakValue: Number.isFinite(worst.peakValue) ? worst.peakValue : 0,
+  peakAbs: Number.isFinite(worst.peakAbs) ? worst.peakAbs : 0,
+  nodeId: worst.nodeId,
+});
+
 export const runPathEnvelope = async (
   baseModel: SlabModel,
   onProgress?: (progress: EnvelopeProgress) => void,
@@ -139,6 +178,8 @@ export const runPathEnvelope = async (
   );
   const total = stations.length;
   const accum = new Map<EnvelopeField, PerFieldAccum>();
+  const worstMx = initWorst();
+  const worstMy = initWorst();
 
   for (let i = 0; i < total; i += 1) {
     const station = stations[i];
@@ -164,6 +205,10 @@ export const runPathEnvelope = async (
         updateField(accumField, contour);
       }
     }
+    const mxContour = stepResult.nodalContours.mx;
+    const myContour = stepResult.nodalContours.my;
+    updateWorst(worstMx, mxContour, station);
+    updateWorst(worstMy, myContour, station);
     onProgress?.({ current: i + 1, total, station });
     await new Promise((resolve) => setTimeout(resolve, 0));
   }
@@ -186,5 +231,9 @@ export const runPathEnvelope = async (
     mx: buildFieldData("mx", mxAccum),
     my: buildFieldData("my", myAccum),
     deflection: buildFieldData("deflection", deflectionAccum),
+    worstStations: {
+      mx: finalizeWorst(worstMx),
+      my: finalizeWorst(worstMy),
+    },
   };
 };
