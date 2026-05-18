@@ -1,102 +1,97 @@
 # Moving Load Slab App
 
-Browser-based structural analysis app for rapid fixed-position and stepped moving-load checks on a rectangular concrete slab model.
+A browser-based structural analysis tool for rapid moving-load checks on rectangular concrete slab decks. Built for engineers who need a fast screening result, an envelope of worst-case moments, and a printable engineering note — without firing up a full FEA package.
 
-## Documentation
+> **Status:** Screening / quick-check tool. Not a substitute for full design FEA. See [Scope and limitations](#scope-and-limitations) before using results outside preliminary checks.
 
-- [V5 specification](./docs/v5-specification.md)
-- [V4 specification](./docs/v4-specification.md)
-- [V3 specification](./docs/v3-specification.md)
-- [V2 specification](./docs/v2-specification.md)
-- [V1 specification](./docs/v1-specification.md)
-- [Benchmark reference](./docs/benchmark-reference.md)
-- [Solver suitability review (2026-04-18)](./docs/2026-04-18-solver-suitability-review.md)
+## Features
 
-## Stack
+- **Linear-elastic plate analysis** of a rectangular RC slab with point and line supports.
+- **Vehicle loading** in two modes:
+  - Axle definition with longitudinal spacings, axle load, and wheels-per-axle.
+  - Direct wheel placement with arbitrary patch sizes.
+- **Live re-run** with debounced auto-analysis as inputs change.
+- **Moving-load envelope** — sweep the vehicle along a path and accumulate worst-case Mxx / Myy / deflection per node.
+- **Cross-section plot** along the travel axis with the current placement curve and envelope max/min curves overlaid.
+- **WebGL viewer** with three modes — *Structure*, *Results 2D* (nodal contours), and *Deformed 3D* (out-of-plane displacement).
+- **Cursor-follow probe** for live value readout, docked colour legend, and configurable display toggles (mesh, supports, wheel patches, contours).
+- **Reaction summaries** per support and deduplicated totals.
+- **Printable engineering note** (browser print → PDF) including:
+  - Description, assumptions, structure & supports, vehicle loads.
+  - Vehicle side-elevation diagram with axle arrows and kN labels.
+  - Reactions table.
+  - Longitudinal section plot with envelope curves.
+  - Bending-moment plan views at **current placement** *and* at the **envelope worst stations** for Mxx and Myy.
+- **Persistent vehicle library** in browser storage with JSON import/export.
+- **Whole-model JSON** save/load for sharing or version control.
 
-- React
-- TypeScript
-- Vite
-
-## Current scope
-
-- Rectangular slab only
-- Linear elastic plate analysis
-- One vehicle at a time
-- Fixed-position analysis workflow with live rerun
-- JSON save/load
-- Browser-persisted vehicle library with import/export
-- Print-based PDF export with plot-aware print layout
-- WebGL viewer with `Structure`, `Results 2D`, and `Deformed 3D` modes
-- Mesh, support, wheel-patch, and contour display toggles
-- Nodal contour rendering with docked legend
-- Cursor-follow probe readout in `Structure` and `Results 2D`
-- Larger support glyphs with `UZ/RX/RY` restraint chips in `Structure`
-- Deformed plate view with auto-fit displacement exaggeration
-- Safe error handling for invalid or under-restrained runs
-- Axle-mode live travel slider covering the full vehicle crossing envelope
-- Reaction summaries by support and total
-
-## Current solver limitations
-
-The v1 solver is a custom TypeScript 4-node Mindlin/Reissner plate element on a structured rectangular mesh with 3 DOFs per node (`w`, `rx`, `ry`). This scope is intentionally narrow and the following apply to every analysis produced by the app:
-
-- **Pure plate bending only** — no in-plane (membrane) DOF. Composite steel–concrete decks, eccentric edge beams/parapets acting compositely, in-plane prestress, and restraint thermal/shrinkage effects cannot be modelled.
-- **No beam, bar, or rigid-link elements** — kerbs, edge-stiffening beams, diaphragms, and bearing plinths are not represented. Decks must be idealised as a bare slab.
-- **Structured rectangular mesh only** — skew decks, curved-in-plan decks, non-rectangular plan shapes, and local refinement under tyre patches are not supported.
-- **Isotropic material only** (current build) — voided, ribbed, and orthotropic deck behaviour is not captured.
-- **Point and line supports must align with mesh nodes/edges** — arbitrary bearing positions require mesh adjustment.
-- **Dense direct solver** — practical up to roughly 10⁴ DOF; refined full-deck patch-load studies will be slow or run out of memory.
-- **Static linear elastic only** — no dynamic amplification, no non-linear material or geometric effects.
-- **Tyre patch loading** is modeled as rectangular pressure patches clipped to the slab and converted into equivalent nodal vertical loads on the structured grid; local effects under the contact patch remain mesh-dependent and should not be read as design values without refinement checks.
-- **Post-processing** currently reports `w`, plate moments, and reactions. Wood–Armer reinforcement moments and moment envelopes across moving-load sweeps are not yet produced by the app.
-
-Suitable as a screening / quick-check tool for **right (non-skew), solid RC slab decks without composite edge beams**. Any design-submission use requires independent verification against a second method and Chartered Engineer review. See the [solver suitability review](./docs/2026-04-18-solver-suitability-review.md) for a full assessment against bridge-deck use and the roadmap to lift these limitations.
-
-## Current viewer notes
-
-- The current viewer is WebGL-based and uses nodal contour data rather than the older cell-based SVG plot.
-- `Mesh` is now an overlay toggle, not a separate plot mode.
-- `Deformed 3D` shows out-of-plane slab displacement only; there are still no in-plane `ux/uy` DOFs in the solver.
-- Solver/view-only controls stay separated so toggling display state does not rerun the analysis.
-- If the support setup is obviously invalid or the solve produces non-finite data, the app clears the plotted result state and shows an explicit error instead of leaving stale geometry on screen.
-
-## What Changed In V3
-
-- Added a `Vehicle Library` panel for saving reusable vehicle definitions.
-- Added `Save Current`, `Load Selected`, `Overwrite Selected`, `Duplicate Selected`, and `Delete Selected` actions.
-- Added JSON export/import for the full vehicle library.
-- Added duplicate-id protection and sanitization for imported vehicle library items.
-- Kept the library separate from slab model JSON save/load.
-
-## What Changed In V2
-
-- Added debounced live auto-run and a sticky top-level `Re-run Analysis` button.
-- Added an initial auto-run so the viewport starts populated.
-- Added stale-run protection so older async runs cannot overwrite newer results.
-- Added a live travel-axis slider for axle-mode placement.
-- Reworked contour coloring into a centralized diverging scale and added a vertical legend bar.
-- Added viewport padding so the slab is easier to inspect visually.
-- Made `reactions` a proper result mode with support summaries, total sums, and raw nodal rows.
-- Fixed mesh sizing so `target element size` now actually drives the solver mesh.
-- Improved model sanitization and TypeScript/Vite build setup for the nested app repo.
-
-## Main Interaction Notes
-
-- Most valid input changes trigger a rerun automatically after `150 ms`.
-- The manual rerun button stays visible at the top of the control panel.
-- Vehicle definitions can now be saved to a browser-local library and reloaded later from the panel list.
-- In axle mode, the travel direction determines whether the live slider controls vehicle `X` or `Y`, and the range allows the full vehicle to move completely across the slab.
-- Hover probing follows the cursor in `Structure` and `Results 2D`; it is intentionally disabled in `Deformed 3D`.
-- `Deformed 3D` uses an auto-fit base exaggeration with a user multiplier rather than a fixed absolute deformation scale.
-- PDF export keeps the colour scale on the plot and moves the info panel below the plot for print.
-- Reaction totals are shown by support and as a deduplicated global total.
-
-## Run
+## Quick start
 
 ```powershell
 npm install
-npm run dev
-npm test
-npm run build
+npm run dev      # http://127.0.0.1:4173
+npm test         # vitest run, ~100 tests
+npm run build    # tsc + vite build, outputs to dist/
 ```
+
+Production build is a static SPA — `dist/` can be served by any static host or deployed to Vercel/Netlify/Cloudflare Pages.
+
+## Tech stack
+
+- React 18 + TypeScript
+- Vite 7 (dev server + production build)
+- `@react-three/fiber` + `@react-three/drei` (WebGL viewer, Three.js under the hood)
+- Vitest (unit tests, Node test environment — no jsdom)
+
+Custom in-repo solver: a 4-node Mindlin/Reissner plate element on a structured rectangular mesh, 3 DOFs per node (`w`, `rx`, `ry`), dense direct solve.
+
+## Project structure
+
+```
+src/
+  app/                 application state, defaults, run/envelope orchestration, vehicle library
+  components/          control panel, viewport host, report note, section plot, side elevation
+  solver/              plate element, assembly, post-processing
+  viewer/              WebGL scene (R3F): result surface, mesh overlay, supports, probe
+  styles/              global CSS (incl. print rules)
+  tests/               vitest suites
+docs/                  specs, plans, and engineering reviews
+```
+
+## Scope and limitations
+
+The solver is intentionally narrow. Before relying on any result, confirm your problem fits this envelope:
+
+- **Plate bending only** — no in-plane (membrane) DOFs. Composite steel–concrete decks, eccentric edge beams acting compositely, in-plane prestress, and restraint thermal/shrinkage effects cannot be modelled.
+- **No beam, bar, or rigid-link elements** — kerbs, edge-stiffening beams, diaphragms, and bearing plinths are not represented.
+- **Structured rectangular mesh only** — skew decks, curved-in-plan decks, non-rectangular plan shapes, and local refinement under tyre patches are not supported.
+- **Isotropic material only** — voided, ribbed, and orthotropic deck behaviour is not captured.
+- **Supports align to mesh nodes/edges** — arbitrary bearing positions require mesh adjustment.
+- **Dense direct solve** — practical up to ~10⁴ DOFs.
+- **Static linear elastic only** — no dynamic amplification, no non-linear material or geometric effects.
+- **Tyre patch loads** are clipped rectangular pressure patches converted to equivalent nodal vertical loads; local effects under the contact patch remain mesh-dependent.
+- **Post-processing** reports `w`, plate moments, and reactions. Wood–Armer reinforcement moments are not yet produced.
+
+Suitable as a screening / quick-check tool for **right (non-skew), solid RC slab decks without composite edge beams**. Any design-submission use requires independent verification against a second method and Chartered Engineer review.
+
+See [`docs/2026-04-18-solver-suitability-review.md`](./docs/2026-04-18-solver-suitability-review.md) for a full assessment against bridge-deck use and the roadmap to lift these limitations.
+
+## Workflow notes
+
+- Most valid input changes trigger a re-run automatically after ~150 ms. A manual *Re-run Analysis* button sits at the top of the control panel.
+- In axle mode, the travel direction sets whether the live slider controls vehicle `X` or `Y`, and the range covers the full vehicle crossing.
+- *Run Envelope* sweeps the vehicle along the configured path range/step and accumulates worst-case fields. The envelope persists across input changes; if inputs that affect the envelope change, it is marked stale and a re-run is offered.
+- The hover probe is enabled in *Structure* and *Results 2D*, disabled in *Deformed 3D*.
+- *Deformed 3D* uses auto-fit base exaggeration × a user-controlled multiplier rather than a fixed absolute scale.
+- *Export PDF (Print)* opens the browser print dialog with a print-tuned engineering note. If an envelope is available and fresh, the export re-runs analysis at the worst-Mxx and worst-Myy stations to capture additional plan views, then restores your original placement.
+
+## Documentation
+
+- [Solver suitability review (2026-04-18)](./docs/2026-04-18-solver-suitability-review.md)
+- [Benchmark reference](./docs/benchmark-reference.md)
+- Version specifications: [v5](./docs/v5-specification.md) · [v4](./docs/v4-specification.md) · [v3](./docs/v3-specification.md) · [v2](./docs/v2-specification.md) · [v1](./docs/v1-specification.md)
+- Feature design notes: [V5 WebGL viewer](./docs/2026-04-17-v5-webgl-viewer.md) · [PDF envelope + vehicle elevation](./docs/2026-05-18-pdf-envelope-and-vehicle-diagram.md)
+
+## Disclaimer
+
+This tool is provided for engineering screening and educational use. Outputs are not a substitute for project-specific design FEA, code-compliant assessment, or independent checking by a competent Chartered Engineer. The authors accept no liability for use of the results.
