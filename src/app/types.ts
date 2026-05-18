@@ -236,6 +236,18 @@ export interface EnvelopeFieldData {
   units: string;
 }
 
+export interface EnvelopeWorstStation {
+  stationM: number;
+  peakValue: number;
+  peakAbs: number;
+  nodeId: number;
+}
+
+export interface EnvelopeWorstStations {
+  mx: EnvelopeWorstStation;
+  my: EnvelopeWorstStation;
+}
+
 export interface EnvelopeData {
   stationsRun: number;
   pathStartM: number;
@@ -247,6 +259,7 @@ export interface EnvelopeData {
   mx: EnvelopeFieldData;
   my: EnvelopeFieldData;
   deflection: EnvelopeFieldData;
+  worstStations: EnvelopeWorstStations;
 }
 
 export interface AnalysisResults {
