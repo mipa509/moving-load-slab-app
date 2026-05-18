@@ -52,7 +52,17 @@ export const App = () => {
   const [running, setRunning] = useState(false);
   const [envelopeRunning, setEnvelopeRunning] = useState(false);
   const [envelopeProgress, setEnvelopeProgress] = useState<EnvelopeProgress | null>(null);
-  const [reportImages, setReportImages] = useState<{ mx?: string; my?: string }>({});
+  const [reportImages, setReportImages] = useState<{
+    currentMx?: string;
+    currentMy?: string;
+    envelopeMx?: string;
+    envelopeMy?: string;
+    envelopeMxStationM?: number;
+    envelopeMyStationM?: number;
+    envelopeMxPeak?: number;
+    envelopeMyPeak?: number;
+    envelopeUnits?: string;
+  }>({});
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const vehicleLibraryInputRef = useRef<HTMLInputElement | null>(null);
   const autoRunTimeoutRef = useRef<number | null>(null);
@@ -221,13 +231,13 @@ export const App = () => {
       setSelectedResultField("mx");
       setModel((curr) => ({ ...curr, display: { ...curr.display, plotMode: "results" } }));
       await waitFrames(4);
-      const mxPng = canvasRef.current?.toDataURL("image/png");
+      const currentMx = canvasRef.current?.toDataURL("image/png");
 
       setSelectedResultField("my");
       await waitFrames(4);
-      const myPng = canvasRef.current?.toDataURL("image/png");
+      const currentMy = canvasRef.current?.toDataURL("image/png");
 
-      setReportImages({ mx: mxPng, my: myPng });
+      setReportImages({ currentMx, currentMy });
       await waitFrames(2);
       window.print();
     } finally {
@@ -424,7 +434,11 @@ export const App = () => {
           canvasRef.current = canvas;
         }}
       />
-      <ReportNote model={model} results={results} images={reportImages} />
+      <ReportNote
+        model={model}
+        results={results}
+        images={{ mx: reportImages.currentMx, my: reportImages.currentMy }}
+      />
     </div>
   );
 };
