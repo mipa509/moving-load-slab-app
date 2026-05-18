@@ -1376,3 +1376,36 @@ th {
   border-color: rgba(134, 148, 165, 0.42);
   color: #c9d3df;
 }
+
+.vehicle-side-elevation {
+  margin: 0.75rem 0 0;
+  color: #1f2937;
+}
+
+.vehicle-side-elevation svg {
+  display: block;
+  width: 100%;
+  max-width: 640px;
+  height: auto;
+}
+
+.vehicle-side-elevation figcaption {
+  margin-top: 0.25rem;
+  font-size: 0.85rem;
+  color: #4b5563;
+}
+
+.vehicle-side-elevation-empty {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+@media print {
+  .report-note-section.report-note-figures figure {
+    page-break-inside: avoid;
+  }
+  .vehicle-side-elevation {
+    page-break-inside: avoid;
+  }
+}
