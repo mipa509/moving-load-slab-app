@@ -434,11 +434,7 @@ export const App = () => {
           canvasRef.current = canvas;
         }}
       />
-      <ReportNote
-        model={model}
-        results={results}
-        images={{ mx: reportImages.currentMx, my: reportImages.currentMy }}
-      />
+      <ReportNote model={model} results={results} images={reportImages} />
     </div>
   );
 };

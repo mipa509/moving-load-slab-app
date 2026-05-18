@@ -13,10 +13,22 @@ import {
 import { SectionPlot } from "./SectionPlot";
 import { VehicleSideElevation } from "./VehicleSideElevation";
 
+interface ReportNoteImages {
+  currentMx?: string;
+  currentMy?: string;
+  envelopeMx?: string;
+  envelopeMy?: string;
+  envelopeMxStationM?: number;
+  envelopeMyStationM?: number;
+  envelopeMxPeak?: number;
+  envelopeMyPeak?: number;
+  envelopeUnits?: string;
+}
+
 interface ReportNoteProps {
   model: SlabModel;
   results: AnalysisResults;
-  images: { mx?: string; my?: string };
+  images: ReportNoteImages;
   preparedBy?: string;
 }
 
@@ -362,7 +374,7 @@ export const ReportNote = ({ model, results, images, preparedBy }: ReportNotePro
       })()}
 
       <section className="report-note-section report-note-figures">
-        <h2>7. Bending moments</h2>
+        <h2>7. Bending moments — current placement</h2>
         <figure>
           <figcaption>
             <strong>Mxx</strong> — bending moment about y-axis
@@ -370,8 +382,8 @@ export const ReportNote = ({ model, results, images, preparedBy }: ReportNotePro
               ? ` · range ${mxData.min.toFixed(2)} to ${mxData.max.toFixed(2)} ${mxData.units}`
               : null}
           </figcaption>
-          {images.mx ? (
-            <img src={images.mx} alt="Mxx contour" />
+          {images.currentMx ? (
+            <img src={images.currentMx} alt="Mxx contour at current placement" />
           ) : (
             <p className="report-note-missing">Plot capture not available.</p>
           )}
@@ -383,12 +395,67 @@ export const ReportNote = ({ model, results, images, preparedBy }: ReportNotePro
               ? ` · range ${myData.min.toFixed(2)} to ${myData.max.toFixed(2)} ${myData.units}`
               : null}
           </figcaption>
-          {images.my ? (
-            <img src={images.my} alt="Myy contour" />
+          {images.currentMy ? (
+            <img src={images.currentMy} alt="Myy contour at current placement" />
           ) : (
             <p className="report-note-missing">Plot capture not available.</p>
           )}
         </figure>
+      </section>
+
+      <section className="report-note-section report-note-figures">
+        <h2>8. Bending moments — envelope worst stations</h2>
+        {images.envelopeMx || images.envelopeMy ? (
+          <>
+            <p>
+              Plan views captured with the vehicle reference centre placed at the
+              station that produced the largest absolute peak across all nodes during
+              the envelope sweep. Travel axis follows{" "}
+              {travelLabel[model.placement.travelDirection] ?? model.placement.travelDirection}.
+            </p>
+            <figure>
+              <figcaption>
+                <strong>Mxx</strong> — worst station
+                {images.envelopeMxStationM !== undefined
+                  ? ` · vehicle ref. centre at ${
+                      model.placement.travelDirection.startsWith("x") ? "X" : "Y"
+                    } = ${images.envelopeMxStationM.toFixed(2)} m`
+                  : null}
+                {images.envelopeMxPeak !== undefined && images.envelopeUnits
+                  ? ` · peak ${images.envelopeMxPeak.toFixed(2)} ${images.envelopeUnits}`
+                  : null}
+              </figcaption>
+              {images.envelopeMx ? (
+                <img src={images.envelopeMx} alt="Mxx contour at worst envelope station" />
+              ) : (
+                <p className="report-note-missing">Plot capture not available.</p>
+              )}
+            </figure>
+            <figure>
+              <figcaption>
+                <strong>Myy</strong> — worst station
+                {images.envelopeMyStationM !== undefined
+                  ? ` · vehicle ref. centre at ${
+                      model.placement.travelDirection.startsWith("x") ? "X" : "Y"
+                    } = ${images.envelopeMyStationM.toFixed(2)} m`
+                  : null}
+                {images.envelopeMyPeak !== undefined && images.envelopeUnits
+                  ? ` · peak ${images.envelopeMyPeak.toFixed(2)} ${images.envelopeUnits}`
+                  : null}
+              </figcaption>
+              {images.envelopeMy ? (
+                <img src={images.envelopeMy} alt="Myy contour at worst envelope station" />
+              ) : (
+                <p className="report-note-missing">Plot capture not available.</p>
+              )}
+            </figure>
+          </>
+        ) : (
+          <p className="report-note-missing">
+            No envelope available — run <strong>Envelope</strong> then re-export to populate
+            worst-station plan views.
+          </p>
+        )}
       </section>
 
       <footer className="report-note-footer">
