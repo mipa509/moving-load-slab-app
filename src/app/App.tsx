@@ -224,20 +224,93 @@ export const App = () => {
       return;
     }
 
+    const envelope = results.envelope;
+    const envelopeFresh =
+      envelope !== undefined &&
+      envelope.signature === buildAutoRunSignature(model);
+
     const prevField = selectedResultField;
     const prevPlotMode = model.display.plotMode;
+    const prevPlacement = model.placement;
+
+    const captureField = async (field: "mx" | "my"): Promise<string | undefined> => {
+      setSelectedResultField(field);
+      await waitFrames(4);
+      return canvasRef.current?.toDataURL("image/png");
+    };
 
     try {
-      setSelectedResultField("mx");
       setModel((curr) => ({ ...curr, display: { ...curr.display, plotMode: "results" } }));
-      await waitFrames(4);
-      const currentMx = canvasRef.current?.toDataURL("image/png");
+      await waitFrames(2);
 
-      setSelectedResultField("my");
-      await waitFrames(4);
-      const currentMy = canvasRef.current?.toDataURL("image/png");
+      const currentMx = await captureField("mx");
+      const currentMy = await captureField("my");
 
-      setReportImages({ currentMx, currentMy });
+      const captures: {
+        envelopeMx?: string;
+        envelopeMy?: string;
+        envelopeMxStationM?: number;
+        envelopeMyStationM?: number;
+        envelopeMxPeak?: number;
+        envelopeMyPeak?: number;
+        envelopeUnits?: string;
+      } = {};
+
+      if (envelopeFresh && envelope) {
+        const isXAxis =
+          model.placement.travelDirection === "x+" ||
+          model.placement.travelDirection === "x-";
+        const stationModel = (stationM: number): SlabModel => ({
+          ...model,
+          placement: {
+            ...model.placement,
+            ...(isXAxis ? { centerXM: stationM } : { centerYM: stationM }),
+          },
+        });
+
+        const mxStation = envelope.worstStations.mx.stationM;
+        setModel(stationModel(mxStation));
+        await waitFrames(2);
+        const mxRun = await runFixedAnalysis(stationModel(mxStation));
+        if (mxRun.status === "success") {
+          setResults(mxRun);
+          await waitFrames(4);
+          captures.envelopeMx = await captureField("mx");
+          captures.envelopeMxStationM = mxStation;
+          captures.envelopeMxPeak = envelope.worstStations.mx.peakValue;
+          captures.envelopeUnits = envelope.mx.units;
+        }
+
+        const myStation = envelope.worstStations.my.stationM;
+        setModel(stationModel(myStation));
+        await waitFrames(2);
+        const myRun = await runFixedAnalysis(stationModel(myStation));
+        if (myRun.status === "success") {
+          setResults(myRun);
+          await waitFrames(4);
+          captures.envelopeMy = await captureField("my");
+          captures.envelopeMyStationM = myStation;
+          captures.envelopeMyPeak = envelope.worstStations.my.peakValue;
+          captures.envelopeUnits = envelope.my.units;
+        }
+
+        // Restore original placement + re-run so the UI reflects user's last setup.
+        setModel((curr) => ({ ...curr, placement: prevPlacement }));
+        const restoredRun = await runFixedAnalysis({
+          ...model,
+          placement: prevPlacement,
+        });
+        if (restoredRun.status === "success") {
+          setResults({ ...restoredRun, envelope });
+        }
+        await waitFrames(2);
+      }
+
+      setReportImages({
+        currentMx,
+        currentMy,
+        ...captures,
+      });
       await waitFrames(2);
       window.print();
     } finally {
