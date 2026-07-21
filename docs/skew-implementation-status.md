@@ -2,12 +2,12 @@
 
 ## Current integration
 
-- Integration hash: `4253976`
+- Integration hash: `8316904`
 - Worktree: `C:\MyEngineering\04-Apps\moving-load-slab-app`
 - Branch: `feat/skew-plate-analysis`
-- Active wave/package: Wave 2A / WP-020 skew structured mesh and quality diagnostics plus WP-022 wheel-patch polygon generation; WP-004 and formal approvals remain deferred to the end-of-plan review register
-- Package state: `G1 passed; WP-020 stopped cleanly at each lease boundary and is reissued under CD-WP020-001-R1/002; WP-022 remains active; G2 open`
-- Gate state: G1 remains passed for implementation progression. WP-020 must pass before WP-021/WP-023; WP-022 may integrate independently but WP-024 remains blocked until WP-020, WP-022, and WP-023 pass. No physical-validation, standards-compliance, engineering-reliance, or release claim is authorized
+- Active wave/package: Wave 2A complete / WP-020 skew structured mesh and quality diagnostics plus WP-022 wheel-patch polygon generation passed; Wave 2B WP-021/WP-023 is now dependency-eligible; WP-004 and formal approvals remain deferred to the end-of-plan review register
+- Package state: `G1 passed; WP-020 passed at 8316904; WP-022 passed at 5eb9d70; combined Wave 2A regression passed; G2 open`
+- Gate state: G1 remains passed for implementation progression. WP-020 now satisfies the prerequisite for WP-021/WP-023. WP-024 remains blocked until WP-023 passes; WP-026 remains responsible for removing the temporary public skew-solve guard after all of its prerequisites pass. No physical-validation, standards-compliance, engineering-reliance, or release claim is authorized
 - Worktree at dispatch: clean at `1060d4b` except user-owned untracked plan and frozen untracked WP-004 verification files
 
 ## Decision digests
@@ -74,6 +74,9 @@
 - `CD-WP020-001` resolves the literal AABB/centre acceptance conflict without crossing prerequisites: WP-020 must produce coordinate-identical element polygons, containing metadata AABBs, and a tested Q4 `(0,0)` centre utility. WP-024 remains the sole owner that replaces AABB load integration, and WP-030 remains the sole owner that activates Q4 centres in recovery. Until both consumer packets pass, no nonzero-skew load/recovery correctness claim is permitted.
 - `CD-WP020-002` extends WP-020 only to the existing typed mechanical element fixtures reached by required `MeshNode.s/t` promotion. Those edits may add deterministic local-coordinate fields and update promoted type references only; element equations, numerical inputs/outputs, snapshots, hashes, tolerances, and assertions remain frozen.
 - `CD-WP020-001-R1` supersedes the initial consumer deferral after independent preflight identified an unsafe transient public path. WP-020 now also owns three narrow safety/correctness edits: Q4-centre use in `recover.ts`, fail-closed rejection of non-rectangular element AABB loading in `patch.ts`, and a temporary nonzero-skew public-solve guard in `runFixedPositionAnalysis.ts`. WP-024 still exclusively owns polygon integration; WP-026 removes the public guard only after its prerequisites pass.
+- WP-022 passed corrected independent computational-geometry review with no findings after finite/safe axle-count and derived-value guards were added and clipping/area/centroid/first-moment expectations were replaced by independent test oracles. Focused 43/43, compatibility 11/11, and strict TypeScript passed; checkpoint `5eb9d70` is pushed.
+- WP-020's initial review found a bypassable stale polygon/node metadata invariant. The corrected central resolver makes four indexed nodes authoritative, hard-rejects runtime cardinality other than four, requires exact stored polygon order/coordinates and canonical AABB agreement, and is consumed by quality, recovery centre, and the temporary legacy-load guard. Final independent re-review passed with no findings.
+- WP-020 focused tests passed 27/27; the combined post-WP-022 full suite passed 35 files/345 tests; strict TypeScript and the 672-module production build passed with only the existing chunk-size warning. Checkpoint `8316904` is pushed. These are internal implementation gates only; formal CEng/source/release reviews remain deferred.
 
 ## Packet states
 
@@ -97,8 +100,8 @@
 | EF-004 | `passed` | zero-skew rebaseline worker; independent numerical impact review accepted | checkpoint `b4cbbec` pushed; complete old/new evidence and limitations recorded |
 | EF-005 | `passed_reentry` | lead/integrator computational re-entry | available G1 suites passed 170/170; main path re-entered at WP-015, not a G1 pass |
 | WP-015 | `passed` | app/solver boundary worker; independent architecture/numerical review accepted | checkpoint `79ccf06` pushed; exact normalization and canonical physical-edge sizing accepted; G1 passed |
-| WP-020 | `reissued` | mesh worker; independent numerical/architecture review required | worker stopped before edits at every discovered lease boundary; CD-WP020-001-R1/002 approved; fail-closed atomic lease reissued from `04ff9db`; WP-021/WP-023 blocked |
-| WP-022 | `dispatched` | load-geometry worker; independent computational-geometry review required | WP-012/WP-013/WP-015 and patch contract passed; exclusive vehicle/polygon-test lease active from `1060d4b`; WP-024 blocked |
+| WP-020 | `passed` | mesh worker; independent numerical/architecture correction review accepted | checkpoint `8316904` pushed; exact live mesh contract, Q4 centre, quality diagnostics, stored-geometry invariant, and interim fail-closed guards accepted; WP-021/WP-023 unblocked |
+| WP-022 | `passed` | load-geometry worker; independent computational-geometry correction review accepted | checkpoint `5eb9d70` pushed; skew deck clipping, full-area pressure, finite-input guards, tangent/outside semantics, and independent geometry oracles accepted |
 
 ## File leases
 
@@ -143,8 +146,8 @@
 | WP-015 app/solver boundary worker | write | `src/solver/model/fromAppModel.ts`, `src/app/meshSizing.ts`, `src/tests/meshSizing.test.ts` only | released; accepted and pushed at `79ccf06` |
 | WP-015 independent architecture/numerical reviewer | read-only | exact three-file diff, accepted geometry/mesh-sizing policy, compatibility, and focused evidence | released; recommendation `pass`, no findings |
 | G1 lead/integrator and independent gate reviewer | verification/integration | committed Wave 1 tree, all G1 focused/numerical suites, full suite, build, and repository integrity | released; internal implementation-progression gate `pass` at `79ccf06` |
-| WP-020 mesh worker | write | `src/solver/model/types.ts`, `src/solver/core/mesh.ts`, new `src/solver/core/meshQuality.ts`, `src/solver/benchmarks/zeroSkewCharacterizationFixture.ts`, `src/solver/post/recover.ts` centre lines only, `src/solver/loads/patch.ts` non-rectangular guard only, `src/solver/runFixedPositionAnalysis.ts` temporary nonzero-skew guard only, new `src/tests/mesh.test.ts`, `src/tests/recoverNodal.test.ts`, `src/tests/skewContractScaffold.test.ts`, `src/tests/q4Geometry.test.ts`, `src/tests/mitc4Element.test.ts`, `src/tests/elementStability.test.ts`, `src/tests/helpers/elementStabilityDiagnostics.ts`, `src/tests/solverSmoke.test.ts` only | all prior leases stopped with zero edits; reissued under CD-WP020-001-R1/002 from `04ff9db`; mechanical fixtures and three narrow fail-closed/correctness integrations only; no support/facade/app/ADR edits |
-| WP-022 load-geometry worker | write | `src/solver/loads/vehicle.ts`, new `src/tests/vehiclePatchGeometry.test.ts` only | active from `1060d4b`; staged polygon generation/clipping only; no patch integration/type promotion/viewer edits |
+| WP-020 mesh worker | write | `src/solver/model/types.ts`, `src/solver/core/mesh.ts`, new `src/solver/core/meshQuality.ts`, `src/solver/benchmarks/zeroSkewCharacterizationFixture.ts`, `src/solver/post/recover.ts` centre lines only, `src/solver/loads/patch.ts` non-rectangular guard only, `src/solver/runFixedPositionAnalysis.ts` temporary nonzero-skew guard only, new `src/tests/mesh.test.ts`, `src/tests/recoverNodal.test.ts`, `src/tests/skewContractScaffold.test.ts`, `src/tests/q4Geometry.test.ts`, `src/tests/mitc4Element.test.ts`, `src/tests/elementStability.test.ts`, `src/tests/helpers/elementStabilityDiagnostics.ts`, `src/tests/solverSmoke.test.ts` only | released after final independent correction review and pushed checkpoint `8316904`; no support/facade/app/ADR edits |
+| WP-022 load-geometry worker | write | `src/solver/loads/vehicle.ts`, new `src/tests/vehiclePatchGeometry.test.ts` only | released after corrected independent review and pushed checkpoint `5eb9d70`; no patch integration/type promotion/viewer edits |
 
 WP-003 and WP-004 leases are disjoint. Source, test, configuration, package, report, live type, app, solver, viewer, and user-owned files are outside both scopes.
 
@@ -413,6 +416,6 @@ This register defers review timing, not evidence integrity. A known sign/transfo
 
 ## Next three delegations
 
-1. Complete, independently review, and checkpoint WP-020 from `1060d4b`; stop for any out-of-lease recovery/load-integration requirement.
-2. Complete, independently review, and checkpoint WP-022 from `1060d4b`; preserve full-contact-area pressure and keep WP-024 integration out of scope.
-3. After both checkpoints, rerun the combined Wave 2A regression set; only then dispatch WP-021/WP-023 or proceed to the next dependency-safe lane.
+1. Dispatch WP-021 support mapping from accepted WP-020/WP-002 contracts; retain exact support lease and topology/physical-distance fail-closed requirements.
+2. Dispatch WP-023 inverse Q4 mapping from accepted WP-010/WP-020 contracts; retain its exclusive Q4 geometry/test lease.
+3. Independently review and checkpoint WP-021/WP-023 separately, then evaluate G2 and WP-024 eligibility; keep the public nonzero-skew solve guard until WP-026.
