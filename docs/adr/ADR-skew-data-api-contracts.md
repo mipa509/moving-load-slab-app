@@ -6,6 +6,7 @@
 - **Integration baseline:** `feat/skew-plate-analysis` at `7f4c77f24b0712075b754f13a232b9d9e7ac9c13`
 - **Depends on:** Accepted `docs/adr/ADR-skew-mathematical-conventions.md`
 - **Amendment:** `CD-WP005-001` approved 2026-07-21 - compile-safe collision staging and real WP-021 normalizer boundary; no numerical, sign, warning-authority, or runtime-behaviour change
+- **Amendment:** `CD-WP012-001` approved 2026-07-21 - canonical kernel angle domain and off-deck affine-transform responsibility; app/persistence limit unchanged
 
 ## 1. Decision, authority, and labels
 
@@ -269,7 +270,7 @@ export function normalizeSolverGeometry(
 }
 ```
 
-All four fields are finite. Length, width, and thickness are positive. Persisted app input is limited to the agreed inclusive range `-45 <= skewAngleDeg <= 45`. `lengthM` is the centreline span in global `x`; `widthM` is measured in global `y`. Vehicle `headingDeg` is unrelated and cannot supply `skewAngleDeg`.
+All four fields are finite. Length, width, and thickness are positive. Canonical geometry kernels accept the mathematical domain `-90 < skewAngleDeg < 90`; the open limits exclude the singular tangent/cosine geometry. Persisted app input remains limited to the agreed inclusive range `-45 <= skewAngleDeg <= 45`, with WP-014B solely responsible for that narrower UI/import/saved-model policy. A kernel must not privately apply the app-only limit. `lengthM` is the centreline span in global `x`; `widthM` is measured in global `y`. Vehicle `headingDeg` is unrelated and cannot supply `skewAngleDeg`. This domain clarification is approved by `CD-WP012-001` and does not widen the released app input.
 
 **Observed.** The app currently uses `lengthM/widthM/thicknessM` without skew. The solver currently has a separate `SlabGeometry` with `lengthX/lengthY/thickness`.
 
@@ -307,6 +308,8 @@ getSupportAxes(geometry: SlabGeometry, edge: DeckEdge): DeckEdgeFrame
 ```
 
 The affine mapping is exactly the accepted mathematical ADR. For `skewAngleDeg === 0` (including normalized negative zero), both transforms take a direct branch: global `(x,y)=(s,t)` and local `(s,t)=(x,y)`. That branch also returns the exact rectangular vertices and bounds without evaluating trigonometric functions. This is a behavioral requirement, not merely a tolerance check.
+
+The two transforms are total affine coordinate maps for any finite local or global point, including points outside `0 <= s <= lengthM` or `0 <= t <= widthM`. They do not perform containment and do not clamp. Physical deck membership is determined separately against local limits or the canonical deck polygon by the packet that needs containment. This `CD-WP012-001` decision supports vehicle travel, patch clipping, inverse mapping, and entry/exit calculations without duplicating the affine formula; it does not make an off-deck point part of the slab.
 
 Edge frames use these canonical directions:
 
