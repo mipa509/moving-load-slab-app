@@ -2,12 +2,12 @@
 
 ## Current integration
 
-- Integration hash: `e990eb5b47c5b50ac7d946794ba8d8dd14437462`
+- Integration hash: `7f4c77f24b0712075b754f13a232b9d9e7ac9c13`
 - Worktree: `C:\MyEngineering\04-Apps\moving-load-slab-app`
 - Branch: `feat/skew-plate-analysis`
-- Active wave/package: Wave 0B / WP-002 accepted; checkpoint pending
-- Package state: `passed`
-- Gate state: G0 `blocked` pending WP-001 through WP-005; no later package is active
+- Active wave/package: Wave 0C / WP-003 accepted; WP-004 blocked external
+- Package state: `WP-003 accepted; checkpoint staged`
+- Gate state: G0 `blocked` pending WP-004 and WP-005; no Wave 1 package is active
 - Worktree at dispatch: clean at the integration hash except user-owned untracked `docs/2026-07-21-skew-plate-analysis-implementation-plan.md`
 
 ## Decision digests
@@ -33,6 +33,10 @@
 - Mathematical re-review found no remaining sign, mirror, equilibrium, spring, unit, geometry, validation-status, or WP-001 contract defect; acceptance remains conditional on removing one notation collision and one public-field naming ambiguity.
 - Final correction applied: curvature uses `K_curv`, generalized rotational spring stiffness uses `K_s^(beta)`, displacement outputs use `rotationX/rotationY`, and normalized physical action outputs use the distinct `coupleX/coupleY` fields.
 - Final independent correction review passed with no critical, major, moderate, or minor findings; the mathematical/sign ADR is accepted.
+- WP-002 checkpoint `7f4c77f` is pushed to GitHub; WP-003 and WP-004 prerequisites are satisfied.
+- WP-003 owns only the shared data/API contract ADR. It may inspect all relevant boundaries but must not edit live types, adapters, app, solver, viewer, tests, or the implementation plan.
+- WP-004 owns only the verification-source protocol and its documentation fixture-data directory. It must freeze source interpretation and the commercial-shell protocol before tolerances or observed comparison results.
+- WP-003 passed independent architecture/numerical review after all type-safety, compatibility-bridge, persistence, warning, and package-ownership findings were closed. Its shared data/API ADR is accepted.
 
 ## Packet states
 
@@ -40,16 +44,22 @@
 |---|---|---|---|
 | WP-001 | `passed` | lead/integrator; independent review accepted | none |
 | WP-002 | `passed` | lead/integrator; independent mathematical review accepted | WP-001 passed at `e990eb5` |
+| WP-003 | `passed` | data/API contract architecture worker; independent architecture review accepted | WP-002 passed at `7f4c77f`; checkpoint pending |
+| WP-004 | `blocked_external` | engineering reference-data worker; independent source review | local correction re-review passed; package/G0 cannot pass without external evidence |
 
 ## File leases
 
 | Holder | Mode | Exclusive scope | State |
 |---|---|---|---|
 | WP-002 numerical architecture worker | write | `docs/adr/ADR-skew-mathematical-conventions.md` only | released; initial ADR delivered, later sandbox-blocked correction supplied as exact patch text |
-| Lead/integrator | write/integration | ADR review corrections; `docs/skew-implementation-status.md`; repository staging/commit/push | final ADR correction released; ledger active |
+| Lead/integrator | write/integration | `docs/skew-implementation-status.md`; repository staging/commit/push | active; all worker files read-only to lead until handoff |
 | WP-002 fresh numerical reviewer | read-only | ADR and directly relevant equations/code evidence | released; final recommendation `pass` with no open findings |
+| WP-003 data/API contract worker | write | `docs/adr/ADR-skew-data-api-contracts.md` only | ownership-correction lease released; partial handoff completed by lead mechanical sync |
+| WP-004 reference-data worker | write | `docs/verification/skew-verification-source-protocol.md` and `docs/verification/fixtures/skew/**` only | released; locally reviewed files frozen pending external unblock |
+| WP-003 fresh architecture reviewer | read-only | WP-003 ADR, accepted mathematical ADR, plan Section 5, and directly relevant live boundaries | released; final recommendation `pass`, no open findings |
+| WP-004 fresh source reviewer | read-only | WP-004 protocol/data, cited primary/official sources, source-status and shell-contract consistency | released; local corrections `pass`, WP-004/G0 `fail` on retained blockers |
 
-All WP-002 leases are released except the lead's ledger/integration authority. Source, test, configuration, package, report, and user-owned files remained outside WP-002 scope.
+WP-003 and WP-004 leases are disjoint. Source, test, configuration, package, report, live type, app, solver, viewer, and user-owned files are outside both scopes.
 
 ## Exact command outcomes
 
@@ -86,6 +96,26 @@ All WP-002 leases are released except the lead's ledger/integration authority. S
 | WP-002 independent mathematical re-review | `conditional`; all original mathematical findings corrected; moderate `K_beta` notation collision and minor rotation/action field-name ambiguity remained |
 | WP-002 final localized correction | exit 0; curvature/spring notation separated and kinematic/action public fields given distinct names |
 | WP-002 final independent correction review | `pass`; no critical, major, moderate, or minor findings; no mathematical regression found |
+| WP-002 checkpoint commit | exit 0; `7f4c77f`; `docs: freeze skew mathematical conventions`; ADR and ledger only |
+| `git push` after WP-002 | exit 0; `e990eb5..7f4c77f` pushed to `origin/feat/skew-plate-analysis`; remote relocation notice only |
+| WP-003 worker ADR checks | exit 0; leased file `git diff --check` and explicit trailing-whitespace scan clean; Markdown-only tests/build deferred to lead |
+| WP-003 independent architecture review | `fail`; two critical, four major, and one moderate contract-completeness/type-safety finding group; mathematical signs passed |
+| WP-003 correction checks | exit 0; no-index whitespace and trailing scan clean; stale-pattern scan clean; 34 Markdown fences balanced |
+| WP-003 independent correction re-review | `fail`; first findings mostly closed, but staged aggregate materialization, intermediate geometry/mesh/support bridges, immutable persistence/section versioning, line reaction axes/mixed attribution, and success warning/quality correlation remain |
+| WP-003 second correction checks | exit 0; no-index whitespace, trailing, fence, stale-pattern, scope/status, and baseline checks pass; one context-miss patch made no change before narrower success |
+| WP-003 final architecture re-review | `fail`; revised types/signs pass, but WP-032B/C section persistence ordering, one undefined geometry bridge, and WP-021/WP-022 promotion owners conflict with declared leases |
+| WP-003 ownership-correction checks | worker no-index/trailing/fence/status checks pass; lead removed only listed stale owner/version rows and re-ran no-index whitespace/stale-owner scan clean |
+| WP-003 ownership re-review | `fail`; ownership chain passed except missing legacy envelope worst-station shape and unassigned Viewport/ResultSurface/App compatibility consumers |
+| WP-003 final compatibility correction | lead added exact legacy worst-station types and assigned Viewport to WP-041B plus ResultSurface/non-print App migration to WP-050's plan-authorized minimal integration lease; no-index whitespace clean |
+| WP-003 final independent compatibility re-review | `pass`; no findings; complete production consumer audit and clean no-index/trailing checks |
+| `npm.cmd test` after WP-003 acceptance | exit 0; 25 files and 101 tests passed; Vitest duration 9.40 s |
+| `npm.cmd run build` after WP-003 acceptance | exit 0; 668 modules transformed; built in 21.08 s; existing greater-than-500-kB chunk warning remains |
+| WP-003 checkpoint staging request | rejected before execution by approval service because the session usage limit was reached; nothing staged, committed, or pushed; no bypass attempted |
+| WP-003 checkpoint staging retry | exit 0 after explicit user retry request; staged only the accepted WP-003 ADR and ledger; plan and WP-004 files excluded |
+| WP-004 worker protocol checks | exit 0; three JSON files parsed; leased documentation/data `git diff --check` and trailing-whitespace scan clean |
+| WP-004 independent source review | `fail`; fail-closed numeric/source qualification passed, but source access, instantiated shell case, tolerance timing, author order, controlled states, and one access classification require resolution |
+| WP-004 correction checks | exit 0; three JSON files parse; 22 controlled unverified transcription records; all four no-index whitespace checks clean |
+| WP-004 independent correction re-review | local `pass`; no local findings; WP-004/G0 `fail` pending originals, V28 authority, and instantiated pre-results shell case |
 
 ## Gate evidence and tolerances
 
@@ -112,9 +142,11 @@ All WP-002 leases are released except the lead's ledger/integration authority. S
 - WP-001's exact floating-point findings are closed; its correction passed focused/full/build checks and independent re-review.
 - The implementation-plan document is untracked user work and must be preserved unchanged.
 - No contract deviation is active.
+- WP-004 protocol preparation is complete but benchmark acceptance is blocked: Morley 1962 and Razzaque 1973 originals were not acquired, and the rectangular analytical source chain is incomplete. No executable acceptance fixture or empirical tolerance was added.
+- WP-003 is accepted and green; its mandatory Git checkpoint is staged. WP-005 remains undispatched until commit/push succeeds.
 
 ## Next three delegations
 
-1. WP-003 data/API contract architecture worker — ready after the accepted WP-002 checkpoint is pushed; ADR-only lease.
-2. WP-004 engineering reference-data worker — ready in parallel with WP-003 after the checkpoint; verification-source document and fixture-data-directory lease.
-3. Independent WP-003/WP-004 reviewers, followed by WP-005 contract integration — blocked until their respective packets are delivered and accepted; WP-005 additionally requires WP-003 to pass.
+1. WP-003 checkpoint commit/push - ready after full test/build acceptance; ADR and ledger only.
+2. WP-005 contract integrator - ready after the WP-003 checkpoint because its sole prerequisite has passed.
+3. WP-004 external evidence/source-case resolution - blocked pending original sources and an instantiated commercial-shell case; G0 and Wave 1 remain blocked.
