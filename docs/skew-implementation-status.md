@@ -2,12 +2,12 @@
 
 ## Current integration
 
-- Integration hash: `d078b76`
+- Integration hash: `1a6eaf1`
 - Worktree: `C:\MyEngineering\04-Apps\moving-load-slab-app`
 - Branch: `feat/skew-plate-analysis`
-- Active wave/package: Wave 1B / WP-011, WP-014A, and WP-031A ready for parallel dispatch; WP-004 deferred
-- Package state: `Wave 1A accepted and pushed; Wave 1B dispatch ready`
-- Gate state: G0 verification criteria are not passed; implementation-only exception `CD-G0-001` authorizes Wave 1 while release/verification gates remain fail-closed
+- Active wave/package: Wave 1B / WP-011 EF-001 evidence, WP-014B, and WP-031A; WP-004 deferred
+- Package state: `WP-014A accepted and pushed; WP-011 formulation failure awaiting independent review`
+- Gate state: G0 verification criteria are not passed under CD-G0-001; G1 is fail-closed on WP-011 extra zero-energy modes and Section 11 is active at EF-001 pending independent review
 - Worktree at dispatch: clean at the integration hash except user-owned untracked plan and frozen untracked WP-004 verification files
 
 ## Decision digests
@@ -51,6 +51,8 @@
 - Wave 1A is accepted. G1 remains open until WP-011 passes; no G1 claim is made from WP-010/WP-012/WP-013 alone.
 - `CD-WP014A-001` is approved: adding required live `skewAngleDeg` makes the typed `createDefaultModel` object invalid before WP-014B. WP-014A may add only the zero-valued field to that constructor as a compile bridge with no physical-behaviour change; WP-014B still exclusively owns sanitization, migration, range handling, and defaults tests.
 - `CD-WP014A-002` is approved after the worker's lease stop: strict typing also reaches the sanitizer return and two mesh-sizing fixtures. WP-014A may carry only `fallback.skewAngleDeg` through the sanitizer and add explicit zero to those fixtures; it must not read, validate, clamp, or migrate imported skew input before WP-014B.
+- WP-014A passed independent type/compatibility review with no findings and checkpoint `1a6eaf1` is pushed. WP-014B's sole prerequisite is now satisfied.
+- WP-011 has produced EF-001 stop evidence: element nullity 5 versus 3 physical modes, assembled 2x2 nullity 4 versus 3, near-zero checkerboard energy, and CG breakdown at iteration zero. These are formulation failures, not tolerance failures; independent numerical review is mandatory before replacement selection.
 
 ## Packet states
 
@@ -64,8 +66,9 @@
 | WP-010 | `passed` | Q4 geometry worker; independent numerical review accepted | checkpoint `799e190` pushed |
 | WP-012 | `passed` | deck-coordinate geometry correction worker; independent correction review accepted | checkpoint `6ed093c` pushed; CD-WP012-001 integrated |
 | WP-013 | `passed` | lead correction under original geometry lease; independent computational-geometry correction review accepted | checkpoint `8aa6c78` pushed |
-| WP-011 | `dispatched` | numerical element stability worker; fresh independent numerical review required | WP-010 passed; test/diagnostic-only initial lease |
-| WP-014A | `correction_active` | app schema worker; fresh independent type/compatibility review required | WP-005 and WP-012 passed; CD-WP014A-001/002 compile bridges approved |
+| WP-011 | `review_pending_fail` | numerical element stability worker; fresh independent numerical review required | EF-001 stop evidence produced; G1 and mesh/load integration blocked |
+| WP-014A | `passed` | app schema worker; independent type/compatibility review accepted | checkpoint `1a6eaf1` pushed; CD-WP014A-001/002 integrated |
+| WP-014B | `dispatched` | migration worker; fresh independent migration/compatibility review required | WP-014A passed at `1a6eaf1` |
 | WP-031A | `dispatched` | numerical convention worker; fresh independent numerical review required | WP-002 passed |
 
 ## File leases
@@ -93,8 +96,10 @@
 | Lead CD-WP012-001 contract clarification | write/integration | `docs/adr/ADR-skew-data-api-contracts.md` and ledger only | released; amendment synchronized and frozen for correction review |
 | WP-012 correction worker | write | `src/solver/geometry/deckCoordinates.ts`, `src/tests/deckCoordinates.test.ts` only | released; corrected handoff complete and accepted |
 | Lead WP-013 correction | write/integration | `src/solver/geometry/convexPolygon.ts`, `src/tests/convexPolygon.test.ts` only | released; bounded correction completed after agent thread limit; independently accepted |
-| WP-011 numerical stability worker | write | new `src/tests/helpers/elementStabilityDiagnostics.ts`, new `src/tests/elementStability.test.ts` only | active; production element/kernel changes prohibited without a new lead decision |
-| WP-014A app schema worker | write | `src/app/types.ts`; `src/app/defaults.ts` limited to zero construction plus `fallback.skewAngleDeg` carry-through; `src/tests/vehiclePlacement.test.ts`; `src/tests/skewContractScaffold.test.ts`; `src/tests/meshSizing.test.ts` limited to explicit zero fixture fields | active under CD-WP014A-001/002; no imported-input reading, validation, migration, clamping, or defaults-test authority |
+| WP-011 numerical stability worker | write | new `src/tests/helpers/elementStabilityDiagnostics.ts`, new `src/tests/elementStability.test.ts` only | active only to present six exact EF-001 defects as explicit expected failures; no tolerance relaxation or production edit |
+| WP-014A app schema worker | write | `src/app/types.ts`; narrow `src/app/defaults.ts` bridges; `src/tests/vehiclePlacement.test.ts`; `src/tests/skewContractScaffold.test.ts`; mechanical `src/tests/meshSizing.test.ts` fields | released; corrected handoff independently accepted and pushed |
+| WP-014A independent type/compatibility reviewer | read-only | WP-014A files, ADR ownership, and CD-WP014A-001/002 | released; recommendation `pass`, no findings |
+| WP-014B migration worker | write | `src/app/defaults.ts`, `src/tests/defaults.test.ts` only | active; owns missing legacy skew to zero, finite inclusive +/-45 policy, deterministic invalid handling, and save/load round trips |
 | WP-031A numerical convention worker | write | new `src/solver/post/reactionMomentMapping.ts`, new `src/tests/reactionMomentMapping.test.ts` only | active; tensor rotation and equilibrium aggregation excluded |
 
 WP-003 and WP-004 leases are disjoint. Source, test, configuration, package, report, live type, app, solver, viewer, and user-owned files are outside both scopes.
@@ -189,6 +194,11 @@ WP-003 and WP-004 leases are disjoint. Source, test, configuration, package, rep
 | WP-013 independent correction re-review | `pass`; all five original findings closed, including additional cyclic/remote/mutation/analytic probes; no remaining findings |
 | WP-013 checkpoint commit/push | exit 0; commit `8aa6c78`; pushed `6ed093c..8aa6c78` to `origin/feat/skew-plate-analysis`; remote relocation notice only |
 | Wave 1A ledger checkpoint | exit 0; commit `d078b76`; pushed `8aa6c78..d078b76` to `origin/feat/skew-plate-analysis`; remote relocation notice only |
+| WP-014A initial strict typecheck | exit 2; required skew missing from sanitizer return and two mesh-sizing fixtures; worker stopped at lease boundary |
+| WP-014A corrected strict/focused/build | exit 0; strict typecheck passed, focused 3 files/13 tests passed, 669-module build passed; full suite passed all unrelated 29 files/172 tests and failed only active WP-011 diagnostics |
+| WP-014A independent review | `pass`; canonical required type, staging removal, exact compile bridges, heading independence, and no WP-014B scope leakage confirmed; no findings |
+| WP-014A checkpoint commit/push | exit 0; commit `1a6eaf1`; pushed `d79ecef..1a6eaf1` to `origin/feat/skew-plate-analysis`; remote relocation notice only |
+| WP-011 initial EF-001 audit | focused/full exit 1 with 10 passing and 6 intentional acceptance failures; element nullity 5/3, assembled nullity 4/3, checkerboard normalized energy near zero, and CG breakdown at iteration zero; build/diff checks passed |
 
 ## Gate evidence and tolerances
 
@@ -264,6 +274,6 @@ WP-003 and WP-004 leases are disjoint. Source, test, configuration, package, rep
 
 ## Next three delegations
 
-1. WP-011 numerical stability audit after accepted WP-010; production changes require a separate lead decision.
-2. WP-014A mechanical app skew-type activation after accepted WP-005 and WP-012 validation contract.
+1. Independent numerical review of WP-011 EF-001 evidence and expected-failure presentation; if confirmed, proceed to EF-002 rather than WP-020/load integration.
+2. WP-014B skew defaults, sanitization, and persistence migration after accepted WP-014A.
 3. WP-031A generalized-to-physical reaction-moment mapping after accepted WP-002.
