@@ -2,13 +2,13 @@
 
 ## Current integration
 
-- Integration hash: `79ccf06`
+- Integration hash: `1060d4b`
 - Worktree: `C:\MyEngineering\04-Apps\moving-load-slab-app`
 - Branch: `feat/skew-plate-analysis`
-- Active wave/package: Wave 2 / WP-020 skew structured mesh and quality diagnostics is next for dispatch; WP-004 and formal approvals remain deferred to the end-of-plan review register
-- Package state: `WP-015 passed and pushed at 79ccf06; G1 computational gate passed; WP-020 eligible but not yet dispatched`
-- Gate state: G1 passed its internal implementation-progression audit. Inverse-transpose, corrected MITC4, zero-skew rebaseline, geometry/polygon, reaction mapping, migration/translation/mesh sizing, focused/full tests, and build are green. This is not physical validation, standards compliance, engineering reliance, or release approval
-- Worktree at gate: clean at `79ccf06` except user-owned untracked plan and frozen untracked WP-004 verification files
+- Active wave/package: Wave 2A / WP-020 skew structured mesh and quality diagnostics plus WP-022 wheel-patch polygon generation; WP-004 and formal approvals remain deferred to the end-of-plan review register
+- Package state: `G1 passed; WP-020 and WP-022 dispatched in disjoint lanes from 1060d4b; G2 open`
+- Gate state: G1 remains passed for implementation progression. WP-020 must pass before WP-021/WP-023; WP-022 may integrate independently but WP-024 remains blocked until WP-020, WP-022, and WP-023 pass. No physical-validation, standards-compliance, engineering-reliance, or release claim is authorized
+- Worktree at dispatch: clean at `1060d4b` except user-owned untracked plan and frozen untracked WP-004 verification files
 
 ## Decision digests
 
@@ -70,6 +70,7 @@
 - WP-014B passed independent correction review after exact nested V2 and malformed-shape evidence was added; checkpoint `2430f6e` is pushed. WP-015's package prerequisite is satisfied but its mesh-integration work remains held by the Section 11/G1 block.
 - WP-015 now normalizes the legacy solver slab fields once, propagates exact zero and signed skew through `fromAppModel`, and derives transverse target counts from WP-012's canonical physical support-edge length. Independent review passed with no findings; checkpoint `79ccf06` is pushed.
 - G1 passed its independent internal gate audit at `79ccf06`: 11 focused files/188 tests, the full 33-file/281-test suite, strict TypeScript, and the 671-module Vite build passed. No known executable sign, transform, rank, non-finite, positive-definiteness, locking, recovery, or stability failure remains. Deferred formal approvals still prohibit engineering reliance, warning removal, or release.
+- Wave 2A dispatches WP-020 and WP-022 from ledger checkpoint `1060d4b` under disjoint leases. WP-020 owns live mesh-type promotion, structured skew geometry, point-support forcing, and quality diagnostics; WP-022 owns staged patch polygon generation and deck clipping only. Any need to edit recovery, patch integration, shared contracts, or another package's files is a stop/deviation condition.
 
 ## Packet states
 
@@ -93,6 +94,8 @@
 | EF-004 | `passed` | zero-skew rebaseline worker; independent numerical impact review accepted | checkpoint `b4cbbec` pushed; complete old/new evidence and limitations recorded |
 | EF-005 | `passed_reentry` | lead/integrator computational re-entry | available G1 suites passed 170/170; main path re-entered at WP-015, not a G1 pass |
 | WP-015 | `passed` | app/solver boundary worker; independent architecture/numerical review accepted | checkpoint `79ccf06` pushed; exact normalization and canonical physical-edge sizing accepted; G1 passed |
+| WP-020 | `dispatched` | mesh worker; independent numerical/architecture review required | prerequisites passed at G1; exclusive mesh/type/quality lease active from `1060d4b`; WP-021/WP-023 blocked |
+| WP-022 | `dispatched` | load-geometry worker; independent computational-geometry review required | WP-012/WP-013/WP-015 and patch contract passed; exclusive vehicle/polygon-test lease active from `1060d4b`; WP-024 blocked |
 
 ## File leases
 
@@ -137,6 +140,8 @@
 | WP-015 app/solver boundary worker | write | `src/solver/model/fromAppModel.ts`, `src/app/meshSizing.ts`, `src/tests/meshSizing.test.ts` only | released; accepted and pushed at `79ccf06` |
 | WP-015 independent architecture/numerical reviewer | read-only | exact three-file diff, accepted geometry/mesh-sizing policy, compatibility, and focused evidence | released; recommendation `pass`, no findings |
 | G1 lead/integrator and independent gate reviewer | verification/integration | committed Wave 1 tree, all G1 focused/numerical suites, full suite, build, and repository integrity | released; internal implementation-progression gate `pass` at `79ccf06` |
+| WP-020 mesh worker | write | `src/solver/model/types.ts`, `src/solver/core/mesh.ts`, new `src/solver/core/meshQuality.ts`, new `src/tests/mesh.test.ts`, `src/tests/recoverNodal.test.ts`, `src/tests/skewContractScaffold.test.ts` only | active from `1060d4b`; no recovery/load/support/facade/app/ADR edits |
+| WP-022 load-geometry worker | write | `src/solver/loads/vehicle.ts`, new `src/tests/vehiclePatchGeometry.test.ts` only | active from `1060d4b`; staged polygon generation/clipping only; no patch integration/type promotion/viewer edits |
 
 WP-003 and WP-004 leases are disjoint. Source, test, configuration, package, report, live type, app, solver, viewer, and user-owned files are outside both scopes.
 
@@ -378,6 +383,6 @@ This register defers review timing, not evidence integrity. A known sign/transfo
 
 ## Next three delegations
 
-1. Checkpoint this G1 ledger state from accepted implementation hash `79ccf06` and push it before opening Wave 2.
-2. Dispatch WP-020 skew structured mesh and quality diagnostics under its exact plan lease; keep WP-021/WP-023 blocked until WP-020 review passes.
-3. After WP-020 passes review and is checkpointed, rerun its affected zero-skew/numerical suites before dispatching dependent support or inverse-mapping work.
+1. Complete, independently review, and checkpoint WP-020 from `1060d4b`; stop for any out-of-lease recovery/load-integration requirement.
+2. Complete, independently review, and checkpoint WP-022 from `1060d4b`; preserve full-contact-area pressure and keep WP-024 integration out of scope.
+3. After both checkpoints, rerun the combined Wave 2A regression set; only then dispatch WP-021/WP-023 or proceed to the next dependency-safe lane.
