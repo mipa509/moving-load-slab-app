@@ -2,11 +2,11 @@
 
 ## Current integration
 
-- Integration hash: `4d7d4f1`
+- Integration hash: `2430f6e`
 - Worktree: `C:\MyEngineering\04-Apps\moving-load-slab-app`
 - Branch: `feat/skew-plate-analysis`
-- Active wave/package: Section 11 / EF-002 formulation selection plus WP-014B correction review; WP-004 deferred
-- Package state: `EF-001 accepted and pushed; current SRI formulation failed; EF-002 dispatch ready`
+- Active wave/package: Section 11 / EF-002 formulation selection; WP-004 deferred
+- Package state: `WP-014B accepted and pushed; EF-002 research active`
 - Gate state: G0 verification criteria are not passed under CD-G0-001; G1 failed on independently confirmed extra zero-energy modes; WP-020 and downstream mesh/load integration remain blocked through EF-005 re-entry
 - Worktree at dispatch: clean at the integration hash except user-owned untracked plan and frozen untracked WP-004 verification files
 
@@ -57,6 +57,7 @@
 - WP-011's corrected EF-001 failure-evidence packet passed independent review. The formulation verdict remains failed: the extra SRI hourglass modes are genuine and checkpoint `4d7d4f1` preserves the exact defect signature.
 - WP-031A passed independent correction review with no remaining findings and checkpoint `2bc2e77` is pushed.
 - EF-002 may compare and select a documented replacement behind the stable API, but implementation cannot begin without independent numerical approval of the equations/fixtures and the required Chartered Engineer review.
+- WP-014B passed independent correction review after exact nested V2 and malformed-shape evidence was added; checkpoint `2430f6e` is pushed. WP-015's package prerequisite is satisfied but its mesh-integration work remains held by the Section 11/G1 block.
 
 ## Packet states
 
@@ -72,7 +73,7 @@
 | WP-013 | `passed` | lead correction under original geometry lease; independent computational-geometry correction review accepted | checkpoint `8aa6c78` pushed |
 | WP-011 | `failed` | numerical element stability worker; independent numerical failure review accepted | genuine extra zero-energy modes; replacement required |
 | WP-014A | `passed` | app schema worker; independent type/compatibility review accepted | checkpoint `1a6eaf1` pushed; CD-WP014A-001/002 integrated |
-| WP-014B | `correction_active` | migration worker; fresh independent migration/compatibility review required | strict V1/V2 interpretation frozen; CD-WP014B-001 save-call lease approved |
+| WP-014B | `passed` | migration worker; independent migration/compatibility correction review accepted | checkpoint `2430f6e` pushed; CD-WP014B-001 integrated |
 | WP-031A | `dispatched` | numerical convention worker; fresh independent numerical review required | WP-002 passed |
 | EF-001 | `passed` | numerical failure-evidence worker; independent numerical review accepted | checkpoint `4d7d4f1` pushed; evidence accepted, formulation not accepted |
 | EF-002 | `dispatched` | replacement-formulation architecture worker; independent numerical/CEng approval required | EF-001 accepted; documentation/research only |
@@ -106,7 +107,8 @@
 | WP-011 independent numerical reviewer | read-only | WP-011 diagnostics, accepted element kernel/ADRs, plan WP-011 and Section 11 | released; confirmed genuine hourglass modes; corrected EF-001 packet `pass`, formulation `fail` |
 | WP-014A app schema worker | write | `src/app/types.ts`; narrow `src/app/defaults.ts` bridges; `src/tests/vehiclePlacement.test.ts`; `src/tests/skewContractScaffold.test.ts`; mechanical `src/tests/meshSizing.test.ts` fields | released; corrected handoff independently accepted and pushed |
 | WP-014A independent type/compatibility reviewer | read-only | WP-014A files, ADR ownership, and CD-WP014A-001/002 | released; recommendation `pass`, no findings |
-| WP-014B migration worker | write | `src/app/defaults.ts`, `src/tests/defaults.test.ts`, and `src/app/App.tsx` limited only to replacing direct `JSON.stringify(model)` in `handleSaveJson` with the leased V2 serializer | active under CD-WP014B-001; exact V1/V2 parse, V2 save, skew fallback policy; no unrelated App edit |
+| WP-014B migration worker | write | `src/app/defaults.ts`, `src/tests/defaults.test.ts`, and one import/save-call bridge in `src/app/App.tsx` | released; corrected handoff independently accepted and pushed |
+| WP-014B independent migration/compatibility reviewer | read-only | WP-014B parser/serializer/tests, ADR snapshots, and narrow App diff | released; correction re-review `pass`, no findings |
 | WP-031A numerical convention worker | write | `src/solver/post/reactionMomentMapping.ts`, `src/tests/reactionMomentMapping.test.ts` only | released; corrected handoff independently accepted and pushed |
 | WP-031A independent numerical reviewer | read-only | WP-031A mapping/tests and accepted mathematical ADR | released; signed-zero correction re-review `pass`, no findings |
 | EF-002 replacement-formulation architecture worker | write/research | new `docs/adr/ADR-plate-element-formulation-replacement.md` only | active; compare documented formulations using primary sources; no production/test/type edits |
@@ -214,6 +216,11 @@ WP-003 and WP-004 leases are disjoint. Source, test, configuration, package, rep
 | WP-011 corrected EF-001 focused/full/build | exit 0; focused 21 tests including six narrowly scoped expected failures, full 31 files/214 tests, and build passed |
 | WP-011 independent correction review | EF-001 evidence `pass`, formulation `fail`; exact defect signatures accepted and EF-002 required |
 | EF-001 checkpoint commit/push | exit 0; commit `4d7d4f1`; pushed `2bc2e77..4d7d4f1` to `origin/feat/skew-plate-analysis`; remote relocation notice only |
+| WP-014B initial focused/full/build | exit 0; focused 23 tests, full 31 files/214 tests, strict typecheck, and 669-module build passed |
+| WP-014B independent initial review | `fail`; production accepted but independent full nested V2 oracle, point-support serialization, and malformed-shape matrix were missing |
+| WP-014B corrected focused/full/build | exit 0; focused 62 tests, full 31 files/253 tests, strict typecheck, and 669-module build passed |
+| WP-014B independent correction re-review | `pass`; complete V2 oracle, line/point preservation, structural rejection precedence, skew policy, and narrow App scope accepted; no findings |
+| WP-014B checkpoint commit/push | exit 0; commit `2430f6e`; pushed `5181458..2430f6e` to `origin/feat/skew-plate-analysis`; remote relocation notice only |
 
 ## Gate evidence and tolerances
 
@@ -299,5 +306,5 @@ WP-003 and WP-004 leases are disjoint. Source, test, configuration, package, rep
 ## Next three delegations
 
 1. EF-002 documented replacement-formulation comparison and selection ADR; no production implementation before independent numerical/CEng approval.
-2. WP-014B exact persistence evidence correction and independent re-review.
+2. Independent numerical review and required Chartered Engineer approval of the EF-002 selection before EF-003 implementation.
 3. Hold WP-015, WP-020, and load integration until the Section 11 branch re-enters at G1 through EF-005.
