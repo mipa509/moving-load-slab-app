@@ -2,11 +2,11 @@
 
 ## Current integration
 
-- Integration hash: `0088e11`
+- Integration hash: `dcf7cdb`
 - Worktree: `C:\MyEngineering\04-Apps\moving-load-slab-app`
 - Branch: `feat/skew-plate-analysis`
 - Active wave/package: Section 11 / EF-004 deliberate zero-skew rebaseline; WP-004 and formal approvals deferred to the end-of-plan review register
-- Package state: `EF-003 accepted, committed, and pushed at 0088e11; EF-004 ready for dispatch`
+- Package state: `EF-003 accepted and pushed; EF-004 rebaseline dispatched from dcf7cdb`
 - Gate state: the EF-001 SRI rank defect is corrected and EF-003 internal numerical/code review passed. G1 remains unpassed until EF-004 rebaseline and EF-005 re-entry; WP-020 and downstream mesh/load integration remain blocked
 - Worktree at dispatch: clean at the integration hash except user-owned untracked plan and frozen untracked WP-004 verification files
 
@@ -83,7 +83,7 @@
 | EF-001 | `passed` | numerical failure-evidence worker; independent numerical review accepted | checkpoint `4d7d4f1` pushed; evidence accepted, formulation not accepted |
 | EF-002 | `passed_for_implementation` | replacement-formulation architecture worker; independent numerical formulation and fixture-plan reviews accepted | original MITC4 selected; CEng suitability approval deferred to end-of-plan review under CD-EF002-001 |
 | EF-003 | `passed` | MITC4 implementation worker; independent numerical/code correction review accepted | checkpoint `0088e11` pushed; two deliberate stale snapshots handed to EF-004 |
-| EF-004 | `ready_for_dispatch` | zero-skew rebaseline worker; independent numerical impact review to be recorded | EF-003 passed; must record old/new values, convergence, reason, and engineering impact |
+| EF-004 | `dispatched` | zero-skew rebaseline worker; independent numerical impact review required | EF-003 passed; exact fixture/test/evidence lease recorded below |
 
 ## File leases
 
@@ -122,7 +122,7 @@
 | EF-002 independent numerical reviewers | read-only | formulation equations/API boundary and EF-003 fixture plan | released; `EF-002-R1` formulation pass and `EF-002-R2` fixture-plan pass |
 | EF-003 MITC4 implementation worker | write | `src/solver/core/element.ts`, new `src/solver/core/mitc4.ts`, new `src/tests/mitc4Element.test.ts`, `src/tests/elementStability.test.ts`, `src/tests/helpers/elementStabilityDiagnostics.ts` only | released; implementation and correction handoffs accepted at checkpoint `0088e11` |
 | EF-003 independent numerical/code reviewer | read-only | exact five-file diff, accepted MITC4 ADR, and hard numerical/test-independence criteria | released; initial conditional findings corrected; final recommendation `pass`, no findings |
-| EF-004 zero-skew rebaseline worker | write | to be recorded before dispatch from the fixture/report ownership in plan Section 11 | pending; production MITC4 kernel remains frozen |
+| EF-004 zero-skew rebaseline worker | write | `src/solver/benchmarks/zeroSkewCharacterizationFixture.ts`, `src/tests/zeroSkewCharacterization.test.ts`, `src/tests/q4Geometry.test.ts`, new `src/tests/zeroSkewRebaseline.test.ts`, new `docs/ef004-zero-skew-rebaseline.md` only | active from `dcf7cdb`; production MITC4 kernel, ledger, WP-004 paths, app, and other tests remain frozen |
 
 WP-003 and WP-004 leases are disjoint. Source, test, configuration, package, report, live type, app, solver, viewer, and user-owned files are outside both scopes.
 
@@ -353,6 +353,6 @@ This register defers review timing, not evidence integrity. A known sign/transfo
 
 ## Next three delegations
 
-1. Dispatch EF-004 from `0088e11` with an exact zero-skew fixture/evidence lease; production MITC4 code remains frozen.
+1. Complete the active EF-004 zero-skew fixture/evidence lease from `dcf7cdb`; production MITC4 code remains frozen.
 2. Record complete old/new zero-skew values, convergence evidence, formulation reason, and engineering impact; independently review numerical interpretation before checkpointing EF-004.
 3. Run EF-005 G1 re-entry after EF-004. Hold WP-015, WP-020, and load integration until that computational gate passes.
