@@ -240,7 +240,7 @@ WP-003 and WP-004 leases are disjoint. Source, test, configuration, package, rep
 | EF-002 checkpoint commit/push | exit 0; commit `352556d`; pushed `03016e3..352556d` to `origin/feat/skew-plate-analysis`; remote relocation notice only |
 | EF-003 initial focused run | 22/26 passed; stale EF-001 assertions exposed corrected element/assembled nullity 3 and positive checkerboard energy; invalid one-node locking oracle identified and replaced without tolerance widening |
 | EF-003 corrected focused run | exit 0; 2 files/29 tests passed, including independent full-J, mirror, raw-locking discriminator, warped convergence, thick-patch, and recovery-energy evidence |
-| EF-003 full suite | 30 files/259 tests passed; exactly two expected EF-004 stale zero-skew snapshot failures in `q4Geometry.test.ts` and `zeroSkewCharacterization.test.ts`, both first stiffness entry old `1562500` versus MITC4 `520833.3333333335` |
+| EF-003 full suite | 30 files/259 tests passed; exactly two expected EF-004 stale zero-skew snapshot failures in `q4Geometry.test.ts` and `zeroSkewCharacterization.test.ts`; first stiffness entry old `1562500`, MITC4 `2083333.3333333335`, absolute difference `520833.3333333335` |
 | EF-003 final build | exit 0; strict TypeScript and 670-module Vite build passed; pre-existing greater-than-500-kB chunk warning remains |
 | EF-003 independent initial review | production formulation `pass`; packet `conditional` on edge-swap oracle independence, independent raw comparator, affine mirror, warped-load convergence, thick assembled patch, and conditioning-label corrections |
 | EF-003 independent correction re-review | `pass`; every finding closed, 29/29 independent focused rerun passed, no Critical/High/Moderate/Minor findings |
