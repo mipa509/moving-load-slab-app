@@ -3,21 +3,41 @@ import { deriveMeshResolution } from "../../app/meshSizing";
 import type {
   AxisDirection,
   FixedPositionAnalysisModel,
+  LegacySolverSlabGeometryInput,
+  StagedSkewSolverContract,
   SupportDefinition,
   SupportDofConstraint,
 } from "./types";
 
+export function normalizeSolverGeometry(
+  input: LegacySolverSlabGeometryInput,
+): StagedSkewSolverContract.NormalizedSlabGeometry {
+  return {
+    lengthM: input.lengthX,
+    widthM: input.lengthY,
+    thicknessM: input.thickness,
+    skewAngleDeg: input.skewAngleDeg ?? 0,
+  };
+}
+
 export function fromAppModel(model: SlabModel): FixedPositionAnalysisModel {
+  const normalizedGeometry = normalizeSolverGeometry({
+    lengthX: model.geometry.lengthM,
+    lengthY: model.geometry.widthM,
+    thickness: model.geometry.thicknessM,
+    skewAngleDeg: model.geometry.skewAngleDeg,
+  });
   const { targetElementsX, targetElementsY } = deriveMeshResolution(
-    model.geometry,
+    normalizedGeometry,
     model.mesh.autoTargetElementM,
   );
 
   return {
     slab: {
-      lengthX: model.geometry.lengthM,
-      lengthY: model.geometry.widthM,
-      thickness: model.geometry.thicknessM,
+      lengthX: normalizedGeometry.lengthM,
+      lengthY: normalizedGeometry.widthM,
+      thickness: normalizedGeometry.thicknessM,
+      skewAngleDeg: normalizedGeometry.skewAngleDeg,
     },
     material: {
       elasticModulusMPa: model.material.elasticModulusMPa,
