@@ -50,6 +50,7 @@
 - WP-013 passed independent correction review after all five geometry/tolerance/immutability evidence findings were closed; checkpoint `8aa6c78` is pushed to GitHub.
 - Wave 1A is accepted. G1 remains open until WP-011 passes; no G1 claim is made from WP-010/WP-012/WP-013 alone.
 - `CD-WP014A-001` is approved: adding required live `skewAngleDeg` makes the typed `createDefaultModel` object invalid before WP-014B. WP-014A may add only the zero-valued field to that constructor as a compile bridge with no physical-behaviour change; WP-014B still exclusively owns sanitization, migration, range handling, and defaults tests.
+- `CD-WP014A-002` is approved after the worker's lease stop: strict typing also reaches the sanitizer return and two mesh-sizing fixtures. WP-014A may carry only `fallback.skewAngleDeg` through the sanitizer and add explicit zero to those fixtures; it must not read, validate, clamp, or migrate imported skew input before WP-014B.
 
 ## Packet states
 
@@ -64,7 +65,7 @@
 | WP-012 | `passed` | deck-coordinate geometry correction worker; independent correction review accepted | checkpoint `6ed093c` pushed; CD-WP012-001 integrated |
 | WP-013 | `passed` | lead correction under original geometry lease; independent computational-geometry correction review accepted | checkpoint `8aa6c78` pushed |
 | WP-011 | `dispatched` | numerical element stability worker; fresh independent numerical review required | WP-010 passed; test/diagnostic-only initial lease |
-| WP-014A | `dispatched` | app schema worker; fresh independent type/compatibility review required | WP-005 and WP-012 passed; CD-WP014A-001 compile bridge approved |
+| WP-014A | `correction_active` | app schema worker; fresh independent type/compatibility review required | WP-005 and WP-012 passed; CD-WP014A-001/002 compile bridges approved |
 | WP-031A | `dispatched` | numerical convention worker; fresh independent numerical review required | WP-002 passed |
 
 ## File leases
@@ -93,7 +94,7 @@
 | WP-012 correction worker | write | `src/solver/geometry/deckCoordinates.ts`, `src/tests/deckCoordinates.test.ts` only | released; corrected handoff complete and accepted |
 | Lead WP-013 correction | write/integration | `src/solver/geometry/convexPolygon.ts`, `src/tests/convexPolygon.test.ts` only | released; bounded correction completed after agent thread limit; independently accepted |
 | WP-011 numerical stability worker | write | new `src/tests/helpers/elementStabilityDiagnostics.ts`, new `src/tests/elementStability.test.ts` only | active; production element/kernel changes prohibited without a new lead decision |
-| WP-014A app schema worker | write | `src/app/types.ts`, `src/app/defaults.ts` limited to the zero-valued compile bridge, `src/tests/vehiclePlacement.test.ts`, `src/tests/skewContractScaffold.test.ts` only | active under CD-WP014A-001; no sanitization/migration/defaults-test authority |
+| WP-014A app schema worker | write | `src/app/types.ts`; `src/app/defaults.ts` limited to zero construction plus `fallback.skewAngleDeg` carry-through; `src/tests/vehiclePlacement.test.ts`; `src/tests/skewContractScaffold.test.ts`; `src/tests/meshSizing.test.ts` limited to explicit zero fixture fields | active under CD-WP014A-001/002; no imported-input reading, validation, migration, clamping, or defaults-test authority |
 | WP-031A numerical convention worker | write | new `src/solver/post/reactionMomentMapping.ts`, new `src/tests/reactionMomentMapping.test.ts` only | active; tensor rotation and equilibrium aggregation excluded |
 
 WP-003 and WP-004 leases are disjoint. Source, test, configuration, package, report, live type, app, solver, viewer, and user-owned files are outside both scopes.
@@ -251,6 +252,15 @@ WP-003 and WP-004 leases are disjoint. Source, test, configuration, package, rep
 - Backward-compatibility impact: saved/imported legacy objects remain untouched until WP-014B; newly constructed defaults gain an explicit zero skew and retain identical rectangular physical behavior.
 - Proposed migration/test: WP-014A proves required typing and exact zero construction with mechanical fixtures; WP-014B later owns missing-field migration, +/-45 limits, invalid inputs, persistence, and round trips.
 - Lead decision: approved as the narrowest compile bridge; no WP-014B parsing or migration task starts early.
+- Contract deviation integrated and active: `CD-WP014A-002`.
+- Decision/contract ID: required app skew field reaches sanitizer return and mesh-sizing typed fixtures.
+- Current definition: the first compile bridge covered only `createDefaultModel`, but strict typecheck also requires the live sanitizer return and two typed mesh-sizing fixtures to provide the new required field.
+- Required change: permit `sanitizeGeometry` to return only `skewAngleDeg: fallback.skewAngleDeg`, without observing imported input, and permit the two mesh-sizing fixtures to add explicit zero.
+- Why this packet cannot continue: strict typecheck otherwise fails in one already leased production file and one unleased mechanical fixture file, while starting WP-014B's real input policy would violate the packet prerequisite.
+- Affected packets: WP-014A, WP-014B, WP-015, and mesh-sizing fixtures.
+- Backward-compatibility impact: pre-WP-014B imports continue to behave as zero skew; explicit imported skew is intentionally not activated until WP-014B. Existing rectangular geometry and mesh expectations remain unchanged.
+- Proposed migration/test: WP-014A proves compile-safe required typing and zero fixtures; WP-014B replaces fallback-only carry-through with the accepted missing/finite/range policy and owns defaults/persistence tests.
+- Lead decision: approved after the worker stopped at the exact lease boundary; no WP-014B behavior is accepted early.
 
 ## Next three delegations
 
