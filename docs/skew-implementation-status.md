@@ -2,12 +2,12 @@
 
 ## Current integration
 
-- Integration hash: `84e22b6`
+- Integration hash: `e12c7f7`
 - Worktree: `C:\MyEngineering\04-Apps\moving-load-slab-app`
 - Branch: `feat/skew-plate-analysis`
-- Active wave/package: Wave 2B in progress / WP-023 inverse Q4 point mapping passed at `ec8897e` and WP-021 normalized edge/coordinate support mapping passed at `84e22b6`; WP-024 patch integration is now dependency-eligible (its remaining prerequisites WP-013/WP-020/WP-022/WP-023 are all passed); G2 evaluation is next; WP-004 and formal approvals remain deferred to the end-of-plan review register
-- Package state: `G1 passed; WP-020 passed at 8316904; WP-022 passed at 5eb9d70; WP-023 passed at ec8897e; WP-021 passed at 84e22b6; combined Wave 2A+2B regression passed; G2 open`
-- Gate state: G1 remains passed for implementation progression. WP-020/WP-023 satisfy the prerequisites for WP-024; WP-021 satisfies its share of the WP-025 prerequisite. WP-026 remains responsible for removing the temporary public skew-solve guard after all of its prerequisites pass. No physical-validation, standards-compliance, engineering-reliance, or release claim is authorized
+- Active wave/package: Wave 2B/Wave 3 boundary / WP-023 (`ec8897e`), WP-021 (`84e22b6`), and WP-024 polygon patch integration (`e12c7f7`) passed as internal implementation gates; the full Wave 2 packet set (WP-020/WP-021/WP-022/WP-023) plus the first Wave 3 loading packet (WP-024) is complete; G2 evaluation and WP-025 signed equilibrium are next; WP-004 and formal approvals remain deferred to the end-of-plan review register
+- Package state: `G1 passed; WP-020 passed at 8316904; WP-022 passed at 5eb9d70; WP-023 passed at ec8897e; WP-021 passed at 84e22b6; WP-024 passed at e12c7f7; combined Wave 2+early-3 regression passed; G2 open`
+- Gate state: G1 remains passed for implementation progression. WP-020/WP-023 prerequisites for WP-024 are satisfied and WP-024 is delivered additively; WP-021 satisfies its share of the WP-025 prerequisite. WP-026 remains responsible for rewiring the solver to the polygon load path and normalized support mapper, removing the legacy AABB integration + rectangular guard, and removing the temporary public skew-solve guard after all prerequisites pass. No physical-validation, standards-compliance, engineering-reliance, or release claim is authorized
 - Worktree at dispatch: clean at `f222abb` except user-owned untracked plan and frozen untracked WP-004 verification files
 
 ## Decision digests
@@ -80,6 +80,8 @@
 - WP-023 adds inverse Q4 point mapping in `q4Geometry.ts`: an affine-parallelogram direct 2x2 solve fast path and a bounded Newton fallback for future convex non-affine point location. The result reports `converged`, `inside`, `jacobianFailed`, an explicit iteration cap, and a scale-aware residual, and never silently clamps natural coordinates. Globally degenerate (zero-area) and inverted (negative-area) quads are rejected up front as Jacobian failures before any target-specific short circuit. `isAffineParallelogramQ4`/`assertAffineParallelogramQ4` are provided for the WP-024 release load path to assert affine parallelogram elements; Newton support is not evidence that degree-two triangle quadrature is exact for variable-Jacobian non-affine quads.
 - WP-021 adds `mapNormalizedSupportsToMesh` in `supports.ts` consuming the staged `InternalNormalizedSupport` (edge/line/point + generalized `w/betaX/betaY` restraint). Generalized rotation DOFs reuse the legacy `rx/ry` DOF indices per the WP-002 ADR (`betaX`->`rx`, `betaY`->`ry`). Edges map by topology (`start`/`end` columns, `lower-side`/`upper-side` rows of `nodeIdsByIJ`); retained point supports map to the nearest node by global Euclidean distance with a physical-distance confirmation (no silent snapping); retained coordinate lines map by exact point-to-segment membership and are rejected as unsupported internal lines unless both endpoints and at least two members are meshed. Line/edge springs distribute by Euclidean tributary so a declared total stiffness is conserved under refinement; shared corners appear once per support in `assignments` while `fixedDofs`/`springStiffnessByDof` deduplicate the solve DOF. The legacy zero-skew `mapSupportsToMesh` path is unchanged; WP-026 switches the public path to the normalized mapper and WP-027 activates the app `EdgeSupport` union.
 - WP-023 focused tests passed 11/11 and WP-021 focused tests passed 10/10. The combined full suite passed 37 files/366 tests; strict TypeScript and the 672-module production build passed with only the existing chunk-size warning. Checkpoints `ec8897e` (WP-023) and `84e22b6` (WP-021) are pushed. These are internal implementation gates only; formal CEng/source/release reviews remain deferred. Independent review of both packages by a fresh reviewer, and G2 evaluation, remain outstanding lead tasks.
+- WP-024 adds `assemblePolygonPatchLoads` in `loads/patch.ts` as an additive polygon-integration path: it clips each deck-clipped wheel patch (`clippedPolygon`) against actual element polygons using element/patch AABBs for broad phase only, triangulates the intersection with the WP-013 kernel, evaluates the degree-two triangle rule globally, inverse-maps each quadrature point with WP-023 `inverseQ4Point`, and integrates `pressure * N_i * dA` into four vertical nodal forces. Full-contact pressure is never recomputed from clipped area. Release elements are asserted affine parallelograms (`isAffineParallelogramQ4`); a non-affine overlap or an unmappable quadrature point throws with the patch id and element id. The legacy AABB `assembleWheelPatchLoads` and its temporary `assertLegacyRectangularElement` guard are intentionally left intact so no existing test (including the `mesh.test.ts` guard assertions and the frozen `zeroSkewCharacterization` fixture) is disturbed; WP-026 rewires `runFixedPositionAnalysis` to the polygon path and removes the legacy function/guard.
+- WP-024 focused tests passed 10/10: full-element `pA/4` at 0 and 19 degrees, triangle/trapezoid/rectangle force+first-moment conservation, off-deck zero, null clipped polygon, a smooth internal-boundary sweep with no load jump, non-affine element rejection naming patch/element, and exact zero-skew equivalence with the legacy AABB global load vector within scaled roundoff. The combined full suite passed 38 files/376 tests; strict TypeScript and the 672-module build passed with only the existing chunk-size warning. Checkpoint `e12c7f7` is pushed. Internal implementation gate only; independent review and formal CEng/source/release reviews remain deferred.
 
 ## Packet states
 
@@ -107,6 +109,7 @@
 | WP-022 | `passed` | load-geometry worker; independent computational-geometry correction review accepted | checkpoint `5eb9d70` pushed; skew deck clipping, full-area pressure, finite-input guards, tangent/outside semantics, and independent geometry oracles accepted |
 | WP-023 | `passed_implementation` | Q4 geometry worker, lead-integrated; independent numerical review outstanding | checkpoint `ec8897e` pushed; affine fast path + bounded Newton, no-clamp containment, degenerate/inverted rejection, and affine-parallelogram assertion verified by TDD; fresh independent reviewer not yet run |
 | WP-021 | `passed_implementation` | support worker, lead-integrated; independent review outstanding | checkpoint `84e22b6` pushed; topology edge mapping, physical-distance point mapping, point-to-segment line membership, Euclidean tributary spring conservation, and duplicate-corner exposure verified by TDD; fresh independent reviewer not yet run |
+| WP-024 | `passed_implementation` | load-integration worker, lead-integrated; independent review outstanding | checkpoint `e12c7f7` pushed; additive polygon integration with `pA/4`, first-moment conservation, off-deck zero, boundary-sweep continuity, non-affine rejection, and exact zero-skew legacy equivalence verified by TDD; legacy AABB path/guard left intact for WP-026; fresh independent reviewer not yet run |
 
 ## File leases
 
@@ -155,6 +158,7 @@
 | WP-022 load-geometry worker | write | `src/solver/loads/vehicle.ts`, new `src/tests/vehiclePatchGeometry.test.ts` only | released after corrected independent review and pushed checkpoint `5eb9d70`; no patch integration/type promotion/viewer edits |
 | WP-023 Q4 geometry worker | write | `src/solver/core/q4Geometry.ts`, new `src/tests/q4InverseMapping.test.ts` only | released and pushed at `ec8897e`; additive inverse-mapping/affine-assertion exports only; existing forward/Jacobian/gradient exports and frozen q4/element fixtures unchanged; independent review pending |
 | WP-021 support worker | write | `src/solver/core/supports.ts`, new `src/tests/supportsNormalizedMapping.test.ts` only | released and pushed at `84e22b6`; additive normalized mapper only; legacy `mapSupportsToMesh` and shared `types.ts` unchanged; independent review pending |
+| WP-024 load-integration worker | write | `src/solver/loads/patch.ts`, new `src/tests/patchLoadIntegration.test.ts` only | released and pushed at `e12c7f7`; additive `assemblePolygonPatchLoads`; legacy `assembleWheelPatchLoads`/`assertLegacyRectangularElement` and shared types unchanged; `runFixedPositionAnalysis`/`mesh.test.ts` untouched; independent review pending |
 
 WP-003 and WP-004 leases are disjoint. Source, test, configuration, package, report, live type, app, solver, viewer, and user-owned files are outside both scopes.
 
@@ -297,6 +301,10 @@ WP-003 and WP-004 leases are disjoint. Source, test, configuration, package, rep
 | Wave 2B `git diff --check` | exit 0; only expected LF-to-CRLF line-ending warnings; only leased files changed |
 | WP-023 checkpoint commit/push | commit `ec8897e`; `feat: add inverse Q4 point mapping` |
 | WP-021 checkpoint commit/push | commit `84e22b6`; `feat: map normalized edge and coordinate supports to skew mesh` |
+| WP-024 focused | exit 0; 1 file/10 polygon patch load integration tests passed |
+| WP-024 full suite | exit 0; 38 files/376 tests passed |
+| WP-024 strict typecheck/build | exit 0; `npx.cmd tsc -b` clean; 672 modules transformed; existing greater-than-500-kB chunk warning only |
+| WP-024 checkpoint commit/push | commit `e12c7f7`; `feat: assemble consistent polygon patch loads` |
 
 ## Gate evidence and tolerances
 
@@ -431,6 +439,6 @@ This register defers review timing, not evidence integrity. A known sign/transfo
 
 ## Next three delegations
 
-1. Independently review WP-023 (`ec8897e`) and WP-021 (`84e22b6`) with a fresh numerical/architecture reviewer; both currently hold `passed_implementation` (lead-integrated, TDD-verified) and need independent sign-off before formal G2 acceptance.
-2. Dispatch WP-024 polygon patch integration (`src/solver/loads/patch.ts`) from accepted WP-013/WP-020/WP-022/WP-023 contracts; it consumes `assertAffineParallelogramQ4`/`inverseQ4Point` and the stored element polygons, integrates degree-two quadrature, and replaces the temporary non-rectangular-AABB fail-closed guard.
-3. Evaluate G2 (mesh/support/patch representation gate) once WP-021/WP-023 independent review and WP-024 pass; keep the temporary public nonzero-skew solve guard until WP-026 removes it.
+1. Independently review WP-023 (`ec8897e`), WP-021 (`84e22b6`), and WP-024 (`e12c7f7`) with a fresh numerical/computational-geometry reviewer; all three hold `passed_implementation` (lead-integrated, TDD-verified) and need independent sign-off before formal G2 acceptance.
+2. Evaluate G2 (mesh/support/patch representation gate): mesh contract frozen, support-node sets at plus/minus 19 degrees, patch clipping vs analytic geometry, inverse round trips, and zero-skew fixtures are all covered by passing suites; record the gate decision once the independent review lands.
+3. Dispatch WP-025 signed force/moment equilibrium (new `src/solver/core/equilibrium.ts`, `src/solver/analysisGuards.ts`, focused tests) from accepted WP-002/WP-021/WP-024/WP-031A contracts; keep the output pure until WP-026 integrates it, and keep the temporary public nonzero-skew solve guard until WP-026 removes it.
