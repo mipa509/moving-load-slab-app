@@ -179,7 +179,7 @@ describe("Mindlin element use of shared Q4 geometry", () => {
     expect(normalizedAntisymmetry(stiffness)).toBeLessThanOrEqual(1e-12);
   });
 
-  it("keeps zero-skew stiffness within the ledger scaled-roundoff policy", () => {
+  it("keeps the deliberate MITC4 zero-skew baseline within the scaled-roundoff policy", () => {
     const actual = computeMindlinQ4ElementStiffness(
       ZERO_SKEW_CHARACTERIZATION_ELEMENT_NODES,
       ZERO_SKEW_CHARACTERIZATION_MATERIAL,

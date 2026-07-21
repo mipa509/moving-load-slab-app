@@ -40,7 +40,7 @@ function expectArrayClose(
 }
 
 describe('zero-skew characterization', () => {
-  it('records the current rectangular solver contract without claiming validation', () => {
+  it('records the deliberate MITC4 rectangular baseline without claiming validation', () => {
     const elementStiffness = computeMindlinQ4ElementStiffness(
       ZERO_SKEW_CHARACTERIZATION_ELEMENT_NODES,
       ZERO_SKEW_CHARACTERIZATION_MATERIAL,
@@ -72,47 +72,50 @@ describe('zero-skew characterization', () => {
       scaledRoundOffFloor(expected.globalLoadVector),
     );
 
+    const expectedW = expected.nodalDisplacements.map((node) => node.w);
     const solveAbsoluteTolerance = Math.max(
       ZERO_SKEW_CHARACTERIZATION_MODEL.options?.cgAbsoluteTolerance ?? 0,
-      scaledRoundOffFloor(expected.nodalW),
+      scaledRoundOffFloor(expectedW),
     );
     expectArrayClose(
       'nodal w',
       result.nodalDisplacements.map((node) => node.w),
-      expected.nodalW,
+      expectedW,
       SOLVE_RELATIVE_TOLERANCE,
       solveAbsoluteTolerance,
     );
     expect(result.nodalDisplacements.map(({ nodeId, x, y }) => ({ nodeId, x, y }))).toEqual(
-      [
-        { nodeId: 0, x: 0, y: 0 }, { nodeId: 1, x: 1, y: 0 }, { nodeId: 2, x: 2, y: 0 },
-        { nodeId: 3, x: 0, y: 1 }, { nodeId: 4, x: 1, y: 1 }, { nodeId: 5, x: 2, y: 1 },
-        { nodeId: 6, x: 0, y: 2 }, { nodeId: 7, x: 1, y: 2 }, { nodeId: 8, x: 2, y: 2 },
-      ],
+      expected.nodalDisplacements.map(({ nodeId, x, y }) => ({ nodeId, x, y })),
     );
     expectArrayClose(
       'nodal rx',
       result.nodalDisplacements.map((node) => node.rx),
-      expected.nodalRx,
+      expected.nodalDisplacements.map((node) => node.rx),
       SOLVE_RELATIVE_TOLERANCE,
       solveAbsoluteTolerance,
     );
     expectArrayClose(
       'nodal ry',
       result.nodalDisplacements.map((node) => node.ry),
-      expected.nodalRy,
+      expected.nodalDisplacements.map((node) => node.ry),
       SOLVE_RELATIVE_TOLERANCE,
       solveAbsoluteTolerance,
     );
 
-    const verticalReactions = result.supportReactions.filter((reaction) => reaction.dof === 'w');
-    expect(verticalReactions.map(({ supportId, nodeId }) => ({ supportId, nodeId }))).toEqual(
-      expected.verticalReactions.map(({ supportId, nodeId }) => ({ supportId, nodeId })),
+    expect(result.supportReactions.map((reaction) => {
+      const {
+        value: _value,
+        springStiffness: _springStiffness,
+        ...identity
+      } = reaction;
+      return identity;
+    })).toEqual(
+      expected.supportReactions.map(({ value: _value, ...identity }) => identity),
     );
-    const expectedReactionValues = expected.verticalReactions.map((reaction) => reaction.value);
+    const expectedReactionValues = expected.supportReactions.map((reaction) => reaction.value);
     expectArrayClose(
-      'signed vertical reactions',
-      verticalReactions.map((reaction) => reaction.value),
+      'complete signed support reactions',
+      result.supportReactions.map((reaction) => reaction.value),
       expectedReactionValues,
       SOLVE_RELATIVE_TOLERANCE,
       Math.max(
