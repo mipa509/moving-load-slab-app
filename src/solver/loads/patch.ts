@@ -1,4 +1,16 @@
 import { resolveMeshElementGeometry } from "../core/mesh";
+import {
+  evaluateQ4ShapeFunctions,
+  inverseQ4Point,
+  isAffineParallelogramQ4,
+} from "../core/q4Geometry";
+import {
+  clipConvexPolygons,
+  getPolygonAabb,
+  triangleQuadratureDegreeTwo,
+  triangulateConvexPolygon,
+} from "../geometry/convexPolygon";
+import type { Aabb, Polygon2D } from "../geometry/types";
 import type { StructuredMesh, WheelPatch } from "../model/types";
 
 export interface ElementPatchLoadContribution {
@@ -15,6 +27,128 @@ export interface PatchLoadAssembly {
   totalWheelLoad: number;
   totalAppliedLoadToSlab: number;
   contributions: ElementPatchLoadContribution[];
+}
+
+/**
+ * Minimal polygon patch contract consumed by WP-024 consistent-load
+ * integration. The deck-clipped polygon carries the full-contact `pressure`
+ * (never recomputed from the clipped area) and `load` is the total wheel load.
+ */
+export interface PolygonWheelPatchInput {
+  id: string;
+  pressure: number;
+  load: number;
+  clippedPolygon: Polygon2D | null;
+  clippedArea: number;
+  clippedBounds: Aabb | null;
+}
+
+/**
+ * Assemble consistent nodal patch loads by clipping each deck-clipped wheel
+ * patch against actual element polygons, triangulating the intersection, and
+ * integrating `pressure * N_i` with the degree-two triangle rule evaluated
+ * globally and inverse-mapped to natural coordinates. Element/patch AABBs are
+ * used for broad phase only. Release elements must be affine parallelograms.
+ */
+export function assemblePolygonPatchLoads(
+  mesh: StructuredMesh,
+  wheelPatches: PolygonWheelPatchInput[],
+  totalDofs: number,
+): PatchLoadAssembly {
+  const globalLoadVector = new Float64Array(totalDofs);
+  const contributions: ElementPatchLoadContribution[] = [];
+  let totalWheelLoad = 0;
+  let totalAppliedLoadToSlab = 0;
+
+  for (const patch of wheelPatches) {
+    totalWheelLoad += patch.load;
+    if (!patch.clippedPolygon || patch.clippedArea <= 0) {
+      continue;
+    }
+    const patchBounds = patch.clippedBounds ?? getPolygonAabb(patch.clippedPolygon);
+    if (!patchBounds) {
+      continue;
+    }
+
+    for (const element of mesh.elements) {
+      const resolved = resolveMeshElementGeometry(mesh, element);
+      if (!aabbsOverlap(resolved.bounds, patchBounds)) {
+        continue;
+      }
+
+      const intersection = clipConvexPolygons(patch.clippedPolygon, resolved.polygon);
+      if (!intersection) {
+        continue;
+      }
+
+      // Release load integration is exact only for affine parallelogram Q4
+      // elements; reject any variable-Jacobian element up front.
+      if (!isAffineParallelogramQ4(resolved.nodes)) {
+        throw new Error(
+          `Patch "${patch.id}" overlaps non-affine element ${element.id}; release load integration requires affine parallelogram elements.`,
+        );
+      }
+
+      const triangles = triangulateConvexPolygon(intersection);
+      if (!triangles) {
+        continue;
+      }
+
+      const nodalForcesW: [number, number, number, number] = [0, 0, 0, 0];
+      let overlapArea = 0;
+      for (const triangle of triangles) {
+        const quadrature = triangleQuadratureDegreeTwo(triangle);
+        if (!quadrature) {
+          continue;
+        }
+        for (const sample of quadrature) {
+          overlapArea += sample.weight;
+          const inverse = inverseQ4Point(resolved.nodes, sample.point);
+          if (!inverse.converged || inverse.jacobianFailed) {
+            throw new Error(
+              `Patch "${patch.id}" quadrature point could not be inverse-mapped into element ${element.id}.`,
+            );
+          }
+          const shapeFunctions = evaluateQ4ShapeFunctions(inverse.xi, inverse.eta);
+          for (let localNode = 0; localNode < 4; localNode += 1) {
+            nodalForcesW[localNode] += patch.pressure * shapeFunctions[localNode] * sample.weight;
+          }
+        }
+      }
+
+      if (overlapArea <= 0) {
+        continue;
+      }
+
+      let applied = 0;
+      for (let localNode = 0; localNode < 4; localNode += 1) {
+        const nodeId = element.nodeIds[localNode];
+        globalLoadVector[nodeId * 3] += nodalForcesW[localNode];
+        applied += nodalForcesW[localNode];
+      }
+
+      contributions.push({
+        elementId: element.id,
+        wheelPatchId: patch.id,
+        overlapArea,
+        pressure: patch.pressure,
+        nodalForcesW,
+        totalAppliedLoad: applied,
+      });
+      totalAppliedLoadToSlab += applied;
+    }
+  }
+
+  return {
+    globalLoadVector,
+    totalWheelLoad,
+    totalAppliedLoadToSlab,
+    contributions,
+  };
+}
+
+function aabbsOverlap(a: Aabb, b: Aabb): boolean {
+  return a.xMax >= b.xMin && b.xMax >= a.xMin && a.yMax >= b.yMin && b.yMax >= a.yMin;
 }
 
 export function assembleWheelPatchLoads(
