@@ -1,4 +1,8 @@
 import type { MaterialDefinition, MeshNode } from "../model/types";
+import {
+  evaluateQ4PhysicalGradients,
+  evaluateQ4ShapeFunctions,
+} from "./q4Geometry";
 
 const BENDING_GAUSS_POINTS: ReadonlyArray<[number, number, number]> = [
   [-1 / Math.sqrt(3), -1 / Math.sqrt(3), 1],
@@ -99,111 +103,16 @@ function computeKinematics(
   shearB: Float64Array;
   detJ: number;
 } {
-  const shape = evaluateShapeFunctionsQ4(xi, eta);
-  const jacobian = computeJacobian(elementNodes, shape.dNdxi, shape.dNdeta);
-  if (jacobian.detJ <= 0) {
-    throw new Error("Invalid Mindlin Q4 element Jacobian determinant.");
-  }
-
-  const derivatives = mapShapeDerivativesToPhysical(
-    shape.dNdxi,
-    shape.dNdeta,
-    jacobian.invJ,
-  );
+  const shapeFunctions = evaluateQ4ShapeFunctions(xi, eta);
+  const derivatives = evaluateQ4PhysicalGradients(elementNodes, xi, eta);
   const bendingB = buildBendingB(derivatives.dNdx, derivatives.dNdy);
-  const shearB = buildShearB(shape.n, derivatives.dNdx, derivatives.dNdy);
+  const shearB = buildShearB(shapeFunctions, derivatives.dNdx, derivatives.dNdy);
 
   return {
-    shapeFunctions: shape.n,
+    shapeFunctions,
     bendingB,
     shearB,
-    detJ: jacobian.detJ,
-  };
-}
-
-function evaluateShapeFunctionsQ4(
-  xi: number,
-  eta: number,
-): {
-  n: [number, number, number, number];
-  dNdxi: [number, number, number, number];
-  dNdeta: [number, number, number, number];
-} {
-  const n1 = 0.25 * (1 - xi) * (1 - eta);
-  const n2 = 0.25 * (1 + xi) * (1 - eta);
-  const n3 = 0.25 * (1 + xi) * (1 + eta);
-  const n4 = 0.25 * (1 - xi) * (1 + eta);
-
-  const dN1dxi = -0.25 * (1 - eta);
-  const dN2dxi = 0.25 * (1 - eta);
-  const dN3dxi = 0.25 * (1 + eta);
-  const dN4dxi = -0.25 * (1 + eta);
-
-  const dN1deta = -0.25 * (1 - xi);
-  const dN2deta = -0.25 * (1 + xi);
-  const dN3deta = 0.25 * (1 + xi);
-  const dN4deta = 0.25 * (1 - xi);
-
-  return {
-    n: [n1, n2, n3, n4],
-    dNdxi: [dN1dxi, dN2dxi, dN3dxi, dN4dxi],
-    dNdeta: [dN1deta, dN2deta, dN3deta, dN4deta],
-  };
-}
-
-function computeJacobian(
-  elementNodes: readonly [MeshNode, MeshNode, MeshNode, MeshNode],
-  dNdxi: readonly [number, number, number, number],
-  dNdeta: readonly [number, number, number, number],
-): {
-  detJ: number;
-  invJ: [number, number, number, number];
-} {
-  let j11 = 0;
-  let j12 = 0;
-  let j21 = 0;
-  let j22 = 0;
-
-  for (let i = 0; i < 4; i += 1) {
-    const node = elementNodes[i];
-    j11 += dNdxi[i] * node.x;
-    j12 += dNdeta[i] * node.x;
-    j21 += dNdxi[i] * node.y;
-    j22 += dNdeta[i] * node.y;
-  }
-
-  const detJ = j11 * j22 - j12 * j21;
-  const invDet = 1 / detJ;
-  const invJ: [number, number, number, number] = [
-    j22 * invDet,
-    -j12 * invDet,
-    -j21 * invDet,
-    j11 * invDet,
-  ];
-
-  return {
-    detJ,
-    invJ,
-  };
-}
-
-function mapShapeDerivativesToPhysical(
-  dNdxi: readonly [number, number, number, number],
-  dNdeta: readonly [number, number, number, number],
-  invJ: readonly [number, number, number, number],
-): {
-  dNdx: [number, number, number, number];
-  dNdy: [number, number, number, number];
-} {
-  const dNdx: number[] = [];
-  const dNdy: number[] = [];
-  for (let i = 0; i < 4; i += 1) {
-    dNdx.push(invJ[0] * dNdxi[i] + invJ[1] * dNdeta[i]);
-    dNdy.push(invJ[2] * dNdxi[i] + invJ[3] * dNdeta[i]);
-  }
-  return {
-    dNdx: [dNdx[0], dNdx[1], dNdx[2], dNdx[3]],
-    dNdy: [dNdy[0], dNdy[1], dNdy[2], dNdy[3]],
+    detJ: derivatives.jacobian.determinant,
   };
 }
 
