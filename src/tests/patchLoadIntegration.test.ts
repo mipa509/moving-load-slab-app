@@ -112,27 +112,8 @@ describe("polygon patch load integration", () => {
     },
   );
 
-  it("applies zero load for a patch entirely off the deck", () => {
-    const mesh = meshFor(0);
-    const away: Polygon2D = [
-      { x: 10, y: 10 },
-      { x: 12, y: 10 },
-      { x: 12, y: 12 },
-      { x: 10, y: 12 },
-    ];
-
-    const assembly = assemblePolygonPatchLoads(
-      mesh,
-      [polygonPatch("off", away, 5, 20)],
-      mesh.nodes.length * 3,
-    );
-
-    expect(assembly.totalAppliedLoadToSlab).toBe(0);
-    expect(assembly.globalLoadVector.every((value) => value === 0)).toBe(true);
-    expect(assembly.totalWheelLoad).toBe(20);
-  });
-
-  it("accumulates wheel load but no applied load for a null clipped polygon", () => {
+  it("treats a null clipped polygon (patch outside the deck) as zero applied load", () => {
+    // A patch fully off the deck is clipped to null by upstream deck clipping.
     const mesh = meshFor(0);
     const assembly = assemblePolygonPatchLoads(
       mesh,
@@ -141,6 +122,71 @@ describe("polygon patch load integration", () => {
     );
     expect(assembly.totalWheelLoad).toBe(33);
     expect(assembly.totalAppliedLoadToSlab).toBe(0);
+    expect(assembly.globalLoadVector.every((value) => value === 0)).toBe(true);
+  });
+
+  it("rejects a non-null clipped polygon that claims contact off the meshed deck", () => {
+    // A clipped polygon with real area but no overlap with any element is a
+    // load-geometry error: the assembly-time conservation self-check must catch it.
+    const mesh = meshFor(0);
+    const away: Polygon2D = [
+      { x: 10, y: 10 },
+      { x: 12, y: 10 },
+      { x: 12, y: 12 },
+      { x: 10, y: 12 },
+    ];
+    expect(() =>
+      assemblePolygonPatchLoads(mesh, [polygonPatch("off", away, 5, 20)], mesh.nodes.length * 3),
+    ).toThrow(/conservation failed/i);
+  });
+
+  it("applies pressure over the on-deck area only for a partially off-deck patch", () => {
+    // Deck extent is [0,4] x [0,4]; clippedPolygon is the on-deck part of a wheel
+    // whose full contact spans [3,5] x [1,2]. The wheel load reflects the full
+    // patch, but only pressure x on-deck-area is applied.
+    const mesh = meshFor(0);
+    const pressure = 8;
+    const fullArea = 2 * 1; // full [3,5] x [1,2]
+    const clipped: Polygon2D = [
+      { x: 3, y: 1 },
+      { x: 4, y: 1 },
+      { x: 4, y: 2 },
+      { x: 3, y: 2 },
+    ];
+    const onDeckArea = polygonArea(clipped); // 1
+
+    const assembly = assemblePolygonPatchLoads(
+      mesh,
+      [polygonPatch("straddle", clipped, pressure, pressure * fullArea)],
+      mesh.nodes.length * 3,
+    );
+
+    expect(assembly.totalWheelLoad).toBeCloseTo(pressure * fullArea, 9); // 16
+    expectClose(assembly.totalAppliedLoadToSlab, pressure * onDeckArea, pressure * fullArea); // 8
+    expect(assembly.totalAppliedLoadToSlab).toBeGreaterThan(0);
+    expect(assembly.totalAppliedLoadToSlab).toBeLessThan(assembly.totalWheelLoad);
+    expectClose(assembly.analyticAppliedLoad ?? NaN, pressure * onDeckArea, pressure * fullArea);
+  });
+
+  it("gives zero contribution from elements touched only along an edge or at a vertex", () => {
+    // A patch equal to element 3 ([2,4]x[2,4]) shares only a vertex with element 0
+    // and only edges with elements 1 and 2, so only element 3 is loaded.
+    const mesh = meshFor(0);
+    const element3 = mesh.elements[3];
+    const polygon = element3.polygon.map((p) => ({ x: p.x, y: p.y }));
+    const area = polygonArea(polygon);
+    const pressure = 5;
+
+    const assembly = assemblePolygonPatchLoads(
+      mesh,
+      [polygonPatch("corner", polygon, pressure, pressure * area)],
+      mesh.nodes.length * 3,
+    );
+
+    expect(assembly.contributions.map((c) => c.elementId)).toEqual([element3.id]);
+    for (const nodeId of element3.nodeIds) {
+      expectClose(assembly.globalLoadVector[nodeId * 3], (pressure * area) / 4, pressure * area);
+    }
   });
 
   it("varies smoothly across an internal element boundary and stays analytically conserved", () => {

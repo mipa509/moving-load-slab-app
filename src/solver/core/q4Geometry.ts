@@ -115,7 +115,14 @@ export interface InverseQ4Options {
 export interface InverseQ4Result {
   xi: number;
   eta: number;
-  /** True when the forward map reproduces the target within `residualTolerance`. */
+  /**
+   * True when the forward map reproduces the target to the branch convergence
+   * threshold. The Newton branch uses `residualTolerance`. The affine branch,
+   * which admits elements with a bilinear cross term up to
+   * `AFFINE_RELATIVE_TOLERANCE * scale`, uses the looser
+   * `max(residualTolerance, 1e-9 * scale)` so a barely-non-affine element still
+   * converges through the fast path. `inside` is always derived from this value.
+   */
   converged: boolean;
   /** True when the mapping Jacobian became non-positive/degenerate and was rejected. */
   jacobianFailed: boolean;
@@ -203,6 +210,12 @@ export function assertAffineParallelogramQ4(
  * interpolation reproduces `target`. Affine parallelograms use a direct 2x2
  * solve; general convex quads use a bounded Newton iteration. Results are never
  * silently clamped to the natural domain — `inside` reports containment instead.
+ *
+ * Precondition: the element must be convex (positive-area, non-self-intersecting).
+ * Structured skew-mesh release elements are always convex parallelograms. For a
+ * concave quad the inverse is not globally unique and the Newton branch may
+ * converge to a valid-but-unintended root; only the degenerate/inverted
+ * (non-positive-area) case is rejected up front as a Jacobian failure.
  */
 export function inverseQ4Point(
   nodes: Q4NodeCoordinates,
@@ -262,8 +275,12 @@ export function inverseQ4Point(
     const ry = target.y - a.y;
     const xi = (rx * c.y - c.x * ry) / det;
     const eta = (b.x * ry - rx * b.y) / det;
-    const result = classify(xi, eta, true, false, 0, "affine");
-    return { ...result, converged: result.residualNorm <= Math.max(residualTolerance, 1e-9 * scale) };
+    // Determine convergence before classifying so `inside` is derived from the
+    // final `converged` value (never from a value that is overridden afterward).
+    const mapped = interpolateQ4Point(nodes, xi, eta);
+    const residualNorm = Math.hypot(mapped.x - target.x, mapped.y - target.y);
+    const affineConverged = residualNorm <= Math.max(residualTolerance, 1e-9 * scale);
+    return classify(xi, eta, affineConverged, false, 0, "affine");
   }
 
   const guess = options.initialGuess ?? [0, 0];

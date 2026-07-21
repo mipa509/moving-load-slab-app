@@ -125,6 +125,25 @@ describe("inverse Q4 point mapping", () => {
     }
   });
 
+  it("recovers hand-computed natural coordinates on the non-affine trapezoid (independent oracle)", () => {
+    // TRAPEZOID_Q4 is symmetric about x = 2. Derived by hand from the shape
+    // functions (not from a forward-map call): on the axis xi = 0 the forward
+    // map gives (2, 1 + eta); on the bottom edge eta = -1 it gives (2(1 + xi), 0).
+    const cases = [
+      { target: { x: 2, y: 1 }, xi: 0, eta: 0 },
+      { target: { x: 2, y: 1.5 }, xi: 0, eta: 0.5 },
+      { target: { x: 2, y: 0.5 }, xi: 0, eta: -0.5 },
+      { target: { x: 1, y: 0 }, xi: -0.5, eta: -1 },
+    ] as const;
+    for (const { target, xi, eta } of cases) {
+      const result = inverseQ4Point(TRAPEZOID_Q4, target);
+      expect(result.method).toBe("newton");
+      expect(result.converged).toBe(true);
+      expect(result.xi).toBeCloseTo(xi, 8);
+      expect(result.eta).toBeCloseTo(eta, 8);
+    }
+  });
+
   it("honours an explicit iteration cap and never clamps the result", () => {
     const target = interpolateQ4Point(TRAPEZOID_Q4, 0.6, -0.4);
     const result = inverseQ4Point(TRAPEZOID_Q4, target, { maxIterations: 1 });
@@ -174,5 +193,18 @@ describe("affine parallelogram assertion for the release load path", () => {
   it("rejects a non-affine convex quad", () => {
     expect(isAffineParallelogramQ4(TRAPEZOID_Q4)).toBe(false);
     expect(() => assertAffineParallelogramQ4(TRAPEZOID_Q4)).toThrow(/affine parallelogram/i);
+  });
+
+  it("classifies robustly on both sides of the affine detection boundary", () => {
+    // Perturbing one rectangle node by delta gives a bilinear cross term |d| = delta/4;
+    // the scale-relative threshold is ~1e-9 * characteristic length.
+    const perturb = (delta: number): Q4NodeCoordinates => [
+      { x: 2, y: -1 },
+      { x: 6, y: -1 },
+      { x: 6 + delta, y: 3 },
+      { x: 2, y: 3 },
+    ];
+    expect(isAffineParallelogramQ4(perturb(1e-9))).toBe(true);
+    expect(isAffineParallelogramQ4(perturb(1e-2))).toBe(false);
   });
 });

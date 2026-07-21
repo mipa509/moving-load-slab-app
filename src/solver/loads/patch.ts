@@ -7,6 +7,8 @@ import {
 import {
   clipConvexPolygons,
   getPolygonAabb,
+  polygonArea,
+  polygonFirstMoments,
   triangleQuadratureDegreeTwo,
   triangulateConvexPolygon,
 } from "../geometry/convexPolygon";
@@ -27,6 +29,15 @@ export interface PatchLoadAssembly {
   totalWheelLoad: number;
   totalAppliedLoadToSlab: number;
   contributions: ElementPatchLoadContribution[];
+  /**
+   * WP-024 polygon integration only. Analytic pressure integrals over every
+   * clipped patch polygon: `sum(pressure * clippedArea)` and the first moments
+   * `sum(pressure * integral(x dA))` / `sum(pressure * integral(y dA))`. The
+   * legacy AABB assembler leaves these undefined.
+   */
+  analyticAppliedLoad?: number;
+  analyticFirstMomentX?: number;
+  analyticFirstMomentY?: number;
 }
 
 /**
@@ -55,10 +66,18 @@ export function assemblePolygonPatchLoads(
   wheelPatches: PolygonWheelPatchInput[],
   totalDofs: number,
 ): PatchLoadAssembly {
+  // Resolve and validate each element's geometry once, not once per patch.
+  const resolvedByElement = mesh.elements.map((element) =>
+    resolveMeshElementGeometry(mesh, element),
+  );
+
   const globalLoadVector = new Float64Array(totalDofs);
   const contributions: ElementPatchLoadContribution[] = [];
   let totalWheelLoad = 0;
   let totalAppliedLoadToSlab = 0;
+  let analyticAppliedLoad = 0;
+  let analyticFirstMomentX = 0;
+  let analyticFirstMomentY = 0;
 
   for (const patch of wheelPatches) {
     totalWheelLoad += patch.load;
@@ -70,8 +89,13 @@ export function assemblePolygonPatchLoads(
       continue;
     }
 
-    for (const element of mesh.elements) {
-      const resolved = resolveMeshElementGeometry(mesh, element);
+    let assembledForce = 0;
+    let assembledMomentX = 0;
+    let assembledMomentY = 0;
+
+    for (let elementIndex = 0; elementIndex < mesh.elements.length; elementIndex += 1) {
+      const element = mesh.elements[elementIndex];
+      const resolved = resolvedByElement[elementIndex];
       if (!aabbsOverlap(resolved.bounds, patchBounds)) {
         continue;
       }
@@ -122,10 +146,14 @@ export function assemblePolygonPatchLoads(
 
       let applied = 0;
       for (let localNode = 0; localNode < 4; localNode += 1) {
-        const nodeId = element.nodeIds[localNode];
-        globalLoadVector[nodeId * 3] += nodalForcesW[localNode];
-        applied += nodalForcesW[localNode];
+        const node = resolved.nodes[localNode];
+        const force = nodalForcesW[localNode];
+        globalLoadVector[node.id * 3] += force;
+        applied += force;
+        assembledMomentX += force * node.x;
+        assembledMomentY += force * node.y;
       }
+      assembledForce += applied;
 
       contributions.push({
         elementId: element.id,
@@ -137,6 +165,28 @@ export function assemblePolygonPatchLoads(
       });
       totalAppliedLoadToSlab += applied;
     }
+
+    // Load-geometry conservation self-check (plan WP-024 requirement 7): the
+    // shape-function assembly over element pieces must equal the analytic
+    // pressure integral over the whole clipped polygon. A mismatch means the
+    // clipped polygon is not fully covered by the mesh — a load-geometry error
+    // that a solver residual must never excuse.
+    const analyticForce = patch.pressure * polygonArea(patch.clippedPolygon);
+    const moments = polygonFirstMoments(patch.clippedPolygon);
+    const analyticMomentX = moments ? patch.pressure * moments.integralX : Number.NaN;
+    const analyticMomentY = moments ? patch.pressure * moments.integralY : Number.NaN;
+    assertPatchLoadConserved(
+      patch.id,
+      patchBounds,
+      { force: assembledForce, momentX: assembledMomentX, momentY: assembledMomentY },
+      { force: analyticForce, momentX: analyticMomentX, momentY: analyticMomentY },
+    );
+
+    analyticAppliedLoad += analyticForce;
+    if (moments) {
+      analyticFirstMomentX += analyticMomentX;
+      analyticFirstMomentY += analyticMomentY;
+    }
   }
 
   return {
@@ -144,11 +194,56 @@ export function assemblePolygonPatchLoads(
     totalWheelLoad,
     totalAppliedLoadToSlab,
     contributions,
+    analyticAppliedLoad,
+    analyticFirstMomentX,
+    analyticFirstMomentY,
   };
 }
 
 function aabbsOverlap(a: Aabb, b: Aabb): boolean {
   return a.xMax >= b.xMin && b.xMax >= a.xMin && a.yMax >= b.yMin && b.yMax >= a.yMin;
+}
+
+interface PatchLoadTotals {
+  force: number;
+  momentX: number;
+  momentY: number;
+}
+
+function assertPatchLoadConserved(
+  patchId: string,
+  bounds: Aabb,
+  assembled: PatchLoadTotals,
+  analytic: PatchLoadTotals,
+): void {
+  const forceScale = Math.max(Math.abs(analytic.force), Math.abs(assembled.force), 1);
+  const forceTolerance = 1e-7 * forceScale;
+  if (Math.abs(assembled.force - analytic.force) > forceTolerance) {
+    throw new Error(
+      `Patch "${patchId}" load-geometry conservation failed: assembled vertical force ${assembled.force} does not match analytic ${analytic.force} (tolerance ${forceTolerance}). The clipped polygon is not fully covered by the mesh.`,
+    );
+  }
+
+  if (!Number.isFinite(analytic.momentX) || !Number.isFinite(analytic.momentY)) {
+    return;
+  }
+  const coordScale = Math.max(
+    Math.abs(bounds.xMin),
+    Math.abs(bounds.xMax),
+    Math.abs(bounds.yMin),
+    Math.abs(bounds.yMax),
+    1,
+  );
+  const momentTolerance =
+    1e-7 * (forceScale * coordScale + Math.abs(analytic.momentX) + Math.abs(analytic.momentY));
+  if (
+    Math.abs(assembled.momentX - analytic.momentX) > momentTolerance ||
+    Math.abs(assembled.momentY - analytic.momentY) > momentTolerance
+  ) {
+    throw new Error(
+      `Patch "${patchId}" load-geometry first-moment conservation failed (tolerance ${momentTolerance}).`,
+    );
+  }
 }
 
 export function assembleWheelPatchLoads(

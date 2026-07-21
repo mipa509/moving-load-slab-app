@@ -160,6 +160,32 @@ describe("normalized point and line support mapping", () => {
       ]),
     ).toThrow(/not represented by meshed nodes/i);
   });
+
+  it("accepts an inclined constant-s line on a skewed mesh via point-to-segment membership", () => {
+    const mesh = meshFor(skewSlab(19), { targetElementsX: 4, targetElementsY: 3 });
+    const columnNodeIds = mesh.nodeIdsByIJ.map((row) => row[1]); // constant-s column i=1
+    const first = mesh.nodes[columnNodeIds[0]];
+    const last = mesh.nodes[columnNodeIds[columnNodeIds.length - 1]];
+    // The column is inclined in global coordinates at skew (not axis-aligned).
+    expect(first.x).not.toBeCloseTo(last.x, 6);
+
+    const mapped = mapNormalizedSupportsToMesh(mesh, [
+      {
+        id: "incline",
+        kind: "line",
+        x1: first.x,
+        y1: first.y,
+        x2: last.x,
+        y2: last.y,
+        restraint: { behavior: "pinned" },
+      },
+    ]);
+
+    const memberNodes = new Set(
+      mapped.assignments.filter((a) => a.dof === "w").map((a) => a.nodeId),
+    );
+    expect(memberNodes).toEqual(new Set(columnNodeIds));
+  });
 });
 
 describe("normalized support spring conservation and duplicate exposure", () => {
@@ -207,5 +233,45 @@ describe("normalized support spring conservation and duplicate exposure", () => 
     expect(cornerW.length).toBe(2);
     expect(cornerW.map((a) => a.supportId).sort()).toEqual(["lower", "start"]);
     expect(mapped.fixedDofs.has(cornerNode * 3)).toBe(true);
+  });
+
+  it("sums spring stiffness from two edges sharing a corner node", () => {
+    const mesh = meshFor(RECT_SLAB, { targetElementsX: 3, targetElementsY: 3 });
+    const cornerNode = mesh.nodeIdsByIJ[0][0];
+    const startStiffness = 9000;
+    const lowerStiffness = 6000;
+
+    const springEdge = (
+      id: string,
+      edge: "start" | "lower-side",
+      stiffness: number,
+    ): InternalNormalizedSupport => ({
+      id,
+      kind: "edge",
+      edge,
+      restraint: {
+        behavior: "custom",
+        dofs: {
+          w: { kind: "spring", stiffness },
+          betaX: { kind: "free" },
+          betaY: { kind: "free" },
+        },
+      },
+    });
+
+    const mapped = mapNormalizedSupportsToMesh(mesh, [
+      springEdge("start", "start", startStiffness),
+      springEdge("lower", "lower-side", lowerStiffness),
+    ]);
+
+    // Both edges have 3 uniform segments, so the shared end corner takes a
+    // 0.5/3 = 1/6 tributary fraction of each edge's total stiffness.
+    const expected = startStiffness / 6 + lowerStiffness / 6;
+    expect(mapped.springStiffnessByDof.get(cornerNode * 3)).toBeCloseTo(expected, 6);
+
+    const cornerSprings = mapped.assignments.filter(
+      (a) => a.nodeId === cornerNode && a.dof === "w" && a.kind === "spring",
+    );
+    expect(cornerSprings.map((a) => a.supportId).sort()).toEqual(["lower", "start"]);
   });
 });
