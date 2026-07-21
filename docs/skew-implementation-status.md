@@ -2,12 +2,12 @@
 
 ## Current integration
 
-- Integration hash: `dcf7cdb`
+- Integration hash: `b4cbbec`
 - Worktree: `C:\MyEngineering\04-Apps\moving-load-slab-app`
 - Branch: `feat/skew-plate-analysis`
-- Active wave/package: Section 11 / EF-004 deliberate zero-skew rebaseline; WP-004 and formal approvals deferred to the end-of-plan review register
-- Package state: `EF-003 accepted and pushed; EF-004 rebaseline dispatched from dcf7cdb`
-- Gate state: the EF-001 SRI rank defect is corrected and EF-003 internal numerical/code review passed. G1 remains unpassed until EF-004 rebaseline and EF-005 re-entry; WP-020 and downstream mesh/load integration remain blocked
+- Active wave/package: Wave 1 / WP-015 ready after EF-005 re-entry; WP-004 and formal approvals deferred to the end-of-plan review register
+- Package state: `EF-004 accepted and pushed; EF-005 re-entry passed for available evidence; G1 open on WP-015`
+- Gate state: inverse-transpose, corrected MITC4, zero-skew rebaseline, geometry/polygon, reaction mapping, migration, full-suite, and build evidence are green. G1 remains unpassed until WP-015 translation/mesh-sizing completes; WP-020 and downstream mesh/load integration remain blocked
 - Worktree at dispatch: clean at the integration hash except user-owned untracked plan and frozen untracked WP-004 verification files
 
 ## Decision digests
@@ -62,6 +62,9 @@
 - EF-003 implements original MITC4 with four covariant edge ties, full `2 x 2` bending/shear integration, direct ordered stiffness accumulation, and the same assumed-shear operator for recovery behind the unchanged three-DOF API.
 - EF-003 focused tests pass 29/29 and independently confirm full-J transforms, exact three-mode nullity, positive checkerboard energy, solver progress/SPD, locking discrimination, affine mirror parity, non-affine refinement convergence, thick-patch response, and stiffness/recovery energy consistency.
 - Independent EF-003 correction review passed with no remaining findings. The full suite has 259 passing tests and exactly two expected EF-004 stale zero-skew snapshot failures; no tolerance or snapshot was changed in EF-003.
+- EF-004 deliberately rebaselined the complete zero-skew fixture without changing tolerances: `K[0,0]` increased 33.333333%, the coarse 2 by 2 centre deflection decreased 25%, the load vector and total vertical equilibrium were unchanged, and old/new arrays remain hash-traceable.
+- EF-004 internal refinement solves at 2/4/8/16 elements per side all converged; centre-deflection changes contracted to 3.3081% at the final step. Moving raw moment/shear extrema were explicitly recorded as non-converged, non-release evidence.
+- EF-004 passed independent numerical impact review with no findings and checkpoint `b4cbbec` is pushed. Formal WP-004/CEng/release review remains in the end-of-plan register.
 - WP-014B passed independent correction review after exact nested V2 and malformed-shape evidence was added; checkpoint `2430f6e` is pushed. WP-015's package prerequisite is satisfied but its mesh-integration work remains held by the Section 11/G1 block.
 
 ## Packet states
@@ -83,7 +86,8 @@
 | EF-001 | `passed` | numerical failure-evidence worker; independent numerical review accepted | checkpoint `4d7d4f1` pushed; evidence accepted, formulation not accepted |
 | EF-002 | `passed_for_implementation` | replacement-formulation architecture worker; independent numerical formulation and fixture-plan reviews accepted | original MITC4 selected; CEng suitability approval deferred to end-of-plan review under CD-EF002-001 |
 | EF-003 | `passed` | MITC4 implementation worker; independent numerical/code correction review accepted | checkpoint `0088e11` pushed; two deliberate stale snapshots handed to EF-004 |
-| EF-004 | `dispatched` | zero-skew rebaseline worker; independent numerical impact review required | EF-003 passed; exact fixture/test/evidence lease recorded below |
+| EF-004 | `passed` | zero-skew rebaseline worker; independent numerical impact review accepted | checkpoint `b4cbbec` pushed; complete old/new evidence and limitations recorded |
+| EF-005 | `passed_reentry` | lead/integrator computational re-entry | available G1 suites passed 170/170; main path re-entered at WP-015, not a G1 pass |
 
 ## File leases
 
@@ -122,7 +126,9 @@
 | EF-002 independent numerical reviewers | read-only | formulation equations/API boundary and EF-003 fixture plan | released; `EF-002-R1` formulation pass and `EF-002-R2` fixture-plan pass |
 | EF-003 MITC4 implementation worker | write | `src/solver/core/element.ts`, new `src/solver/core/mitc4.ts`, new `src/tests/mitc4Element.test.ts`, `src/tests/elementStability.test.ts`, `src/tests/helpers/elementStabilityDiagnostics.ts` only | released; implementation and correction handoffs accepted at checkpoint `0088e11` |
 | EF-003 independent numerical/code reviewer | read-only | exact five-file diff, accepted MITC4 ADR, and hard numerical/test-independence criteria | released; initial conditional findings corrected; final recommendation `pass`, no findings |
-| EF-004 zero-skew rebaseline worker | write | `src/solver/benchmarks/zeroSkewCharacterizationFixture.ts`, `src/tests/zeroSkewCharacterization.test.ts`, `src/tests/q4Geometry.test.ts`, new `src/tests/zeroSkewRebaseline.test.ts`, new `docs/ef004-zero-skew-rebaseline.md` only | active from `dcf7cdb`; production MITC4 kernel, ledger, WP-004 paths, app, and other tests remain frozen |
+| EF-004 zero-skew rebaseline worker | write | `src/solver/benchmarks/zeroSkewCharacterizationFixture.ts`, `src/tests/zeroSkewCharacterization.test.ts`, `src/tests/q4Geometry.test.ts`, new `src/tests/zeroSkewRebaseline.test.ts`, new `docs/ef004-zero-skew-rebaseline.md` only | released; accepted and pushed at `b4cbbec` |
+| EF-004 independent numerical impact reviewer | read-only | exact five-file rebaseline diff, pre/current commits, old/new values, hashes, convergence, and engineering limitations | released; recommendation `pass`, no findings |
+| EF-005 lead/integrator | verification/integration | no production write lease; tests/build and ledger only | released; available G1 focused evidence passed and WP-015 identified as the remaining executable gate item |
 
 WP-003 and WP-004 leases are disjoint. Source, test, configuration, package, report, live type, app, solver, viewer, and user-owned files are outside both scopes.
 
@@ -246,6 +252,11 @@ WP-003 and WP-004 leases are disjoint. Source, test, configuration, package, rep
 | EF-003 independent correction re-review | `pass`; every finding closed, 29/29 independent focused rerun passed, no Critical/High/Moderate/Minor findings |
 | EF-003 final scope/diff checks | exactly five leased files; tracked and no-index whitespace checks clean; control-byte scans zero; user plan and frozen WP-004 paths untouched |
 | EF-003 checkpoint commit/push | exit 0; commit `0088e11`; pushed `352556d..0088e11` to `origin/feat/skew-plate-analysis`; remote relocation notice only |
+| EF-004 focused/full/build | focused 3 files/11 tests passed; full 33 files/263 tests passed; strict TypeScript and 670-module Vite build passed; existing chunk warning only |
+| EF-004 independent numerical impact review | `pass`; old/current provenance, complete hashes, stiffness delta, reactions/signs, tolerances, refinement table, and limitations independently confirmed; no findings |
+| EF-004 final scope/diff checks | exactly five leased files; tracked/no-index whitespace and control-byte scans clean; production, ledger, plan, and WP-004 files untouched by worker |
+| EF-004 checkpoint commit/push | exit 0; commit `b4cbbec`; pushed `ba3e89d..b4cbbec` to `origin/feat/skew-plate-analysis`; remote relocation notice only |
+| EF-005 available G1 focused suites | exit 0; 11 files/170 tests passed: inverse-transpose/Q4, MITC4/stability, zero-skew characterization/rebaseline, deck coordinates, polygon, reaction mapping, migration/contracts, and current mesh sizing |
 
 ## Gate evidence and tolerances
 
@@ -254,7 +265,7 @@ WP-003 and WP-004 leases are disjoint. Source, test, configuration, package, rep
 - Nodal `w`, `rx`, and `ry`, numeric residual diagnostics, solve summary, and signed equilibrium all use the declared iterative comparison policy; booleans, counts, IDs, and coordinates remain exact.
 - Pure stiffness/load comparison: relative tolerance `1e-12`; absolute floor `128 * Number.EPSILON * max(abs(expected))`. This gives about `4.44e-8` at the stiffness scale and `2.18e-12` at the load-vector scale.
 - Iterative solve/reaction comparison: relative tolerance `1e-9`; absolute floor at least the fixture CG absolute tolerance `1e-12`. Fixture CG settings are relative `1e-10`, absolute `1e-12`, maximum 3000 iterations.
-- WP-001 pre-correction behaviour awaiting EF-004 comparison: applied vertical load `+100 kN`; deduplicated vertical reaction `-100 kN`; signed force residual `0 kN`; centre-node `w = +1.225e-5 m`; one CG iteration with reported residual norm `0`.
+- EF-004 old/new zero-skew comparison: applied vertical load remains `+100 kN`; deduplicated vertical reaction remains `-100 kN`; coarse centre-node `w` changed from `+1.225e-5 m` to `+9.1875e-6 m`; `K[0,0]` changed from `1562500` to `2083333.3333333335`; one-iteration convergence remains.
 - Executable coverage: mesh/support mapping in `supports.test.ts`; nodal recovery in `recoverNodal.test.ts`; solve and vertical equilibrium in `solverSmoke.test.ts`; direct element/load/solve/nodal-displacement/reaction characterization in `zeroSkewCharacterization.test.ts`.
 - `TRANSFER_SLAB_BENCHMARK_FIXTURE` is metadata-only: it references an external notebook path and has no executable test/runner consumer in this repository.
 - Characterization is current numerical behaviour only; it is not physical, formulation, or published-benchmark validation.
@@ -344,8 +355,8 @@ WP-003 and WP-004 leases are disjoint. Source, test, configuration, package, rep
 | WP-004 source verification | original-source acquisition and authority, commercial-shell case definition, comparison protocol, and independently accepted provenance | deferred; no benchmark or validation claim permitted |
 | EF-002 CEng suitability | MITC4 suitability for slab assessment, shear/recovery/report limitations, and engineering significance of EF-004 changes | deferred; blocks engineering reliance/release only |
 | EF-003 implementation review | independent code/mathematics review of covariant tying, transforms, direct stiffness accumulation, recovery, rank, and hard-stop tests | internal review recorded `pass` at `0088e11`; CEng/release reliance remains deferred |
-| EF-004 zero-skew rebaseline | old/new values, convergence evidence, differences, and engineering significance | deferred formal approval; executable comparison still required |
-| EF-003/EF-005 numerical evidence | full-J transforms, non-affine distortion families, locking sweep, recovery/energy consistency, rank, positive definiteness, and finite response | EF-003 internal evidence passed; EF-005 re-entry and formal end-stage acceptance remain pending |
+| EF-004 zero-skew rebaseline | old/new values, convergence evidence, differences, and engineering significance | internal numerical impact review passed at `b4cbbec`; formal CEng/release interpretation remains deferred |
+| EF-003/EF-005 numerical evidence | full-J transforms, non-affine distortion families, locking sweep, recovery/energy consistency, rank, positive definiteness, and finite response | EF-003 and available EF-005 re-entry evidence passed; WP-015/G1 completion and formal end-stage acceptance remain pending |
 | WP-060/WP-061/WP-062/WP-063/WP-064 | planned verification, benchmark, acceptance, compatibility, and reporting evidence with independent review | deferred to their end-stage execution/review |
 | G6/G7 release review | warning/reliance policy, CEng approval, verified sources, benchmark/commercial comparison, and final release authorization | mandatory before warning removal, engineering reliance, or release |
 
@@ -353,6 +364,6 @@ This register defers review timing, not evidence integrity. A known sign/transfo
 
 ## Next three delegations
 
-1. Complete the active EF-004 zero-skew fixture/evidence lease from `dcf7cdb`; production MITC4 code remains frozen.
-2. Record complete old/new zero-skew values, convergence evidence, formulation reason, and engineering impact; independently review numerical interpretation before checkpointing EF-004.
-3. Run EF-005 G1 re-entry after EF-004. Hold WP-015, WP-020, and load integration until that computational gate passes.
+1. Record EF-005 re-entry as successful for the available G1 evidence and checkpoint the ledger; G1 itself remains open.
+2. Dispatch WP-015 app-to-solver geometry and mesh-sizing integration from the new checkpoint under its exact plan lease.
+3. After WP-015 passes review, rerun G1. Only then may WP-020 and downstream mesh/load integration begin.
