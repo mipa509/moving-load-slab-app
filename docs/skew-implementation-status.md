@@ -2,11 +2,11 @@
 
 ## Current integration
 
-- Integration hash: `b4cbbec`
+- Integration hash: `7a04350`
 - Worktree: `C:\MyEngineering\04-Apps\moving-load-slab-app`
 - Branch: `feat/skew-plate-analysis`
-- Active wave/package: Wave 1 / WP-015 ready after EF-005 re-entry; WP-004 and formal approvals deferred to the end-of-plan review register
-- Package state: `EF-004 accepted and pushed; EF-005 re-entry passed for available evidence; G1 open on WP-015`
+- Active wave/package: Wave 1 / WP-015 app-to-solver geometry and mesh sizing; WP-004 and formal approvals deferred to the end-of-plan review register
+- Package state: `EF-005 re-entry passed; WP-015 dispatched from 7a04350; G1 open`
 - Gate state: inverse-transpose, corrected MITC4, zero-skew rebaseline, geometry/polygon, reaction mapping, migration, full-suite, and build evidence are green. G1 remains unpassed until WP-015 translation/mesh-sizing completes; WP-020 and downstream mesh/load integration remain blocked
 - Worktree at dispatch: clean at the integration hash except user-owned untracked plan and frozen untracked WP-004 verification files
 
@@ -65,6 +65,8 @@
 - EF-004 deliberately rebaselined the complete zero-skew fixture without changing tolerances: `K[0,0]` increased 33.333333%, the coarse 2 by 2 centre deflection decreased 25%, the load vector and total vertical equilibrium were unchanged, and old/new arrays remain hash-traceable.
 - EF-004 internal refinement solves at 2/4/8/16 elements per side all converged; centre-deflection changes contracted to 3.3081% at the final step. Moving raw moment/shear extrema were explicitly recorded as non-converged, non-release evidence.
 - EF-004 passed independent numerical impact review with no findings and checkpoint `b4cbbec` is pushed. Formal WP-004/CEng/release review remains in the end-of-plan register.
+- EF-005 successfully re-entered the main path: 11 available G1 suites passed 170/170. This is not a G1 pass because WP-015 translation and mesh-sizing behavior is still required.
+- WP-015 selects physical skew-edge sizing: the centreline-span direction remains `lengthM`, while the transverse support-edge length is `widthM / cos(skewAngleDeg)`. This preserves exact zero-skew counts and approximately maintains the requested physical element size for both skew signs.
 - WP-014B passed independent correction review after exact nested V2 and malformed-shape evidence was added; checkpoint `2430f6e` is pushed. WP-015's package prerequisite is satisfied but its mesh-integration work remains held by the Section 11/G1 block.
 
 ## Packet states
@@ -88,6 +90,7 @@
 | EF-003 | `passed` | MITC4 implementation worker; independent numerical/code correction review accepted | checkpoint `0088e11` pushed; two deliberate stale snapshots handed to EF-004 |
 | EF-004 | `passed` | zero-skew rebaseline worker; independent numerical impact review accepted | checkpoint `b4cbbec` pushed; complete old/new evidence and limitations recorded |
 | EF-005 | `passed_reentry` | lead/integrator computational re-entry | available G1 suites passed 170/170; main path re-entered at WP-015, not a G1 pass |
+| WP-015 | `dispatched` | app/solver boundary worker; independent architecture/numerical review required | WP-012 and WP-014B passed; EF-005 re-entry complete; G1 remains open |
 
 ## File leases
 
@@ -129,6 +132,7 @@
 | EF-004 zero-skew rebaseline worker | write | `src/solver/benchmarks/zeroSkewCharacterizationFixture.ts`, `src/tests/zeroSkewCharacterization.test.ts`, `src/tests/q4Geometry.test.ts`, new `src/tests/zeroSkewRebaseline.test.ts`, new `docs/ef004-zero-skew-rebaseline.md` only | released; accepted and pushed at `b4cbbec` |
 | EF-004 independent numerical impact reviewer | read-only | exact five-file rebaseline diff, pre/current commits, old/new values, hashes, convergence, and engineering limitations | released; recommendation `pass`, no findings |
 | EF-005 lead/integrator | verification/integration | no production write lease; tests/build and ledger only | released; available G1 focused evidence passed and WP-015 identified as the remaining executable gate item |
+| WP-015 app/solver boundary worker | write | `src/solver/model/fromAppModel.ts`, `src/app/meshSizing.ts`, `src/tests/meshSizing.test.ts` only | active from `7a04350`; exact geometry normalization/skew propagation and physical skew-edge sizing only |
 
 WP-003 and WP-004 leases are disjoint. Source, test, configuration, package, report, live type, app, solver, viewer, and user-owned files are outside both scopes.
 
