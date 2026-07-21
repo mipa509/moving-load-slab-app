@@ -2,13 +2,13 @@
 
 ## Current integration
 
-- Integration hash: `231481ea8b00a70755b7eed7c97145ebc137b1eb`
+- Integration hash: `e990eb5b47c5b50ac7d946794ba8d8dd14437462`
 - Worktree: `C:\MyEngineering\04-Apps\moving-load-slab-app`
 - Branch: `feat/skew-plate-analysis`
-- Active wave/package: Wave 0A / WP-001 only
+- Active wave/package: Wave 0B / WP-002 accepted; checkpoint pending
 - Package state: `passed`
 - Gate state: G0 `blocked` pending WP-001 through WP-005; no later package is active
-- Worktree at dispatch: user-owned untracked `docs/2026-07-21-skew-plate-analysis-implementation-plan.md`; lead-created untracked ledger
+- Worktree at dispatch: clean at the integration hash except user-owned untracked `docs/2026-07-21-skew-plate-analysis-implementation-plan.md`
 
 ## Decision digests
 
@@ -18,23 +18,38 @@
 - Non-zero-skew analysis remains experimental/screening-only; warning authority remains locked to G7/WP-065.
 - Only the lead stages or commits. No commit is authorized until packet review and acceptance.
 - The lead commits and pushes reviewed integration checkpoints to GitHub at each completed phase/gate before dispatching dependent work.
+- WP-002 is documentation-only: derive conventions from current equations and behaviour without editing solver, app, report, types, fixtures, or the implementation plan.
+- Current `rx/ry` names and report prose are evidence to reconcile, not authoritative physical definitions.
+- Applied/load, displacement, plate-result, fixed/spring reaction, generalized-couple, support-axis, global-equilibrium, and mirror signs must be frozen through explicit virtual-work equations and testable predictions.
+- If current code/report meanings cannot be reconciled, the ADR must require a later explicit conversion layer; WP-002 must not implement it.
+- Proposed WP-002 frame: right-handed `ex x ey = ez`, with positive `ez`, `w`, wheel force, and pressure downward.
+- Proposed kinematic mapping: current `[rx,ry] = [betaX,betaY]`; physical right-hand rotations are `phiX=-betaY`, `phiY=betaX`.
+- Proposed conjugate-couple mapping: `Cx=-GbetaY`, `Cy=GbetaX`, fixed by virtual-work invariance.
+- Proposed support-action convention: fixed `K*u-f` already has the external-action sign; raw spring `+k*u` requires later normalization to external action `-k*u`.
+- Proposed signed equilibrium origin is the start-support centre `(0,W/2,0)`; support axes, tensor/vector separation, and full skew-mirror parity are specified in the ADR.
+- Independent review rejected the proposed local mirror table: increasing-`t` reverses under the point mirror, so `tauMinus=-H*tauPlus` and `Aminus=H*Aplus*diag(1,-1)`. Local polar/generalized normal components are even and tangent components odd; local axial normal components are odd and tangent components even; `m_nn/m_tt` are even and `m_nt` is odd.
+- The ADR correction must also separate generalized `beta/G` units from physical `phi/C`, add curvature/shear-strain and applied-generalized-couple mirror parity, and freeze point/total-line spring units and report/theory obligations.
+- Correction applied: the ADR now derives the `S=diag(1,-1)` local mirror transforms, fixes all affected parities, separates generalized and physical units, adds the omitted global parity rows, freezes component/total-line spring units and Euclidean distribution, and records unit-bearing/Reissner-Mindlin presentation obligations.
+- Mathematical re-review found no remaining sign, mirror, equilibrium, spring, unit, geometry, validation-status, or WP-001 contract defect; acceptance remains conditional on removing one notation collision and one public-field naming ambiguity.
+- Final correction applied: curvature uses `K_curv`, generalized rotational spring stiffness uses `K_s^(beta)`, displacement outputs use `rotationX/rotationY`, and normalized physical action outputs use the distinct `coupleX/coupleY` fields.
+- Final independent correction review passed with no critical, major, moderate, or minor findings; the mathematical/sign ADR is accepted.
 
 ## Packet states
 
 | Packet | State | Owner | Prerequisite/gate note |
 |---|---|---|---|
 | WP-001 | `passed` | lead/integrator; independent review accepted | none |
-| WP-002 | `blocked` | unassigned | WP-001 observations and acceptance required |
+| WP-002 | `passed` | lead/integrator; independent mathematical review accepted | WP-001 passed at `e990eb5` |
 
 ## File leases
 
 | Holder | Mode | Exclusive scope | State |
 |---|---|---|---|
-| WP-001 baseline worker | write | `docs/skew-implementation-status.md`; new `src/solver/benchmarks/zeroSkewCharacterizationFixture.ts`; new `src/tests/zeroSkewCharacterization.test.ts` | released after partial handoff |
-| Lead/integrator | write/integration | same WP-001 scope and repository staging/commit | reopened and released after conditional-review correction |
-| WP-001 fresh reviewer | read-only | ledger, fixture, test, relevant existing solver/test contracts | pass; released |
+| WP-002 numerical architecture worker | write | `docs/adr/ADR-skew-mathematical-conventions.md` only | released; initial ADR delivered, later sandbox-blocked correction supplied as exact patch text |
+| Lead/integrator | write/integration | ADR review corrections; `docs/skew-implementation-status.md`; repository staging/commit/push | final ADR correction released; ledger active |
+| WP-002 fresh numerical reviewer | read-only | ADR and directly relevant equations/code evidence | released; final recommendation `pass` with no open findings |
 
-All files are write-frozen during the fresh WP-001 review. All other tracked and untracked files remain outside the WP-001 scope.
+All WP-002 leases are released except the lead's ledger/integration authority. Source, test, configuration, package, report, and user-owned files remained outside WP-002 scope.
 
 ## Exact command outcomes
 
@@ -62,6 +77,15 @@ All files are write-frozen during the fresh WP-001 review. All other tracked and
 | `npm.cmd run build` after review correction | exit 0; 668 modules transformed; built in 15.88 s; existing large-chunk warning remains |
 | Independent reviewer focused recheck | exit 0; 1 file and 1 test passed; duration 1.17 s |
 | `git diff --check` | exit 0 after intent-to-add of only the three leased WP-001 files; no whitespace errors |
+| WP-002 worker `git status --short` | exit 0; lead-modified ledger, preserved untracked plan, and new ADR directory only |
+| WP-002 worker no-index ADR whitespace check | exit 1 expected for a new file; no output and no whitespace errors |
+| WP-002 build/tests | not run; Markdown-only ADR and no source/test/package change |
+| WP-002 lead `git diff --check` | exit 0 after ADR intent-to-add and ledger update; no whitespace errors |
+| WP-002 independent review | `fail`; critical mirror-basis/parity error, major unit-label conflict, and two moderate completeness/semantics findings |
+| WP-002 correction worker `apply_patch` | failed before file access with the Windows split-root sandbox error; no worker edit made |
+| WP-002 independent mathematical re-review | `conditional`; all original mathematical findings corrected; moderate `K_beta` notation collision and minor rotation/action field-name ambiguity remained |
+| WP-002 final localized correction | exit 0; curvature/spring notation separated and kinematic/action public fields given distinct names |
+| WP-002 final independent correction review | `pass`; no critical, major, moderate, or minor findings; no mathematical regression found |
 
 ## Gate evidence and tolerances
 
@@ -85,12 +109,12 @@ All files are write-frozen during the fresh WP-001 review. All other tracked and
 - Restricted execution prevents esbuild child-process startup (`EPERM`); permitted reruns pass. This is an environment constraint, not a repository test failure.
 - `npm.cmd ci` reported 5 vulnerabilities and a `three-mesh-bvh` deprecation. Dependency/security remediation is outside WP-001 and no version was changed.
 - The production build retains its pre-existing greater-than-500-kB chunk warning; performance work is outside WP-001.
-- Fresh review was conditional on replacing exact floating-point rotation, residual, and equilibrium checks. The correction is applied and all focused/full/build checks pass; re-review is pending.
+- WP-001's exact floating-point findings are closed; its correction passed focused/full/build checks and independent re-review.
 - The implementation-plan document is untracked user work and must be preserved unchanged.
 - No contract deviation is active.
 
 ## Next three delegations
 
-1. WP-002 numerical architecture reviewer — ready only after the WP-001 checkpoint is committed and pushed.
-2. WP-003 and WP-004 architecture/source reviewers — blocked; WP-002 must pass first.
-3. WP-005 contract integrator — blocked; WP-003 must pass first.
+1. WP-003 data/API contract architecture worker — ready after the accepted WP-002 checkpoint is pushed; ADR-only lease.
+2. WP-004 engineering reference-data worker — ready in parallel with WP-003 after the checkpoint; verification-source document and fixture-data-directory lease.
+3. Independent WP-003/WP-004 reviewers, followed by WP-005 contract integration — blocked until their respective packets are delivered and accepted; WP-005 additionally requires WP-003 to pass.
