@@ -21,6 +21,7 @@ describe("mesh sizing", () => {
         lengthM: 10,
         widthM: 5,
         thicknessM: 0.4,
+        skewAngleDeg: 0,
       },
       2,
     );
@@ -29,6 +30,7 @@ describe("mesh sizing", () => {
         lengthM: 10,
         widthM: 5,
         thicknessM: 0.4,
+        skewAngleDeg: 0,
       },
       0.5,
     );

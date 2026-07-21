@@ -65,6 +65,7 @@ export const createDefaultModel = (): SlabModel => ({
     lengthM: 10,
     widthM: 5,
     thicknessM: 0.4,
+    skewAngleDeg: 0,
   },
   material: {
     elasticModulusMPa: 32000,
@@ -218,6 +219,7 @@ function sanitizeGeometry(input: unknown, fallback: SlabGeometry): SlabGeometry 
     lengthM: positiveNumber(input.lengthM, fallback.lengthM),
     widthM: positiveNumber(input.widthM, fallback.widthM),
     thicknessM: positiveNumber(input.thicknessM, fallback.thicknessM),
+    skewAngleDeg: fallback.skewAngleDeg,
   };
 }
 

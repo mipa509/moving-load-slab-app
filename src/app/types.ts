@@ -9,11 +9,7 @@ export type VehicleInputMode = "axle" | "direct";
 export type TravelDirection = "x+" | "x-" | "y+" | "y-";
 export type PlotMode = "results" | "structure" | "deformed";
 
-export interface SlabGeometry {
-  lengthM: number;
-  widthM: number;
-  thicknessM: number;
-}
+export type SlabGeometry = SkewGeometryContract.SlabGeometry;
 
 export interface MaterialProps {
   elasticModulusMPa: number;
@@ -1147,8 +1143,6 @@ export type SuccessAnalysisResults = SuccessAnalysisResultEvidence & (
  * support, and WP-032B promotes section/results; each owner removes its alias.
  */
 export declare namespace StagedSkewAppContract {
-  type SlabGeometryV2 = SkewGeometryContract.SlabGeometry;
-
   type ResultFieldV2 = 'deflection' | 'mx' | 'my' | 'mxy' | 'qx' | 'qy' | 'reactions';
   type EnvelopeFieldV2 = 'deflection' | 'mx' | 'my' | 'mxy';
 

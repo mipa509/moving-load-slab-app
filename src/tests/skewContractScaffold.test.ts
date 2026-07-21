@@ -51,6 +51,8 @@ describe("skew contract scaffold", () => {
       "start" | "end" | "lower-side" | "upper-side"
     >();
     expectTypeOf<CanonicalSlabGeometry["skewAngleDeg"]>().toEqualTypeOf<number>();
+    expectTypeOf<LiveAppSlabGeometry>().toEqualTypeOf<CanonicalSlabGeometry>();
+    expectTypeOf<LiveAppSlabGeometry["skewAngleDeg"]>().toEqualTypeOf<number>();
 
     const localCoordinates = [0, 5];
     const mesh: StagedSkewSolverContract.StructuredMeshV2 = {
@@ -108,8 +110,6 @@ describe("skew contract scaffold", () => {
       .toEqualTypeOf<"kN*m/m">();
     expectTypeOf<StagedSkewAppContract.EnvelopeDataV2["fields"]>()
       .toEqualTypeOf<EnvelopeFieldMap>();
-    expectTypeOf<StagedSkewAppContract.SlabGeometryV2>()
-      .toEqualTypeOf<CanonicalSlabGeometry>();
     expectTypeOf<StagedSkewAppContract.SectionSettingsV2["deck"]>()
       .toMatchTypeOf<{ mode: "longitudinal" | "transverse" }>();
     expectTypeOf<SuccessAnalysisResults>()
@@ -146,7 +146,7 @@ describe("skew contract scaffold", () => {
     expectTypeOf<WrongUnits>().not.toMatchTypeOf<ActualMxyField>();
   });
 
-  it("keeps live support and geometry inputs backward compatible", () => {
+  it("keeps live support and solver geometry compatibility boundaries explicit", () => {
     expectTypeOf<LiveAppSupport["kind"]>().toEqualTypeOf<"line" | "point">();
     expectTypeOf<Extract<LiveAppSupport, { kind: "edge" }>>().toEqualTypeOf<never>();
     expectTypeOf<
@@ -163,6 +163,13 @@ describe("skew contract scaffold", () => {
       lengthM: 10,
       widthM: 5,
       thicknessM: 0.25,
+      skewAngleDeg: 0,
+    };
+    // @ts-expect-error Live app geometry requires an explicit structural skew angle.
+    const missingAppSkew: LiveAppSlabGeometry = {
+      lengthM: 10,
+      widthM: 5,
+      thicknessM: 0.25,
     };
     const solverGeometry: LiveSolverSlabGeometry = {
       lengthX: 10,
@@ -171,7 +178,13 @@ describe("skew contract scaffold", () => {
     };
     const legacyModelShape: FixedPositionAnalysisModelInputV2["slab"] = solverGeometry;
 
-    expect(appGeometry).toEqual({ lengthM: 10, widthM: 5, thicknessM: 0.25 });
+    expect(appGeometry).toEqual({
+      lengthM: 10,
+      widthM: 5,
+      thicknessM: 0.25,
+      skewAngleDeg: 0,
+    });
+    void missingAppSkew;
     expect(legacyModelShape.skewAngleDeg).toBeUndefined();
   });
 
