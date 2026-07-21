@@ -3,16 +3,16 @@ import {
   evaluateQ4PhysicalGradients,
   evaluateQ4ShapeFunctions,
 } from "./q4Geometry";
+import {
+  buildMitc4AssumedShearB,
+  buildMitc4TyingRows,
+} from "./mitc4";
 
-const BENDING_GAUSS_POINTS: ReadonlyArray<[number, number, number]> = [
+const STANDARD_GAUSS_POINTS: ReadonlyArray<[number, number, number]> = [
   [-1 / Math.sqrt(3), -1 / Math.sqrt(3), 1],
   [1 / Math.sqrt(3), -1 / Math.sqrt(3), 1],
   [1 / Math.sqrt(3), 1 / Math.sqrt(3), 1],
   [-1 / Math.sqrt(3), 1 / Math.sqrt(3), 1],
-];
-
-const SHEAR_GAUSS_POINTS: ReadonlyArray<[number, number, number]> = [
-  [0, 0, 4], // reduced integration for shear terms
 ];
 
 export interface MindlinConstitutive {
@@ -61,17 +61,20 @@ export function computeMindlinQ4ElementStiffness(
 ): Float64Array {
   const constitutive = computeMindlinConstitutive(material, thickness);
   const ke = new Float64Array(12 * 12);
+  const tyingRows = buildMitc4TyingRows(elementNodes);
 
-  for (const [xi, eta, weight] of BENDING_GAUSS_POINTS) {
+  for (const [xi, eta, weight] of STANDARD_GAUSS_POINTS) {
     const kinematics = computeKinematics(elementNodes, xi, eta);
     const bb = kinematics.bendingB;
-    accumulateStiffnessContribution(ke, bb, constitutive.db, 3, kinematics.detJ * weight);
-  }
-
-  for (const [xi, eta, weight] of SHEAR_GAUSS_POINTS) {
-    const kinematics = computeKinematics(elementNodes, xi, eta);
-    const bs = kinematics.shearB;
-    accumulateStiffnessContribution(ke, bs, constitutive.ds, 2, kinematics.detJ * weight);
+    const bs = buildMitc4AssumedShearB(elementNodes, xi, eta, tyingRows);
+    accumulateMindlinStiffnessAtPoint(
+      ke,
+      bb,
+      constitutive.db,
+      bs,
+      constitutive.ds,
+      kinematics.detJ * weight,
+    );
   }
 
   return ke;
@@ -85,7 +88,8 @@ export function evaluateMindlinQ4At(
 ): MindlinPointEvaluation {
   const kinematics = computeKinematics(elementNodes, xi, eta);
   const curvatures = multiplyBByElementVector(kinematics.bendingB, 3, elementDisplacements);
-  const shears = multiplyBByElementVector(kinematics.shearB, 2, elementDisplacements);
+  const assumedShearB = buildMitc4AssumedShearB(elementNodes, xi, eta);
+  const shears = multiplyBByElementVector(assumedShearB, 2, elementDisplacements);
   return {
     shapeFunctions: kinematics.shapeFunctions,
     curvatures: [curvatures[0], curvatures[1], curvatures[2]],
@@ -100,18 +104,15 @@ function computeKinematics(
 ): {
   shapeFunctions: [number, number, number, number];
   bendingB: Float64Array;
-  shearB: Float64Array;
   detJ: number;
 } {
   const shapeFunctions = evaluateQ4ShapeFunctions(xi, eta);
   const derivatives = evaluateQ4PhysicalGradients(elementNodes, xi, eta);
   const bendingB = buildBendingB(derivatives.dNdx, derivatives.dNdy);
-  const shearB = buildShearB(shapeFunctions, derivatives.dNdx, derivatives.dNdy);
 
   return {
     shapeFunctions,
     bendingB,
-    shearB,
     detJ: derivatives.jacobian.determinant,
   };
 }
@@ -131,47 +132,38 @@ function buildBendingB(
   return b;
 }
 
-function buildShearB(
-  n: readonly [number, number, number, number],
-  dNdx: readonly [number, number, number, number],
-  dNdy: readonly [number, number, number, number],
-): Float64Array {
-  const b = new Float64Array(2 * 12);
-  for (let i = 0; i < 4; i += 1) {
-    const base = i * 3;
-    b[0 * 12 + base + 0] = dNdx[i];
-    b[0 * 12 + base + 1] = n[i];
-    b[1 * 12 + base + 0] = dNdy[i];
-    b[1 * 12 + base + 2] = n[i];
-  }
-  return b;
-}
-
-function accumulateStiffnessContribution(
+function accumulateMindlinStiffnessAtPoint(
   ke: Float64Array,
-  b: Float64Array,
-  d: readonly number[],
-  rows: number,
+  bendingB: Float64Array,
+  db: readonly number[],
+  assumedShearB: Float64Array,
+  ds: readonly number[],
   scale: number,
 ): void {
-  const dTimesB = new Float64Array(rows * 12);
-  for (let i = 0; i < rows; i += 1) {
-    for (let j = 0; j < 12; j += 1) {
-      let sum = 0;
-      for (let k = 0; k < rows; k += 1) {
-        sum += d[i * rows + k] * b[k * 12 + j];
-      }
-      dTimesB[i * 12 + j] = sum;
-    }
-  }
-
+  // Accumulate all 144 ordered entries directly; never mirror or post-symmetrize.
   for (let row = 0; row < 12; row += 1) {
-    for (let col = 0; col < 12; col += 1) {
-      let value = 0;
-      for (let i = 0; i < rows; i += 1) {
-        value += b[i * 12 + row] * dTimesB[i * 12 + col];
+    for (let column = 0; column < 12; column += 1) {
+      let bending = 0;
+      for (let i = 0; i < 3; i += 1) {
+        for (let j = 0; j < 3; j += 1) {
+          bending +=
+            bendingB[i * 12 + row] *
+            db[i * 3 + j] *
+            bendingB[j * 12 + column];
+        }
       }
-      ke[row * 12 + col] += value * scale;
+
+      let shear = 0;
+      for (let i = 0; i < 2; i += 1) {
+        for (let j = 0; j < 2; j += 1) {
+          shear +=
+            assumedShearB[i * 12 + row] *
+            ds[i * 2 + j] *
+            assumedShearB[j * 12 + column];
+        }
+      }
+
+      ke[row * 12 + column] += (bending + shear) * scale;
     }
   }
 }

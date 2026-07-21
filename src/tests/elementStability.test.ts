@@ -178,40 +178,26 @@ describe("Mindlin Q4 kinematic completeness", () => {
 });
 
 describe("Mindlin Q4 rank and hourglass audit", () => {
-  it.each(ELEMENT_RANK_AUDITS)("freezes finite current element-rank diagnostics on a $name element", ({ diagnostics }) => {
+  it.each(ELEMENT_RANK_AUDITS)("has exactly three physical null modes on a $name element", ({ diagnostics }) => {
     expectFiniteEigenDiagnostics(diagnostics);
     expect(diagnostics.negativeCount).toBe(0);
-    expect(diagnostics.nullity).toBe(5);
-  });
-
-  it.fails.each(ELEMENT_RANK_AUDITS)("EF-001 known current-SRI defect: has only three physical null modes on a $name element", ({ diagnostics }) => {
-    // Independently expected physical nullity: w = c - betaX*x - betaY*y.
     expect(diagnostics.nullity).toBe(3);
   });
 
-  it.each(ASSEMBLED_RANK_AUDITS)("freezes finite assembled rank and checkerboard CG diagnostics on a $name 2x2 mesh", ({ diagnostics, checkerboardCg, checkerboardNorm }) => {
+  it.each(ASSEMBLED_RANK_AUDITS)("has only the three physical null modes and gives the checkerboard positive search energy on a $name 2x2 mesh", ({ diagnostics, checkerboardCg, normalizedCheckerboardEnergy, positiveEnergyFloor }) => {
     expectFiniteEigenDiagnostics(diagnostics);
     expect(diagnostics.negativeCount).toBe(0);
-    expect(diagnostics.nullity).toBe(4);
-    expect(checkerboardCg).toMatchObject({ converged: false, breakdown: true, iterations: 0 });
-    expect(Number.isFinite(checkerboardCg.residualNorm)).toBe(true);
-    expect(checkerboardCg.residualNorm).toBe(checkerboardNorm);
+    expect(diagnostics.nullity).toBe(3);
     expect(Number.isFinite(checkerboardCg.minimumNormalizedSearchEnergy)).toBe(true);
-  });
-
-  it.fails.each(ASSEMBLED_RANK_AUDITS)("EF-001 known current-SRI defect: has only three physical null modes after assembling a $name 2x2 mesh", ({ diagnostics }) => {
-    expect(diagnostics.nullity).toBe(3);
-  });
-
-  it.each(ASSEMBLED_RANK_AUDITS)("freezes the finite checkerboard zero-energy signature on a $name mesh", ({ normalizedCheckerboardEnergy, positiveEnergyFloor }) => {
     expect(Number.isFinite(normalizedCheckerboardEnergy)).toBe(true);
     expect(Number.isFinite(positiveEnergyFloor)).toBe(true);
     expect(positiveEnergyFloor).toBeGreaterThan(0);
-    expect(Math.abs(normalizedCheckerboardEnergy)).toBeLessThanOrEqual(positiveEnergyFloor);
-  });
-
-  it.fails.each(ASSEMBLED_RANK_AUDITS)("EF-001 known current-SRI defect: assigns positive energy to the transverse checkerboard on a $name mesh", ({ normalizedCheckerboardEnergy, positiveEnergyFloor }) => {
     expect(normalizedCheckerboardEnergy).toBeGreaterThan(positiveEnergyFloor);
+    expect(checkerboardCg.iterations).toBeGreaterThan(0);
+    expect(
+      checkerboardCg.breakdown && checkerboardCg.iterations === 0,
+      `CG diagnostics ${JSON.stringify(checkerboardCg)}`,
+    ).toBe(false);
   });
 });
 
@@ -243,9 +229,12 @@ describe("restrained-system stability and thickness trend", () => {
     );
   });
 
-  it("records the representative h/L conditioning trend without treating it as physical validation", () => {
+  it("records a bounded 2x2 thin-limit conditioning plateau as a stability diagnostic", () => {
+    // This small restrained-system condition number is a numerical
+    // conditioning/stability diagnostic only. The independent 4x4 compliance
+    // comparison in mitc4Element.test.ts is the transverse-shear locking gate.
     const mesh = createAffineStructuredMesh(2, 2, 2, 1.4, 0.45);
-    const ratios = [0.2, 0.1, 0.05, 0.02];
+    const ratios = [1e-1, 1e-2, 1e-3, 1e-4];
     const trend = ratios.map((ratio) => {
       const stiffness = assembleDenseStiffness(mesh, MATERIAL, ratio * CHARACTERISTIC_LENGTH);
       const centerDofs = [12, 13, 14];
@@ -262,21 +251,13 @@ describe("restrained-system stability and thickness trend", () => {
       expect(diagnostics.nullity).toBe(0);
     });
     const conditionNumbers = trend.map(({ diagnostics }) => diagnostics.conditionNumber);
-    const expectedConditionNumbers = [
-      37.438089233551494,
-      47.32497798829032,
-      50.67031260719935,
-      51.69347099681769,
-    ];
-    conditionNumbers.forEach((value, index) =>
-      expect(Math.abs(value / expectedConditionNumbers[index] - 1)).toBeLessThanOrEqual(1e-10),
-    );
-    for (let index = 1; index < conditionNumbers.length; index += 1) {
-      expect(
-        conditionNumbers[index],
-        `h/L=${ratios.join()} conditions=${conditionNumbers.join()}`,
-      ).toBeGreaterThan(conditionNumbers[index - 1]);
-    }
+    const thinTailRatio =
+      Math.max(conditionNumbers[2], conditionNumbers[3]) /
+      Math.min(conditionNumbers[2], conditionNumbers[3]);
+    expect(
+      thinTailRatio,
+      `h/L=${ratios.join()} conditions=${conditionNumbers.join()}`,
+    ).toBeLessThan(1.01);
   });
 });
 
@@ -289,8 +270,8 @@ describe("multi-element prescribed-boundary constant-bending evidence", () => {
     const kappa = [0.08, -0.05, 0.06] as const;
     // Boundary data are nodal samples of w = -0.5*kx*x^2 - 0.5*ky*y^2
     // -0.5*kxy*x*y, beta = -grad(w). Q4 does not reproduce that quadratic w
-    // everywhere; the claim tested is constant curvature at 2x2 bending points
-    // and zero shear at the one-point shear sample in each affine element.
+    // everywhere; MITC4 tying nevertheless reproduces constant curvature and
+    // zero assumed shear throughout each affine element.
     const displacement = nodalVector(mesh.nodes, (node) => [
       -0.5 * kappa[0] * node.x * node.x -
         0.5 * kappa[1] * node.y * node.y -
@@ -329,12 +310,14 @@ describe("multi-element prescribed-boundary constant-bending evidence", () => {
           ),
         );
       }
-      expectVectorNearZero(
-        "one-point shear compatibility",
-        evaluateMindlinQ4At(nodes, elementDisplacement, 0, 0).shears,
-        Math.max(...elementDisplacement.map(Math.abs)),
-        12,
-      );
+      for (const [xi, eta] of [...BENDING_POINTS, [0.23, -0.41] as const]) {
+        expectVectorNearZero(
+          "MITC4 constant-curvature shear",
+          evaluateMindlinQ4At(nodes, elementDisplacement, xi, eta).shears,
+          Math.max(...elementDisplacement.map(Math.abs)),
+          12,
+        );
+      }
     }
 
     // All perimeter generalized displacements are prescribed. Only the centre

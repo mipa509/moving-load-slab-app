@@ -1,4 +1,5 @@
 import { computeMindlinQ4ElementStiffness } from "../../solver/core/element";
+import { evaluateQ4Jacobian } from "../../solver/core/q4Geometry";
 import type { MaterialDefinition, MeshNode } from "../../solver/model/types";
 
 export interface DenseMatrix {
@@ -28,6 +29,11 @@ export interface CgDiagnostics {
   minimumNormalizedSearchEnergy: number;
 }
 
+export interface MeshJacobianQuality {
+  minimumDeterminant: number;
+  maximumConditionNumber: number;
+}
+
 const EIGEN_ROUNDOFF_MULTIPLIER = 4096;
 const MAX_JACOBI_SWEEPS_PER_DOF_SQUARED = 100;
 
@@ -38,14 +44,24 @@ export function createAffineStructuredMesh(
   lengthY: number,
   shearOffsetPerY = 0,
 ): DiagnosticMesh {
+  return createMappedStructuredMesh(elementCountX, elementCountY, (u, v) => ({
+    x: lengthX * u + shearOffsetPerY * lengthY * v,
+    y: lengthY * v,
+  }));
+}
+
+export function createMappedStructuredMesh(
+  elementCountX: number,
+  elementCountY: number,
+  map: (u: number, v: number) => { x: number; y: number },
+): DiagnosticMesh {
   const nodes: MeshNode[] = [];
   const nodeId = (i: number, j: number): number => j * (elementCountX + 1) + i;
 
   for (let j = 0; j <= elementCountY; j += 1) {
-    const y = (lengthY * j) / elementCountY;
     for (let i = 0; i <= elementCountX; i += 1) {
-      const s = (lengthX * i) / elementCountX;
-      nodes.push({ id: nodeId(i, j), x: s + shearOffsetPerY * y, y });
+      const point = map(i / elementCountX, j / elementCountY);
+      nodes.push({ id: nodeId(i, j), x: point.x, y: point.y });
     }
   }
 
@@ -61,6 +77,33 @@ export function createAffineStructuredMesh(
     }
   }
   return { nodes, elements };
+}
+
+export function evaluateMeshJacobianQuality(
+  mesh: DiagnosticMesh,
+  samplePoints: ReadonlyArray<readonly [number, number]>,
+): MeshJacobianQuality {
+  let minimumDeterminant = Number.POSITIVE_INFINITY;
+  let maximumConditionNumber = 0;
+
+  for (const nodeIds of mesh.elements) {
+    const nodes = nodeIds.map((nodeId) => mesh.nodes[nodeId]) as [
+      MeshNode,
+      MeshNode,
+      MeshNode,
+      MeshNode,
+    ];
+    for (const [xi, eta] of samplePoints) {
+      const jacobian = evaluateQ4Jacobian(nodes, xi, eta);
+      minimumDeterminant = Math.min(minimumDeterminant, jacobian.determinant);
+      maximumConditionNumber = Math.max(
+        maximumConditionNumber,
+        jacobianConditionNumber(jacobian.matrix),
+      );
+    }
+  }
+
+  return { minimumDeterminant, maximumConditionNumber };
 }
 
 export function assembleDenseStiffness(
@@ -369,4 +412,18 @@ function dot(left: ArrayLike<number>, right: ArrayLike<number>): number {
   let result = 0;
   for (let i = 0; i < left.length; i += 1) result += left[i] * right[i];
   return result;
+}
+
+function jacobianConditionNumber(
+  matrix: readonly [number, number, number, number],
+): number {
+  const [a, b, c, d] = matrix;
+  const trace = a * a + b * b + c * c + d * d;
+  const determinant = a * d - b * c;
+  const discriminant = Math.sqrt(
+    Math.max(0, trace * trace - 4 * determinant * determinant),
+  );
+  const maximumEigenvalue = 0.5 * (trace + discriminant);
+  const minimumEigenvalue = 0.5 * (trace - discriminant);
+  return Math.sqrt(maximumEigenvalue / minimumEigenvalue);
 }
