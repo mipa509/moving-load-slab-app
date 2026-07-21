@@ -2,7 +2,7 @@
 
 ## Current integration
 
-- Integration hash: `8aa6c78`
+- Integration hash: `d078b76`
 - Worktree: `C:\MyEngineering\04-Apps\moving-load-slab-app`
 - Branch: `feat/skew-plate-analysis`
 - Active wave/package: Wave 1B / WP-011, WP-014A, and WP-031A ready for parallel dispatch; WP-004 deferred
@@ -49,6 +49,7 @@
 - WP-012 passed independent correction review and checkpoint `6ed093c` is pushed to GitHub.
 - WP-013 passed independent correction review after all five geometry/tolerance/immutability evidence findings were closed; checkpoint `8aa6c78` is pushed to GitHub.
 - Wave 1A is accepted. G1 remains open until WP-011 passes; no G1 claim is made from WP-010/WP-012/WP-013 alone.
+- `CD-WP014A-001` is approved: adding required live `skewAngleDeg` makes the typed `createDefaultModel` object invalid before WP-014B. WP-014A may add only the zero-valued field to that constructor as a compile bridge with no physical-behaviour change; WP-014B still exclusively owns sanitization, migration, range handling, and defaults tests.
 
 ## Packet states
 
@@ -62,6 +63,9 @@
 | WP-010 | `passed` | Q4 geometry worker; independent numerical review accepted | checkpoint `799e190` pushed |
 | WP-012 | `passed` | deck-coordinate geometry correction worker; independent correction review accepted | checkpoint `6ed093c` pushed; CD-WP012-001 integrated |
 | WP-013 | `passed` | lead correction under original geometry lease; independent computational-geometry correction review accepted | checkpoint `8aa6c78` pushed |
+| WP-011 | `dispatched` | numerical element stability worker; fresh independent numerical review required | WP-010 passed; test/diagnostic-only initial lease |
+| WP-014A | `dispatched` | app schema worker; fresh independent type/compatibility review required | WP-005 and WP-012 passed; CD-WP014A-001 compile bridge approved |
+| WP-031A | `dispatched` | numerical convention worker; fresh independent numerical review required | WP-002 passed |
 
 ## File leases
 
@@ -88,6 +92,9 @@
 | Lead CD-WP012-001 contract clarification | write/integration | `docs/adr/ADR-skew-data-api-contracts.md` and ledger only | released; amendment synchronized and frozen for correction review |
 | WP-012 correction worker | write | `src/solver/geometry/deckCoordinates.ts`, `src/tests/deckCoordinates.test.ts` only | released; corrected handoff complete and accepted |
 | Lead WP-013 correction | write/integration | `src/solver/geometry/convexPolygon.ts`, `src/tests/convexPolygon.test.ts` only | released; bounded correction completed after agent thread limit; independently accepted |
+| WP-011 numerical stability worker | write | new `src/tests/helpers/elementStabilityDiagnostics.ts`, new `src/tests/elementStability.test.ts` only | active; production element/kernel changes prohibited without a new lead decision |
+| WP-014A app schema worker | write | `src/app/types.ts`, `src/app/defaults.ts` limited to the zero-valued compile bridge, `src/tests/vehiclePlacement.test.ts`, `src/tests/skewContractScaffold.test.ts` only | active under CD-WP014A-001; no sanitization/migration/defaults-test authority |
+| WP-031A numerical convention worker | write | new `src/solver/post/reactionMomentMapping.ts`, new `src/tests/reactionMomentMapping.test.ts` only | active; tensor rotation and equilibrium aggregation excluded |
 
 WP-003 and WP-004 leases are disjoint. Source, test, configuration, package, report, live type, app, solver, viewer, and user-owned files are outside both scopes.
 
@@ -180,6 +187,7 @@ WP-003 and WP-004 leases are disjoint. Source, test, configuration, package, rep
 | WP-013 corrected focused/full/build | exit 0; focused 14 tests, integrated full 29 files/162 tests, TypeScript and 669-module Vite build passed; existing chunk warning remains |
 | WP-013 independent correction re-review | `pass`; all five original findings closed, including additional cyclic/remote/mutation/analytic probes; no remaining findings |
 | WP-013 checkpoint commit/push | exit 0; commit `8aa6c78`; pushed `6ed093c..8aa6c78` to `origin/feat/skew-plate-analysis`; remote relocation notice only |
+| Wave 1A ledger checkpoint | exit 0; commit `d078b76`; pushed `8aa6c78..d078b76` to `origin/feat/skew-plate-analysis`; remote relocation notice only |
 
 ## Gate evidence and tolerances
 
@@ -234,6 +242,15 @@ WP-003 and WP-004 leases are disjoint. Source, test, configuration, package, rep
 - Backward-compatibility impact: none for app inputs or saved models; the kernel accepts a wider mathematical domain and preserves existing finite mappings.
 - Proposed migration/test: test +/-45 as ordinary accepted cases, accept representative +/-60 and values approaching but below 90, reject +/-90 and beyond, add analytic sign/corner/inverse oracles, multi-scale error cases, and explicit off-deck affine-extension tests.
 - Lead decision: approved; no change to the release UI limit, skew sign, warning policy, or engineering-verification status.
+- Contract deviation integrated and active: `CD-WP014A-001`.
+- Decision/contract ID: required app skew field and compile-safe zero default bridge.
+- Current definition: WP-014A makes live `skewAngleDeg` required and must pass strict typecheck, but its original lease excludes the typed runtime default constructor; WP-014B cannot begin until WP-014A passes.
+- Required change: extend WP-014A's lease to add exactly `skewAngleDeg: 0` to `createDefaultModel`; retain all parsing, sanitization, migration, range, invalid-input, save/load, and defaults-test work in WP-014B.
+- Why this packet cannot continue: the required live field makes the typed default model structurally invalid, so the WP-014A strict-typecheck acceptance condition is otherwise impossible without starting its prerequisite-dependent successor.
+- Affected packets: WP-014A, WP-014B, WP-015, and typed app-model consumers.
+- Backward-compatibility impact: saved/imported legacy objects remain untouched until WP-014B; newly constructed defaults gain an explicit zero skew and retain identical rectangular physical behavior.
+- Proposed migration/test: WP-014A proves required typing and exact zero construction with mechanical fixtures; WP-014B later owns missing-field migration, +/-45 limits, invalid inputs, persistence, and round trips.
+- Lead decision: approved as the narrowest compile bridge; no WP-014B parsing or migration task starts early.
 
 ## Next three delegations
 
