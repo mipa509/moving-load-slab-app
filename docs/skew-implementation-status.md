@@ -53,6 +53,7 @@
 - `CD-WP014A-002` is approved after the worker's lease stop: strict typing also reaches the sanitizer return and two mesh-sizing fixtures. WP-014A may carry only `fallback.skewAngleDeg` through the sanitizer and add explicit zero to those fixtures; it must not read, validate, clamp, or migrate imported skew input before WP-014B.
 - WP-014A passed independent type/compatibility review with no findings and checkpoint `1a6eaf1` is pushed. WP-014B's sole prerequisite is now satisfied.
 - WP-011 has produced EF-001 stop evidence: element nullity 5 versus 3 physical modes, assembled 2x2 nullity 4 versus 3, near-zero checkerboard energy, and CG breakdown at iteration zero. These are formulation failures, not tolerance failures; independent numerical review is mandatory before replacement selection.
+- WP-014B stopped before edits on a persistence lease contradiction. The accepted ADR requires exact implicit-V1/explicit-V2 parsing before sanitization; permissive partial unversioned objects are not valid saved models. `CD-WP014B-001` narrowly adds the live App save call so every pre-WP-027 save can actually write V2.
 
 ## Packet states
 
@@ -68,7 +69,7 @@
 | WP-013 | `passed` | lead correction under original geometry lease; independent computational-geometry correction review accepted | checkpoint `8aa6c78` pushed |
 | WP-011 | `review_pending_fail` | numerical element stability worker; fresh independent numerical review required | EF-001 stop evidence produced; G1 and mesh/load integration blocked |
 | WP-014A | `passed` | app schema worker; independent type/compatibility review accepted | checkpoint `1a6eaf1` pushed; CD-WP014A-001/002 integrated |
-| WP-014B | `dispatched` | migration worker; fresh independent migration/compatibility review required | WP-014A passed at `1a6eaf1` |
+| WP-014B | `correction_active` | migration worker; fresh independent migration/compatibility review required | strict V1/V2 interpretation frozen; CD-WP014B-001 save-call lease approved |
 | WP-031A | `dispatched` | numerical convention worker; fresh independent numerical review required | WP-002 passed |
 
 ## File leases
@@ -99,7 +100,7 @@
 | WP-011 numerical stability worker | write | new `src/tests/helpers/elementStabilityDiagnostics.ts`, new `src/tests/elementStability.test.ts` only | active only to present six exact EF-001 defects as explicit expected failures; no tolerance relaxation or production edit |
 | WP-014A app schema worker | write | `src/app/types.ts`; narrow `src/app/defaults.ts` bridges; `src/tests/vehiclePlacement.test.ts`; `src/tests/skewContractScaffold.test.ts`; mechanical `src/tests/meshSizing.test.ts` fields | released; corrected handoff independently accepted and pushed |
 | WP-014A independent type/compatibility reviewer | read-only | WP-014A files, ADR ownership, and CD-WP014A-001/002 | released; recommendation `pass`, no findings |
-| WP-014B migration worker | write | `src/app/defaults.ts`, `src/tests/defaults.test.ts` only | active; owns missing legacy skew to zero, finite inclusive +/-45 policy, deterministic invalid handling, and save/load round trips |
+| WP-014B migration worker | write | `src/app/defaults.ts`, `src/tests/defaults.test.ts`, and `src/app/App.tsx` limited only to replacing direct `JSON.stringify(model)` in `handleSaveJson` with the leased V2 serializer | active under CD-WP014B-001; exact V1/V2 parse, V2 save, skew fallback policy; no unrelated App edit |
 | WP-031A numerical convention worker | write | new `src/solver/post/reactionMomentMapping.ts`, new `src/tests/reactionMomentMapping.test.ts` only | active; tensor rotation and equilibrium aggregation excluded |
 
 WP-003 and WP-004 leases are disjoint. Source, test, configuration, package, report, live type, app, solver, viewer, and user-owned files are outside both scopes.
@@ -199,6 +200,7 @@ WP-003 and WP-004 leases are disjoint. Source, test, configuration, package, rep
 | WP-014A independent review | `pass`; canonical required type, staging removal, exact compile bridges, heading independence, and no WP-014B scope leakage confirmed; no findings |
 | WP-014A checkpoint commit/push | exit 0; commit `1a6eaf1`; pushed `d79ecef..1a6eaf1` to `origin/feat/skew-plate-analysis`; remote relocation notice only |
 | WP-011 initial EF-001 audit | focused/full exit 1 with 10 passing and 6 intentional acceptance failures; element nullity 5/3, assembled nullity 4/3, checkerboard normalized energy near zero, and CG breakdown at iteration zero; build/diff checks passed |
+| WP-014B pre-edit stop | no files changed; worker identified unleased direct App save and apparent conflict between strict ADR snapshots and permissive legacy sanitizer tests; lead resolved via ADR authority and CD-WP014B-001 |
 
 ## Gate evidence and tolerances
 
@@ -271,6 +273,15 @@ WP-003 and WP-004 leases are disjoint. Source, test, configuration, package, rep
 - Backward-compatibility impact: pre-WP-014B imports continue to behave as zero skew; explicit imported skew is intentionally not activated until WP-014B. Existing rectangular geometry and mesh expectations remain unchanged.
 - Proposed migration/test: WP-014A proves compile-safe required typing and zero fixtures; WP-014B replaces fallback-only carry-through with the accepted missing/finite/range policy and owns defaults/persistence tests.
 - Lead decision: approved after the worker stopped at the exact lease boundary; no WP-014B behavior is accepted early.
+- Contract deviation integrated and active: `CD-WP014B-001`.
+- Decision/contract ID: make the normative V2 save path reachable from the live App.
+- Current definition: WP-014B must make every save before WP-027 write exact V2, but its original lease excludes `src/app/App.tsx`, where `handleSaveJson` directly stringifies the live model.
+- Required change: permit one App integration edit replacing only direct model stringification with a serializer exported from leased `src/app/defaults.ts`; retain all parser/serializer logic and tests in the original WP-014B files.
+- Why this packet cannot continue: a serializer that the live save path never calls cannot satisfy the explicit V2-save acceptance contract.
+- Affected packets: WP-014B, WP-027, WP-032B, WP-050, and WP-063 persistence acceptance.
+- Backward-compatibility impact: complete implicit V1 saved files load with missing skew exactly zero; exact V2 files load; malformed/partial/unversioned or discriminator-shape mismatches now fail as required by the accepted ADR instead of being guessed. Saved files gain explicit V2 metadata.
+- Proposed migration/test: parse exact full V1/V2 snapshots before sanitization; reject discriminator/schema/shape mismatches and unsupported versions; sanitize finite skew within inclusive +/-45, normalize negative zero, use the existing deterministic fallback rather than clamp for invalid/out-of-range values; serialize exact V2 and prove App uses it.
+- Lead decision: approved as a one-expression App integration lease; no other App behavior or file is authorized.
 
 ## Next three delegations
 
