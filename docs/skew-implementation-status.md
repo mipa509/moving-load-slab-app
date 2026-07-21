@@ -2,12 +2,12 @@
 
 ## Current integration
 
-- Integration hash: `2430f6e`
+- Integration hash: `03016e3`
 - Worktree: `C:\MyEngineering\04-Apps\moving-load-slab-app`
 - Branch: `feat/skew-plate-analysis`
-- Active wave/package: Section 11 / EF-002 formulation selection; WP-004 deferred
-- Package state: `WP-014B accepted and pushed; EF-002 research active`
-- Gate state: G0 verification criteria are not passed under CD-G0-001; G1 failed on independently confirmed extra zero-energy modes; WP-020 and downstream mesh/load integration remain blocked through EF-005 re-entry
+- Active wave/package: Section 11 / EF-003 MITC4 implementation; WP-004 and formal approvals deferred to the end-of-plan review register
+- Package state: `EF-002 selected for implementation; EF-003 ready for dispatch under CD-EF002-001`
+- Gate state: G0 verification criteria remain unpassed under CD-G0-001 and G1 remains failed on the confirmed SRI hourglass modes. Formal verification and human approvals do not block implementation under CD-EF002-001, but executable correctness failures do; WP-020 and downstream mesh/load integration remain blocked through EF-005 re-entry
 - Worktree at dispatch: clean at the integration hash except user-owned untracked plan and frozen untracked WP-004 verification files
 
 ## Decision digests
@@ -56,7 +56,9 @@
 - WP-014B stopped before edits on a persistence lease contradiction. The accepted ADR requires exact implicit-V1/explicit-V2 parsing before sanitization; permissive partial unversioned objects are not valid saved models. `CD-WP014B-001` narrowly adds the live App save call so every pre-WP-027 save can actually write V2.
 - WP-011's corrected EF-001 failure-evidence packet passed independent review. The formulation verdict remains failed: the extra SRI hourglass modes are genuine and checkpoint `4d7d4f1` preserves the exact defect signature.
 - WP-031A passed independent correction review with no remaining findings and checkpoint `2bc2e77` is pushed.
-- EF-002 may compare and select a documented replacement behind the stable API, but implementation cannot begin without independent numerical approval of the equations/fixtures and the required Chartered Engineer review.
+- EF-002 selected original Bathe-Dvorkin MITC4 behind the stable API. Independent numerical formulation review `EF-002-R1` and fixture-plan review `EF-002-R2` passed after correction.
+- User/owner direction on 2026-07-21, recorded as `CD-EF002-001`, defers formal verification and human approvals to the end-of-plan review register. The outstanding Chartered Engineer review does not block EF-003 implementation, but it still blocks engineering reliance, warning removal, and release.
+- Executable evidence of a wrong transform/sign, extra non-physical null mode, non-finite response, loss of positive definiteness, locking, or unstable recovery remains an immediate stop condition and cannot be deferred by CD-EF002-001.
 - WP-014B passed independent correction review after exact nested V2 and malformed-shape evidence was added; checkpoint `2430f6e` is pushed. WP-015's package prerequisite is satisfied but its mesh-integration work remains held by the Section 11/G1 block.
 
 ## Packet states
@@ -74,9 +76,10 @@
 | WP-011 | `failed` | numerical element stability worker; independent numerical failure review accepted | genuine extra zero-energy modes; replacement required |
 | WP-014A | `passed` | app schema worker; independent type/compatibility review accepted | checkpoint `1a6eaf1` pushed; CD-WP014A-001/002 integrated |
 | WP-014B | `passed` | migration worker; independent migration/compatibility correction review accepted | checkpoint `2430f6e` pushed; CD-WP014B-001 integrated |
-| WP-031A | `dispatched` | numerical convention worker; fresh independent numerical review required | WP-002 passed |
+| WP-031A | `passed` | numerical convention worker; independent numerical review accepted | checkpoint `2bc2e77` pushed |
 | EF-001 | `passed` | numerical failure-evidence worker; independent numerical review accepted | checkpoint `4d7d4f1` pushed; evidence accepted, formulation not accepted |
-| EF-002 | `dispatched` | replacement-formulation architecture worker; independent numerical/CEng approval required | EF-001 accepted; documentation/research only |
+| EF-002 | `passed_for_implementation` | replacement-formulation architecture worker; independent numerical formulation and fixture-plan reviews accepted | original MITC4 selected; CEng suitability approval deferred to end-of-plan review under CD-EF002-001 |
+| EF-003 | `ready_for_dispatch` | MITC4 implementation worker; independent numerical/code review to be recorded | exact implementation lease below; hard numerical stop conditions remain active |
 
 ## File leases
 
@@ -111,7 +114,9 @@
 | WP-014B independent migration/compatibility reviewer | read-only | WP-014B parser/serializer/tests, ADR snapshots, and narrow App diff | released; correction re-review `pass`, no findings |
 | WP-031A numerical convention worker | write | `src/solver/post/reactionMomentMapping.ts`, `src/tests/reactionMomentMapping.test.ts` only | released; corrected handoff independently accepted and pushed |
 | WP-031A independent numerical reviewer | read-only | WP-031A mapping/tests and accepted mathematical ADR | released; signed-zero correction re-review `pass`, no findings |
-| EF-002 replacement-formulation architecture worker | write/research | new `docs/adr/ADR-plate-element-formulation-replacement.md` only | active; compare documented formulations using primary sources; no production/test/type edits |
+| EF-002 replacement-formulation architecture worker | write/research | new `docs/adr/ADR-plate-element-formulation-replacement.md` only | released; original MITC4 selected and review corrections integrated |
+| EF-002 independent numerical reviewers | read-only | formulation equations/API boundary and EF-003 fixture plan | released; `EF-002-R1` formulation pass and `EF-002-R2` fixture-plan pass |
+| EF-003 MITC4 implementation worker | write | `src/solver/core/element.ts`, new `src/solver/core/mitc4.ts`, new `src/tests/mitc4Element.test.ts`, `src/tests/elementStability.test.ts`, `src/tests/helpers/elementStabilityDiagnostics.ts` only | ready for dispatch after EF-002 checkpoint; no zero-skew rebaseline, external benchmark, app, load, or release edits |
 
 WP-003 and WP-004 leases are disjoint. Source, test, configuration, package, report, live type, app, solver, viewer, and user-owned files are outside both scopes.
 
@@ -221,6 +226,11 @@ WP-003 and WP-004 leases are disjoint. Source, test, configuration, package, rep
 | WP-014B corrected focused/full/build | exit 0; focused 62 tests, full 31 files/253 tests, strict typecheck, and 669-module build passed |
 | WP-014B independent correction re-review | `pass`; complete V2 oracle, line/point preservation, structural rejection precedence, skew policy, and narrow App scope accepted; no findings |
 | WP-014B checkpoint commit/push | exit 0; commit `2430f6e`; pushed `5181458..2430f6e` to `origin/feat/skew-plate-analysis`; remote relocation notice only |
+| EF-002 initial ADR | original Bathe-Dvorkin MITC4 selected conditionally after documented comparison with DKMQ, bilinear DSG4, and stabilized MITC4 |
+| EF-002 independent review `EF-002-R1` | formulation equations/API boundary `pass`; fixture plan required corrections for full-J transform oracles, non-affine refinement families, direct accumulation, and source traceability |
+| EF-002 reviewed corrections | full-J rotated/sheared fixture, all tying-point and non-central transform checks, shape-regular non-affine families with Jacobian diagnostics, direct all-144-entry accumulation, separated recovery/operator scoring, and corrected primary-source locators integrated |
+| EF-002 independent re-review `EF-002-R2` | fixture plan `pass`; formulation remains `pass`; only separate CEng suitability approval remained outstanding |
+| EF-002 final documentation checks | no-index `git diff --check` clean; Markdown fence count even; no benchmark expected values or production/test edits introduced |
 
 ## Gate evidence and tolerances
 
@@ -302,9 +312,32 @@ WP-003 and WP-004 leases are disjoint. Source, test, configuration, package, rep
 - Backward-compatibility impact: complete implicit V1 saved files load with missing skew exactly zero; exact V2 files load; malformed/partial/unversioned or discriminator-shape mismatches now fail as required by the accepted ADR instead of being guessed. Saved files gain explicit V2 metadata.
 - Proposed migration/test: parse exact full V1/V2 snapshots before sanitization; reject discriminator/schema/shape mismatches and unsupported versions; sanitize finite skew within inclusive +/-45, normalize negative zero, use the existing deterministic fallback rather than clamp for invalid/out-of-range values; serialize exact V2 and prove App uses it.
 - Lead decision: approved as a one-expression App integration lease; no other App behavior or file is authorized.
+- Contract deviation active: `CD-EF002-001`.
+- Decision/contract ID: defer formal verification and human approvals without treating known computational failures as acceptable.
+- Current definition: the plan and EF-002 ADR require CEng/external approval before dependent implementation, and WP-004/G0 remain formally unpassed.
+- Required change: formal human and external verification items move to the end-of-plan review register and do not block implementation packages. Internal executable correctness failures remain hard stops, and engineering reliance, warning removal, or release is not authorized.
+- Why this packet can continue: the owner explicitly directed that approvals and verifications be consolidated at the end, while the independently reviewed MITC4 equation and fixture packages are sufficient to start bounded implementation work.
+- Affected packets: EF-003 through EF-005, WP-004, WP-060 through WP-064, and gates G1 through G7.
+- Backward-compatibility impact: none at this decision point; no production code, result, persistence, or public contract changes.
+- Proposed migration/test: execute the internal rank, sign, transform, finite-value, locking, distortion, and recovery tests during implementation; record every deferred human/external item below; complete the register before any release or engineering-reliance decision.
+- Lead decision: approved from explicit user/owner direction on 2026-07-21. This is implementation authorization only.
+
+## Deferred end-of-plan review register
+
+| Review item | Evidence required before closure | Current state |
+|---|---|---|
+| WP-004 source verification | original-source acquisition and authority, commercial-shell case definition, comparison protocol, and independently accepted provenance | deferred; no benchmark or validation claim permitted |
+| EF-002 CEng suitability | MITC4 suitability for slab assessment, shear/recovery/report limitations, and engineering significance of EF-004 changes | deferred; blocks engineering reliance/release only |
+| EF-003 implementation review | independent code/mathematics review of covariant tying, transforms, direct stiffness accumulation, recovery, rank, and hard-stop tests | to be recorded; findings indicating executable incorrectness are not deferrable |
+| EF-004 zero-skew rebaseline | old/new values, convergence evidence, differences, and engineering significance | deferred formal approval; executable comparison still required |
+| EF-003/EF-005 numerical evidence | full-J transforms, non-affine distortion families, locking sweep, recovery/energy consistency, rank, positive definiteness, and finite response | implementation evidence required; formal acceptance deferred |
+| WP-060/WP-061/WP-062/WP-063/WP-064 | planned verification, benchmark, acceptance, compatibility, and reporting evidence with independent review | deferred to their end-stage execution/review |
+| G6/G7 release review | warning/reliance policy, CEng approval, verified sources, benchmark/commercial comparison, and final release authorization | mandatory before warning removal, engineering reliance, or release |
+
+This register defers review timing, not evidence integrity. A known sign/transform error, extra non-physical mode, non-finite value, unstable solve, locking failure, or recovery inconsistency must stop the affected implementation package until corrected or returned to EF-002.
 
 ## Next three delegations
 
-1. EF-002 documented replacement-formulation comparison and selection ADR; no production implementation before independent numerical/CEng approval.
-2. Independent numerical review and required Chartered Engineer approval of the EF-002 selection before EF-003 implementation.
-3. Hold WP-015, WP-020, and load integration until the Section 11 branch re-enters at G1 through EF-005.
+1. Checkpoint the reviewed EF-002 MITC4 decision and CD-EF002-001 review register.
+2. Dispatch EF-003 under the exact five-file lease; implement and test MITC4 without zero-skew rebaselining or external benchmark values.
+3. After EF-003 internal correctness is green, perform EF-004 rebaseline and EF-005 G1 re-entry. Hold WP-015, WP-020, and load integration until that computational gate passes.
