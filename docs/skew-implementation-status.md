@@ -2,13 +2,13 @@
 
 ## Current integration
 
-- Integration hash: `7a04350`
+- Integration hash: `79ccf06`
 - Worktree: `C:\MyEngineering\04-Apps\moving-load-slab-app`
 - Branch: `feat/skew-plate-analysis`
-- Active wave/package: Wave 1 / WP-015 app-to-solver geometry and mesh sizing; WP-004 and formal approvals deferred to the end-of-plan review register
-- Package state: `EF-005 re-entry passed; WP-015 dispatched from 7a04350; G1 open`
-- Gate state: inverse-transpose, corrected MITC4, zero-skew rebaseline, geometry/polygon, reaction mapping, migration, full-suite, and build evidence are green. G1 remains unpassed until WP-015 translation/mesh-sizing completes; WP-020 and downstream mesh/load integration remain blocked
-- Worktree at dispatch: clean at the integration hash except user-owned untracked plan and frozen untracked WP-004 verification files
+- Active wave/package: Wave 2 / WP-020 skew structured mesh and quality diagnostics is next for dispatch; WP-004 and formal approvals remain deferred to the end-of-plan review register
+- Package state: `WP-015 passed and pushed at 79ccf06; G1 computational gate passed; WP-020 eligible but not yet dispatched`
+- Gate state: G1 passed its internal implementation-progression audit. Inverse-transpose, corrected MITC4, zero-skew rebaseline, geometry/polygon, reaction mapping, migration/translation/mesh sizing, focused/full tests, and build are green. This is not physical validation, standards compliance, engineering reliance, or release approval
+- Worktree at gate: clean at `79ccf06` except user-owned untracked plan and frozen untracked WP-004 verification files
 
 ## Decision digests
 
@@ -68,6 +68,8 @@
 - EF-005 successfully re-entered the main path: 11 available G1 suites passed 170/170. This is not a G1 pass because WP-015 translation and mesh-sizing behavior is still required.
 - WP-015 selects physical skew-edge sizing: the centreline-span direction remains `lengthM`, while the transverse support-edge length is `widthM / cos(skewAngleDeg)`. This preserves exact zero-skew counts and approximately maintains the requested physical element size for both skew signs.
 - WP-014B passed independent correction review after exact nested V2 and malformed-shape evidence was added; checkpoint `2430f6e` is pushed. WP-015's package prerequisite is satisfied but its mesh-integration work remains held by the Section 11/G1 block.
+- WP-015 now normalizes the legacy solver slab fields once, propagates exact zero and signed skew through `fromAppModel`, and derives transverse target counts from WP-012's canonical physical support-edge length. Independent review passed with no findings; checkpoint `79ccf06` is pushed.
+- G1 passed its independent internal gate audit at `79ccf06`: 11 focused files/188 tests, the full 33-file/281-test suite, strict TypeScript, and the 671-module Vite build passed. No known executable sign, transform, rank, non-finite, positive-definiteness, locking, recovery, or stability failure remains. Deferred formal approvals still prohibit engineering reliance, warning removal, or release.
 
 ## Packet states
 
@@ -90,7 +92,7 @@
 | EF-003 | `passed` | MITC4 implementation worker; independent numerical/code correction review accepted | checkpoint `0088e11` pushed; two deliberate stale snapshots handed to EF-004 |
 | EF-004 | `passed` | zero-skew rebaseline worker; independent numerical impact review accepted | checkpoint `b4cbbec` pushed; complete old/new evidence and limitations recorded |
 | EF-005 | `passed_reentry` | lead/integrator computational re-entry | available G1 suites passed 170/170; main path re-entered at WP-015, not a G1 pass |
-| WP-015 | `dispatched` | app/solver boundary worker; independent architecture/numerical review required | WP-012 and WP-014B passed; EF-005 re-entry complete; G1 remains open |
+| WP-015 | `passed` | app/solver boundary worker; independent architecture/numerical review accepted | checkpoint `79ccf06` pushed; exact normalization and canonical physical-edge sizing accepted; G1 passed |
 
 ## File leases
 
@@ -132,7 +134,9 @@
 | EF-004 zero-skew rebaseline worker | write | `src/solver/benchmarks/zeroSkewCharacterizationFixture.ts`, `src/tests/zeroSkewCharacterization.test.ts`, `src/tests/q4Geometry.test.ts`, new `src/tests/zeroSkewRebaseline.test.ts`, new `docs/ef004-zero-skew-rebaseline.md` only | released; accepted and pushed at `b4cbbec` |
 | EF-004 independent numerical impact reviewer | read-only | exact five-file rebaseline diff, pre/current commits, old/new values, hashes, convergence, and engineering limitations | released; recommendation `pass`, no findings |
 | EF-005 lead/integrator | verification/integration | no production write lease; tests/build and ledger only | released; available G1 focused evidence passed and WP-015 identified as the remaining executable gate item |
-| WP-015 app/solver boundary worker | write | `src/solver/model/fromAppModel.ts`, `src/app/meshSizing.ts`, `src/tests/meshSizing.test.ts` only | active from `7a04350`; exact geometry normalization/skew propagation and physical skew-edge sizing only |
+| WP-015 app/solver boundary worker | write | `src/solver/model/fromAppModel.ts`, `src/app/meshSizing.ts`, `src/tests/meshSizing.test.ts` only | released; accepted and pushed at `79ccf06` |
+| WP-015 independent architecture/numerical reviewer | read-only | exact three-file diff, accepted geometry/mesh-sizing policy, compatibility, and focused evidence | released; recommendation `pass`, no findings |
+| G1 lead/integrator and independent gate reviewer | verification/integration | committed Wave 1 tree, all G1 focused/numerical suites, full suite, build, and repository integrity | released; internal implementation-progression gate `pass` at `79ccf06` |
 
 WP-003 and WP-004 leases are disjoint. Source, test, configuration, package, report, live type, app, solver, viewer, and user-owned files are outside both scopes.
 
@@ -261,6 +265,12 @@ WP-003 and WP-004 leases are disjoint. Source, test, configuration, package, rep
 | EF-004 final scope/diff checks | exactly five leased files; tracked/no-index whitespace and control-byte scans clean; production, ledger, plan, and WP-004 files untouched by worker |
 | EF-004 checkpoint commit/push | exit 0; commit `b4cbbec`; pushed `ba3e89d..b4cbbec` to `origin/feat/skew-plate-analysis`; remote relocation notice only |
 | EF-005 available G1 focused suites | exit 0; 11 files/170 tests passed: inverse-transpose/Q4, MITC4/stability, zero-skew characterization/rebaseline, deck coordinates, polygon, reaction mapping, migration/contracts, and current mesh sizing |
+| WP-015 focused/full/build | focused 1 file/20 tests passed; full 33 files/281 tests passed; strict TypeScript and 671-module Vite build passed; existing greater-than-500-kB chunk warning only |
+| WP-015 independent review | `pass`; exact three-file lease, canonical normalization, absent exact positive zero, 0/+/-19/+/-45 propagation and sizing, shared WP-012 edge source, zero-count preservation, sign parity, heading/travel independence, and compatibility confirmed; no findings |
+| WP-015 checkpoint commit/push | exit 0; commit `79ccf06`; pushed `42bda86..79ccf06` to `origin/feat/skew-plate-analysis`; remote relocation notice only |
+| G1 focused suites | exit 0; 11 files/188 tests passed: inverse-transpose/Q4, MITC4/stability, zero-skew characterization/rebaseline, deck coordinates, polygon, reaction mapping, migration/contracts, and completed mesh sizing/translation |
+| G1 full suite/build | exit 0; 33 files/281 tests passed; strict TypeScript and 671-module Vite build passed; existing greater-than-500-kB chunk warning only |
+| G1 independent gate audit | `pass` at `79ccf06`; every executable criterion supported, repository integrity clean, and no hard-stop numerical defect remains; formal WP-004/CEng/release items remain deferred |
 
 ## Gate evidence and tolerances
 
@@ -360,7 +370,7 @@ WP-003 and WP-004 leases are disjoint. Source, test, configuration, package, rep
 | EF-002 CEng suitability | MITC4 suitability for slab assessment, shear/recovery/report limitations, and engineering significance of EF-004 changes | deferred; blocks engineering reliance/release only |
 | EF-003 implementation review | independent code/mathematics review of covariant tying, transforms, direct stiffness accumulation, recovery, rank, and hard-stop tests | internal review recorded `pass` at `0088e11`; CEng/release reliance remains deferred |
 | EF-004 zero-skew rebaseline | old/new values, convergence evidence, differences, and engineering significance | internal numerical impact review passed at `b4cbbec`; formal CEng/release interpretation remains deferred |
-| EF-003/EF-005 numerical evidence | full-J transforms, non-affine distortion families, locking sweep, recovery/energy consistency, rank, positive definiteness, and finite response | EF-003 and available EF-005 re-entry evidence passed; WP-015/G1 completion and formal end-stage acceptance remain pending |
+| EF-003/EF-005 numerical evidence | full-J transforms, non-affine distortion families, locking sweep, recovery/energy consistency, rank, positive definiteness, and finite response | EF-003, EF-005 re-entry, WP-015, and the G1 internal gate passed; formal end-stage acceptance remains pending |
 | WP-060/WP-061/WP-062/WP-063/WP-064 | planned verification, benchmark, acceptance, compatibility, and reporting evidence with independent review | deferred to their end-stage execution/review |
 | G6/G7 release review | warning/reliance policy, CEng approval, verified sources, benchmark/commercial comparison, and final release authorization | mandatory before warning removal, engineering reliance, or release |
 
@@ -368,6 +378,6 @@ This register defers review timing, not evidence integrity. A known sign/transfo
 
 ## Next three delegations
 
-1. Record EF-005 re-entry as successful for the available G1 evidence and checkpoint the ledger; G1 itself remains open.
-2. Dispatch WP-015 app-to-solver geometry and mesh-sizing integration from the new checkpoint under its exact plan lease.
-3. After WP-015 passes review, rerun G1. Only then may WP-020 and downstream mesh/load integration begin.
+1. Checkpoint this G1 ledger state from accepted implementation hash `79ccf06` and push it before opening Wave 2.
+2. Dispatch WP-020 skew structured mesh and quality diagnostics under its exact plan lease; keep WP-021/WP-023 blocked until WP-020 review passes.
+3. After WP-020 passes review and is checkpointed, rerun its affected zero-skew/numerical suites before dispatching dependent support or inverse-mapping work.
