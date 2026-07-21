@@ -61,7 +61,13 @@ export function createMappedStructuredMesh(
   for (let j = 0; j <= elementCountY; j += 1) {
     for (let i = 0; i <= elementCountX; i += 1) {
       const point = map(i / elementCountX, j / elementCountY);
-      nodes.push({ id: nodeId(i, j), x: point.x, y: point.y });
+      nodes.push({
+        id: nodeId(i, j),
+        x: point.x,
+        y: point.y,
+        s: point.x,
+        t: point.y,
+      });
     }
   }
 

@@ -171,22 +171,29 @@ export interface MeshNode {
   id: number;
   x: number;
   y: number;
+  s: number;
+  t: number;
 }
 
 export interface MeshElement {
   id: number;
   nodeIds: [number, number, number, number];
-  bounds: RectBounds;
+  polygon: SkewGeometryContract.Polygon2D;
+  bounds: SkewGeometryContract.Aabb;
 }
 
 export interface StructuredMesh {
+  sCoords: number[];
+  tCoords: number[];
+  /** @deprecated Exact same array object as sCoords; local, not global x. WP-050 removes it. */
   xCoords: number[];
+  /** @deprecated Exact same array object as tCoords; local, not global y. WP-050 removes it. */
   yCoords: number[];
   nodes: MeshNode[];
   elements: MeshElement[];
   nodeIdsByIJ: number[][];
-  elementCountX: number;
-  elementCountY: number;
+  elementCountS: number;
+  elementCountT: number;
 }
 
 export interface WheelPatch {
@@ -430,40 +437,11 @@ export type NormalizeSolverSupports = (
 ) => StagedSkewSolverContract.SupportDefinitionV2[];
 
 /**
- * Compile-safe declarations only. WP-020 promotes the mesh members; WP-026
+ * Compile-safe declarations only. WP-020 promoted the mesh members; WP-026
  * promotes the remaining solver members and removes their staged aliases.
  */
 export declare namespace StagedSkewSolverContract {
   type NormalizedSlabGeometry = SkewGeometryContract.SlabGeometry;
-
-  interface MeshNodeV2 {
-    id: number;
-    x: number;
-    y: number;
-    s: number;
-    t: number;
-  }
-
-  interface MeshElementV2 {
-    id: number;
-    nodeIds: [number, number, number, number];
-    polygon: SkewGeometryContract.Polygon2D;
-    bounds: SkewGeometryContract.Aabb;
-  }
-
-  interface StructuredMeshV2 {
-    sCoords: number[];
-    tCoords: number[];
-    /** @deprecated Exact same array object as sCoords; local, not global x. WP-050 removes it. */
-    xCoords: number[];
-    /** @deprecated Exact same array object as tCoords; local, not global y. WP-050 removes it. */
-    yCoords: number[];
-    nodes: MeshNodeV2[];
-    elements: MeshElementV2[];
-    nodeIdsByIJ: number[][];
-    elementCountS: number;
-    elementCountT: number;
-  }
 
   type SupportDefinitionV2 = InternalNormalizedSupport;
 
@@ -537,7 +515,7 @@ export declare namespace StagedSkewSolverContract {
 
   interface FixedPositionAnalysisResultV2 {
     geometry: NormalizedSlabGeometry;
-    mesh: StructuredMeshV2;
+    mesh: StructuredMesh;
     wheelPatches: WheelPatchV2[];
     internalNodalKinematics: InternalNodalKinematicsV2[];
     internalElementResults: InternalElementResultV2[];

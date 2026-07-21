@@ -10,10 +10,12 @@ import type {
 import type {
   FixedPositionAnalysisModelInputV2,
   GeneralizedSupportDof,
+  MeshElement,
   NormalizeSolverSupports,
   SlabGeometry as LiveSolverSlabGeometry,
   SolverSupportInputBridgeV2,
   StagedSkewSolverContract,
+  StructuredMesh,
 } from "../solver/model/types";
 import type {
   ElementFieldMap,
@@ -38,7 +40,7 @@ import type {
 } from "../app/types";
 
 describe("skew contract scaffold", () => {
-  it("exposes canonical geometry and the staged solver mesh bridge", () => {
+  it("exposes canonical geometry and the promoted solver mesh", () => {
     expectTypeOf<Point2D>().toEqualTypeOf<{ x: number; y: number }>();
     expectTypeOf<Polygon2D>().toEqualTypeOf<Point2D[]>();
     expectTypeOf<Aabb>().toEqualTypeOf<{
@@ -54,12 +56,13 @@ describe("skew contract scaffold", () => {
     expectTypeOf<LiveAppSlabGeometry>().toEqualTypeOf<CanonicalSlabGeometry>();
     expectTypeOf<LiveAppSlabGeometry["skewAngleDeg"]>().toEqualTypeOf<number>();
 
-    const localCoordinates = [0, 5];
-    const mesh: StagedSkewSolverContract.StructuredMeshV2 = {
-      sCoords: localCoordinates,
-      tCoords: localCoordinates,
-      xCoords: localCoordinates,
-      yCoords: localCoordinates,
+    const sCoordinates = [0, 5];
+    const tCoordinates = [0, 5];
+    const mesh: StructuredMesh = {
+      sCoords: sCoordinates,
+      tCoords: tCoordinates,
+      xCoords: sCoordinates,
+      yCoords: tCoordinates,
       nodes: [],
       elements: [],
       nodeIdsByIJ: [],
@@ -69,7 +72,7 @@ describe("skew contract scaffold", () => {
 
     expect(mesh.xCoords).toBe(mesh.sCoords);
     expect(mesh.yCoords).toBe(mesh.tCoords);
-    expectTypeOf<StagedSkewSolverContract.MeshElementV2["polygon"]>()
+    expectTypeOf<MeshElement["polygon"]>()
       .toEqualTypeOf<Polygon2D>();
     expectTypeOf<StagedSkewSolverContract.WheelPatchV2["clippedBounds"]>()
       .toEqualTypeOf<Aabb | null>();

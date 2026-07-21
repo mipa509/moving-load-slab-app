@@ -2,6 +2,7 @@ import {
   computeMindlinConstitutive,
   evaluateMindlinQ4At,
 } from "../core/element";
+import { getMeshElementCenter } from "../core/mesh";
 import type {
   ElementCenterResult,
   MaterialDefinition,
@@ -35,10 +36,7 @@ export function recoverElementCenterResults(
 
     results.push({
       elementId: element.id,
-      center: {
-        x: 0.5 * (element.bounds.xMin + element.bounds.xMax),
-        y: 0.5 * (element.bounds.yMin + element.bounds.yMax),
-      },
+      center: getMeshElementCenter(mesh, element),
       deflection: centerDeflection,
       moments: {
         mx: moments[0],

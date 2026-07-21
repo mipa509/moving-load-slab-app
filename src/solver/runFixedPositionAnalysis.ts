@@ -46,6 +46,11 @@ export function runFixedPositionAnalysis(
   model: FixedPositionAnalysisModel,
 ): FixedPositionAnalysisResult {
   validateModel(model);
+  if ((model.slab.skewAngleDeg ?? 0) !== 0) {
+    throw new Error(
+      "Nonzero-skew public analysis is temporarily unavailable until polygon loading and skew support mapping are integrated.",
+    );
+  }
 
   const mesh = generateStructuredMesh(model.slab, model.mesh, model.supports);
   const totalDofs = mesh.nodes.length * 3;

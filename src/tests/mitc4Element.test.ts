@@ -74,17 +74,17 @@ const QUALITY_POINTS: ReadonlyArray<readonly [number, number]> = [
 const ROUND_OFF_MULTIPLIER = 8192;
 
 const ROTATED_SHEARED_AFFINE: [MeshNode, MeshNode, MeshNode, MeshNode] = [
-  { id: 0, x: 0, y: 0 },
-  { id: 1, x: 2, y: 0.6 },
-  { id: 2, x: 2.45, y: 2 },
-  { id: 3, x: 0.45, y: 1.4 },
+  { id: 0, x: 0, y: 0, s: 0, t: 0 },
+  { id: 1, x: 2, y: 0.6, s: 2, t: 0.6 },
+  { id: 2, x: 2.45, y: 2, s: 2.45, t: 2 },
+  { id: 3, x: 0.45, y: 1.4, s: 0.45, t: 1.4 },
 ];
 
 const NON_AFFINE: [MeshNode, MeshNode, MeshNode, MeshNode] = [
-  { id: 0, x: 0, y: 0 },
-  { id: 1, x: 2, y: 0.2 },
-  { id: 2, x: 2.25, y: 1.5 },
-  { id: 3, x: -0.15, y: 1.25 },
+  { id: 0, x: 0, y: 0, s: 0, t: 0 },
+  { id: 1, x: 2, y: 0.2, s: 2, t: 0.2 },
+  { id: 2, x: 2.25, y: 1.5, s: 2.25, t: 1.5 },
+  { id: 3, x: -0.15, y: 1.25, s: -0.15, t: 1.25 },
 ];
 
 function multiplyB(
@@ -637,16 +637,16 @@ describe("MITC4 independent covariant transform oracle", () => {
 
   it("obeys independently defined reflection parity for positive and negative affine shear", () => {
     const plus: [MeshNode, MeshNode, MeshNode, MeshNode] = [
-      { id: 0, x: 0, y: 0 },
-      { id: 1, x: 2, y: 0 },
-      { id: 2, x: 2.45, y: 1.4 },
-      { id: 3, x: 0.45, y: 1.4 },
+      { id: 0, x: 0, y: 0, s: 0, t: 0 },
+      { id: 1, x: 2, y: 0, s: 2, t: 0 },
+      { id: 2, x: 2.45, y: 1.4, s: 2.45, t: 1.4 },
+      { id: 3, x: 0.45, y: 1.4, s: 0.45, t: 1.4 },
     ];
     const minus: [MeshNode, MeshNode, MeshNode, MeshNode] = [
-      { id: 0, x: 0, y: 0 },
-      { id: 1, x: 2, y: 0 },
-      { id: 2, x: 1.55, y: 1.4 },
-      { id: 3, x: -0.45, y: 1.4 },
+      { id: 0, x: 0, y: 0, s: 0, t: 0 },
+      { id: 1, x: 2, y: 0, s: 2, t: 0 },
+      { id: 2, x: 1.55, y: 1.4, s: 1.55, t: 1.4 },
+      { id: 3, x: -0.45, y: 1.4, s: -0.45, t: 1.4 },
     ];
     const plusDisplacement = Float64Array.from([
       0.17, -0.08, 0.11,
@@ -700,10 +700,10 @@ describe("MITC4 rank, rigid modes, and constant curvature", () => {
     [
       "rectangle",
       [
-        { id: 0, x: 0, y: 0 },
-        { id: 1, x: 2, y: 0 },
-        { id: 2, x: 2, y: 1.4 },
-        { id: 3, x: 0, y: 1.4 },
+        { id: 0, x: 0, y: 0, s: 0, t: 0 },
+        { id: 1, x: 2, y: 0, s: 2, t: 0 },
+        { id: 2, x: 2, y: 1.4, s: 2, t: 1.4 },
+        { id: 3, x: 0, y: 1.4, s: 0, t: 1.4 },
       ] as [MeshNode, MeshNode, MeshNode, MeshNode],
     ],
     ["rotated-and-sheared affine", ROTATED_SHEARED_AFFINE],

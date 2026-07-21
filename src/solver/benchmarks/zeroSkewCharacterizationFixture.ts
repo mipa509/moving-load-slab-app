@@ -16,10 +16,10 @@ export const ZERO_SKEW_CHARACTERIZATION_ELEMENT_NODES: readonly [
   MeshNode,
   MeshNode,
 ] = [
-  { id: 0, x: 0, y: 0 },
-  { id: 1, x: 1, y: 0 },
-  { id: 4, x: 1, y: 1 },
-  { id: 3, x: 0, y: 1 },
+  { id: 0, x: 0, y: 0, s: 0, t: 0 },
+  { id: 1, x: 1, y: 0, s: 1, t: 0 },
+  { id: 4, x: 1, y: 1, s: 1, t: 1 },
+  { id: 3, x: 0, y: 1, s: 0, t: 1 },
 ];
 
 export const ZERO_SKEW_CHARACTERIZATION_MODEL: FixedPositionAnalysisModel = {

@@ -65,10 +65,10 @@ function asMeshNodes(
   nodes: Q4NodeCoordinates,
 ): readonly [MeshNode, MeshNode, MeshNode, MeshNode] {
   return [
-    { id: 0, ...nodes[0] },
-    { id: 1, ...nodes[1] },
-    { id: 2, ...nodes[2] },
-    { id: 3, ...nodes[3] },
+    { id: 0, ...nodes[0], s: nodes[0].x, t: nodes[0].y },
+    { id: 1, ...nodes[1], s: nodes[1].x, t: nodes[1].y },
+    { id: 2, ...nodes[2], s: nodes[2].x, t: nodes[2].y },
+    { id: 3, ...nodes[3], s: nodes[3].x, t: nodes[3].y },
   ];
 }
 

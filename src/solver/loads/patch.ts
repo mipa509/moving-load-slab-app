@@ -1,3 +1,4 @@
+import { resolveMeshElementGeometry } from "../core/mesh";
 import type { StructuredMesh, WheelPatch } from "../model/types";
 
 export interface ElementPatchLoadContribution {
@@ -21,6 +22,10 @@ export function assembleWheelPatchLoads(
   wheelPatches: WheelPatch[],
   totalDofs: number,
 ): PatchLoadAssembly {
+  for (const element of mesh.elements) {
+    assertLegacyRectangularElement(mesh, element);
+  }
+
   const globalLoadVector = new Float64Array(totalDofs);
   const contributions: ElementPatchLoadContribution[] = [];
   let totalWheelLoad = 0;
@@ -76,6 +81,31 @@ export function assembleWheelPatchLoads(
     totalAppliedLoadToSlab,
     contributions,
   };
+}
+
+function assertLegacyRectangularElement(
+  mesh: StructuredMesh,
+  element: StructuredMesh["elements"][number],
+): void {
+  const resolved = resolveMeshElementGeometry(mesh, element);
+  const { xMin, xMax, yMin, yMax } = resolved.bounds;
+  const expected = [
+    [xMin, yMin],
+    [xMax, yMin],
+    [xMax, yMax],
+    [xMin, yMax],
+  ] as const;
+  const exactRectangle =
+    resolved.polygon.length === expected.length &&
+    resolved.polygon.every(
+      (point, index) =>
+        point.x === expected[index][0] && point.y === expected[index][1],
+    );
+  if (!exactRectangle) {
+    throw new Error(
+      `Legacy AABB patch integration rejects non-rectangular mesh element ${element.id}; WP-024 polygon integration is required.`,
+    );
+  }
 }
 
 function integrateNodalForcesForRectangularOverlap(

@@ -49,6 +49,15 @@ function buildSmokeModel(): FixedPositionAnalysisModel {
 }
 
 describe("solver smoke", () => {
+  it("fails closed for public nonzero-skew solves until downstream integration", () => {
+    const model = buildSmokeModel();
+    model.slab.skewAngleDeg = 19;
+
+    expect(() => runFixedPositionAnalysis(model)).toThrow(
+      /nonzero-skew public analysis is temporarily unavailable/i,
+    );
+  });
+
   it("converges and maintains basic vertical load-reaction equilibrium", () => {
     const result = runFixedPositionAnalysis(buildSmokeModel());
 
