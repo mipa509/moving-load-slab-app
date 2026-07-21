@@ -5,6 +5,7 @@
 - **Scope:** Geometry, common geometry, mesh, supports, wheel patches, results, reactions, equilibrium, sections, verification status, warnings, compatibility, and downstream ownership
 - **Integration baseline:** `feat/skew-plate-analysis` at `7f4c77f24b0712075b754f13a232b9d9e7ac9c13`
 - **Depends on:** Accepted `docs/adr/ADR-skew-mathematical-conventions.md`
+- **Amendment:** `CD-WP005-001` approved 2026-07-21 - compile-safe collision staging and real WP-021 normalizer boundary; no numerical, sign, warning-authority, or runtime-behaviour change
 
 ## 1. Decision, authority, and labels
 
@@ -42,6 +43,11 @@ export interface SlabGeometry { /* Section 3.1 */ }
 
 // src/solver/model/types.ts
 import type * as SkewGeometryContract from '../geometry/types';
+import type {
+  DiagnosticWarning, ElementCenterPlateResult, MeshQualityReport, NodalKinematics,
+  NodalRecoveredPlateResult, PhysicalActionTotals, SignedEquilibrium,
+  SupportReactionRow, VerificationEvidenceStatus,
+} from '../../app/types';
 export declare namespace StagedSkewSolverContract {
   type NormalizedSlabGeometry = SkewGeometryContract.SlabGeometry;
   interface MeshNodeV2 {
@@ -134,6 +140,41 @@ export declare namespace StagedSkewSolverContract {
 import type * as SkewGeometryContract from '../solver/geometry/types';
 export declare namespace StagedSkewAppContract {
   type SlabGeometryV2 = SkewGeometryContract.SlabGeometry;
+  type ResultFieldV2 = 'deflection' | 'mx' | 'my' | 'mxy' | 'qx' | 'qy' | 'reactions';
+  type EnvelopeFieldV2 = 'deflection' | 'mx' | 'my' | 'mxy';
+  interface MeshNodeOverlayV2 {
+    id: number; xM: number; yM: number; sM: number; tM: number;
+  }
+  interface MeshElementOverlayV2 {
+    id: number;
+    nodeIds: [number, number, number, number];
+    polygon: Array<{ xM: number; yM: number }>;
+    bounds: { xMinM: number; xMaxM: number; yMinM: number; yMaxM: number };
+  }
+  interface EnvelopePerNodeV2 {
+    nodeId: number; xM: number; yM: number; sM: number; tM: number;
+    max: number; min: number;
+  }
+  interface EnvelopeFieldDataV2<F extends EnvelopeFieldV2, U extends 'mm' | 'kN*m/m'> {
+    field: F; points: EnvelopePerNodeV2[]; max: number; min: number;
+    absMax: number; units: U;
+  }
+  interface EnvelopeWorstStationV2<F extends MomentField> {
+    field: F; stationM: number; peakValue: number; peakAbs: number;
+    nodeId: number; units: 'kN*m/m';
+  }
+  interface EnvelopeWorstStationsV2 {
+    mx: EnvelopeWorstStationV2<'mx'>;
+    my: EnvelopeWorstStationV2<'my'>;
+    mxy: EnvelopeWorstStationV2<'mxy'>;
+  }
+  interface EnvelopeDataV2 {
+    stationsRun: number; pathStartM: number; pathEndM: number; pathStepM: number;
+    travelDirection: 'x+' | 'x-' | 'y+' | 'y-';
+    computedAtIso: string; signature: string;
+    fields: EnvelopeFieldMap;
+    worstStations: EnvelopeWorstStationsV2;
+  }
   interface SupportBaseV2 {
     id: string;
     name: string;
@@ -154,13 +195,13 @@ export declare namespace StagedSkewAppContract {
 }
 ```
 
-This block contains no documentary placeholder: every namespace member is legal TypeScript and is materialized by WP-005. Object records use `interface`; aliases and discriminated unions use `type`. WP-005 also declares every referenced, non-colliding top-level contract from Sections 3-12 before these aliases. No top-level `StagedSlabGeometry`, `TargetMeshNode`, or similar alias is permitted. The only temporary names for colliding live types are members of the two exact namespaces above, imported through the exact module paths shown. Shared primitives are aliases/imports from `src/solver/geometry/types.ts`, never namespace-local lookalikes.
+This block contains no documentary placeholder: every namespace member is legal TypeScript and is materialized by WP-005. Object records use `interface`; aliases and discriminated unions use `type`. WP-005 also declares every referenced, non-colliding top-level contract from Sections 3-12 before these aliases. No top-level `StagedSlabGeometry`, `TargetMeshNode`, or similar alias is permitted. The only temporary names for colliding live types are the exact `V2` members of the two namespaces above, imported through the exact module paths shown. Shared primitives are aliases/imports from `src/solver/geometry/types.ts`, never namespace-local lookalikes. This expanded collision list is the approved `CD-WP005-001` correction: it prevents a target import such as live `EnvelopeData` from silently resolving to the legacy contract while preserving the live application until WP-032B.
 
-Namespace-member ownership is exact. WP-014A promotes and removes app `SlabGeometryV2`. WP-020 promotes and removes `MeshNodeV2`, `MeshElementV2`, and `StructuredMeshV2`, retaining the required deprecated axes in the promoted mesh. WP-021 consumes `SupportDefinitionV2` from its leased support implementation/tests but neither promotes nor removes it. WP-022 likewise consumes `WheelPatchV2` from its leased load implementation/tests but neither promotes nor removes it. WP-026, whose lease includes final solver model/type activation, promotes and removes `NormalizedSlabGeometry`, `SupportDefinitionV2`, `InternalNodalKinematicsV2`, `InternalElementResultV2`, `InternalNodalRecoveryV2`, `WheelPatchV2`, `FixedPositionAnalysisSummaryV2`, and `FixedPositionAnalysisResultV2`; it also activates the solver-support input bridge. WP-027 promotes and removes app `SupportBaseV2`/`SupportV2`. WP-032B promotes and removes app `SectionSettingsV2` and `AnalysisResultsV2`. WP-032A owns facade compatibility retention/removal within its lease; WP-050 performs the final repository audit and only the plan-authorized minimal integration fixes specified below. No packet promotes or removes a namespace member outside its write lease.
+Namespace-member ownership is exact. WP-014A promotes and removes app `SlabGeometryV2`. WP-020 promotes and removes `MeshNodeV2`, `MeshElementV2`, and `StructuredMeshV2`, retaining the required deprecated axes in the promoted mesh. WP-021 consumes `SupportDefinitionV2` from its leased support implementation/tests but neither promotes nor removes it. WP-022 likewise consumes `WheelPatchV2` from its leased load implementation/tests but neither promotes nor removes it. WP-026, whose lease includes final solver model/type activation, promotes and removes `NormalizedSlabGeometry`, `SupportDefinitionV2`, `InternalNodalKinematicsV2`, `InternalElementResultV2`, `InternalNodalRecoveryV2`, `WheelPatchV2`, `FixedPositionAnalysisSummaryV2`, and `FixedPositionAnalysisResultV2`; it also activates the solver-support input bridge. WP-027 promotes and removes app `SupportBaseV2`/`SupportV2`. WP-032B promotes and removes app `ResultFieldV2`, `EnvelopeFieldV2`, `MeshNodeOverlayV2`, `MeshElementOverlayV2`, `EnvelopePerNodeV2`, `EnvelopeFieldDataV2`, `EnvelopeWorstStationV2`, `EnvelopeWorstStationsV2`, `EnvelopeDataV2`, `SectionSettingsV2`, and `AnalysisResultsV2` atomically with its app-result shape. WP-032A owns facade compatibility retention/removal within its lease; WP-050 performs the final repository audit and only the plan-authorized minimal integration fixes specified below. No packet promotes or removes a namespace member outside its write lease.
 
 The no-lookalike rule applies immediately to canonical primitives and to all code outside these two namespaces. The namespaces are the sole, time-bounded exception needed for compile-safe declaration; they must alias canonical primitives and cannot become runtime producers.
 
-The data path has four deliberate layers:
+The data path has four deliberate layers. During WP-005 staging only, `src/solver/model/types.ts` has a type-only import of the app-owned, unit-suffixed facade/result transport contracts referenced by `FixedPositionAnalysisResultV2`. It creates no runtime edge and must not be used by solver kernels. WP-026 removes that staged aggregate; WP-032A then owns the real solver-facade transport boundary. This narrow direction is approved by `CD-WP005-001`; moving or duplicating those app-facing shapes into the core solver is prohibited.
 
 1. persisted/app input, with unit-suffixed public fields;
 2. app-to-solver translation, which normalizes legacy input exactly once;
@@ -469,12 +510,12 @@ export type SolverSupportInputBridgeV2 =
 export type FixedPositionAnalysisModelInputV2 =
   Omit<FixedPositionAnalysisModel, 'supports'> & SolverSupportInputBridgeV2;
 
-export declare function normalizeSolverSupports(
+export type NormalizeSolverSupports = (
   input: SolverSupportInputBridgeV2,
-): StagedSkewSolverContract.SupportDefinitionV2[];
+) => StagedSkewSolverContract.SupportDefinitionV2[];
 ```
 
-WP-005 declares these names without changing the live `FixedPositionAnalysisModel.supports` member. WP-021 implements and tests `normalizeSolverSupports` in its leased support files against staged `SupportDefinitionV2`; it treats an absent discriminator only as the frozen legacy route and the exact literal only as the physical route, but it neither changes the shared live model type nor removes the staged member. Existing `fromAppModel` output therefore remains valid. WP-026 promotes `SupportDefinitionV2`, `FixedPositionAnalysisModelInputV2`, and the bridge into the live solver model types and removes the staged support member. WP-027 atomically changes `fromAppModel` to emit `supportInputSchema: 'physical-v2'`. WP-032A owns retaining or removing the external legacy generalized-coordinate facade route; WP-050 audits the outcome and removes any retained route only through its plan-authorized minimal integration-fix mechanism. No member is guessed from shape.
+WP-005 declares these names without changing the live `FixedPositionAnalysisModel.supports` member. `NormalizeSolverSupports` is deliberately a callable type, not an ambient value export from a real `.ts` module. WP-021 implements and tests the real `normalizeSolverSupports` value in its leased `src/solver/core/supports.ts` and annotates that export with `NormalizeSolverSupports`; it treats an absent discriminator only as the frozen legacy route and the exact literal only as the physical route, but it neither changes the shared live model type nor removes the staged member. Existing `fromAppModel` output therefore remains valid. WP-026 promotes `SupportDefinitionV2`, `FixedPositionAnalysisModelInputV2`, and the bridge into the live solver model types and removes the staged support member. WP-027 atomically changes `fromAppModel` to emit `supportInputSchema: 'physical-v2'`. WP-032A owns retaining or removing the external legacy generalized-coordinate facade route; WP-050 audits the outcome and removes any retained route only through its plan-authorized minimal integration-fix mechanism. No member is guessed from shape. This callable-type correction is approved by `CD-WP005-001`; a declaration erased from emitted JavaScript is not an acceptable promise of a runtime export.
 
 ### 6.1.1 Deterministic saved-model versions
 
@@ -827,62 +868,15 @@ export interface ElementFieldMap {
   qy: ElementQyFieldData;
 }
 
-export interface EnvelopePerNode {
-  nodeId: number;
-  xM: number;
-  yM: number;
-  sM: number;
-  tM: number;
-  max: number;
-  min: number;
-}
-
-export interface EnvelopeFieldData<
-  F extends EnvelopeField,
-  U extends 'mm' | 'kN*m/m',
-> {
-  field: F;
-  points: EnvelopePerNode[];
-  max: number;
-  min: number;
-  absMax: number;
-  units: U;
-}
-
 export interface EnvelopeFieldMap {
-  deflection: EnvelopeFieldData<'deflection', 'mm'>;
-  mx: EnvelopeFieldData<'mx', 'kN*m/m'>;
-  my: EnvelopeFieldData<'my', 'kN*m/m'>;
-  mxy: EnvelopeFieldData<'mxy', 'kN*m/m'>;
-}
-
-export interface EnvelopeWorstStation<F extends MomentField> {
-  field: F;
-  stationM: number;
-  peakValue: number;
-  peakAbs: number;
-  nodeId: number;
-  units: 'kN*m/m';
-}
-
-export interface EnvelopeWorstStations {
-  mx: EnvelopeWorstStation<'mx'>;
-  my: EnvelopeWorstStation<'my'>;
-  mxy: EnvelopeWorstStation<'mxy'>;
-}
-
-export interface EnvelopeData {
-  stationsRun: number;
-  pathStartM: number;
-  pathEndM: number;
-  pathStepM: number;
-  travelDirection: 'x+' | 'x-' | 'y+' | 'y-';
-  computedAtIso: string;
-  signature: string;
-  fields: EnvelopeFieldMap;
-  worstStations: EnvelopeWorstStations;
+  deflection: StagedSkewAppContract.EnvelopeFieldDataV2<'deflection', 'mm'>;
+  mx: StagedSkewAppContract.EnvelopeFieldDataV2<'mx', 'kN*m/m'>;
+  my: StagedSkewAppContract.EnvelopeFieldDataV2<'my', 'kN*m/m'>;
+  mxy: StagedSkewAppContract.EnvelopeFieldDataV2<'mxy', 'kN*m/m'>;
 }
 ```
+
+The colliding live envelope names remain legacy until WP-032B. Their exact target definitions are the `StagedSkewAppContract.*V2` members in Section 2.1.1; `EnvelopeFieldMap` is non-colliding and references those members directly. Inline or intersection lookalikes are prohibited.
 
 The map interfaces are closed and required on a successful solve. Their key, embedded `field`, `location`, point kind, and `units` are correlated by construction; a value for one key cannot legally carry another field name or unit. The adapter validates the same correlations at runtime.
 
@@ -1422,8 +1416,8 @@ export interface SuccessAnalysisResultEvidence extends AnalysisResultCommon {
   status: 'success';
   deckPolygon: Array<{ xM: number; yM: number }>;
   deckBounds: { xMinM: number; xMaxM: number; yMinM: number; yMaxM: number };
-  meshNodeOverlays: MeshNodeOverlay[];
-  meshElementOverlays: MeshElementOverlay[];
+  meshNodeOverlays: StagedSkewAppContract.MeshNodeOverlayV2[];
+  meshElementOverlays: StagedSkewAppContract.MeshElementOverlayV2[];
   nodalKinematics: NodalKinematics[];
   elementFields: ElementFieldMap;
   nodalFields: NodalFieldMap;
@@ -1434,7 +1428,7 @@ export interface SuccessAnalysisResultEvidence extends AnalysisResultCommon {
   reactionDistributions: SupportReactionDistribution[];
   equilibrium: SignedEquilibrium;
   meshQuality: MeshQualityReport;
-  envelopeData?: EnvelopeData;
+  envelopeData?: StagedSkewAppContract.EnvelopeDataV2;
   sections?: SectionCurve[];
   error?: never;
 }
@@ -1554,7 +1548,7 @@ The named implementation/test owner must exercise these obligations. Algebraic e
 | geometry | required/finite/range validation; exact zero branch; 0, +/-19, +/-45 transforms; vertices, area, bounds, edge frames | WP-012, WP-014B, WP-060 |
 | common polygons | CCW/no closing duplicate; CW normalization; degeneracy cleanup; containment/clipping/area/centroid/first moments | WP-013, WP-060 |
 | mesh | local arrays monotonic; node/element IDs; `[j][i]`; CCW connectivity; polygon-node identity; no AABB physics; zero-skew topology | WP-020, WP-060 |
-| staging/alias removal | namespace members compile; `AnalysisResultsV2` union and `SectionSettingsV2` promote; required mesh aliases are object-identical locally; no staging/legacy facade remains at WP-050 | WP-005, activation owners, WP-032A/B, WP-050 |
+| staging/alias removal | every Section 2.1.1 namespace member compiles; live-name collisions resolve only through their exact `V2` members; `AnalysisResultsV2`/`SectionSettingsV2` and collision members promote atomically; required mesh aliases are object-identical locally; no staging/legacy facade remains at WP-050 | WP-005, activation owners, WP-032A/B, WP-050 |
 | supports/persistence | exact dual bridge; all edges/skew signs; M-suffixed/internal split; axis swap; V1-V5 exact parsing/migration; every legacy line stays line; point/line mapping; spring conservation | WP-014B, WP-021, WP-027, WP-032B, WP-050, WP-060/061/063 |
 | duplicate reactions | one global fixed action; four sample source cases; signed fixed/spring subtotals reconcile; authored-line left-normal/canonical-edge frames; shared attribution labelled non-physical | WP-025, WP-034, WP-060/061 |
 | patches | original/clipped winding/areas/centroid; off-deck null; full-area pressure; force/first moments; zero-skew vector | WP-022, WP-024, WP-060/061 |
