@@ -2,11 +2,11 @@
 
 ## Current integration
 
-- Integration hash: `4236dcd6c603fc3fd5fc05c1516a537896d75673`
+- Integration hash: `020064b3cdea7e3e3d8b95f2be993c14cd29165c`
 - Worktree: `C:\MyEngineering\04-Apps\moving-load-slab-app`
 - Branch: `feat/skew-plate-analysis`
-- Active wave/package: Wave 0C / WP-005 serial contract scaffold; WP-004 blocked external
-- Package state: `WP-005 passed; checkpoint pending`
+- Active wave/package: Wave 0C / WP-004 external evidence resolution; WP-005 complete
+- Package state: `WP-005 passed and pushed`
 - Gate state: G0 `blocked` solely by WP-004; no Wave 1 package is active
 - Worktree at dispatch: clean at the integration hash except user-owned untracked plan and frozen untracked WP-004 verification files
 
@@ -41,6 +41,7 @@
 - WP-005 is a serial compile-safe scaffold only: canonical/staged types and a focused type fixture; it must not activate `EdgeSupport`, change runtime behaviour, or consume the blocked WP-004 evidence.
 - CD-WP005-001 is approved by the lead: replace the erased ambient support-normalizer value declaration with a callable type contract for WP-021; explicitly stage every colliding target app contract in `StagedSkewAppContract`; add the omitted generalized-support DOF union; remove inline target lookalikes; and strengthen compile fixtures. WP-032B promotes/removes the additional app collision members. Shared facade/result transport types remain app-owned for this scaffold; the solver's dependency is type-only and WP-026/WP-032A remove it when their boundaries activate.
 - WP-005 passed independent correction re-review with no open findings. The scaffold is compile-safe, keeps every live app union/legacy contract unchanged, and consumes no WP-004 evidence.
+- WP-005 checkpoint `020064b` is pushed to GitHub. G0 remains fail-closed solely on WP-004; Wave 1 is not dispatched.
 
 ## Packet states
 
@@ -48,9 +49,9 @@
 |---|---|---|---|
 | WP-001 | `passed` | lead/integrator; independent review accepted | none |
 | WP-002 | `passed` | lead/integrator; independent mathematical review accepted | WP-001 passed at `e990eb5` |
-| WP-003 | `passed` | data/API contract architecture worker; independent architecture review accepted | WP-002 passed at `7f4c77f`; checkpoint pending |
+| WP-003 | `passed` | data/API contract architecture worker; independent architecture review accepted | checkpoint `4236dcd` pushed |
 | WP-004 | `blocked_external` | engineering reference-data worker; independent source review | local correction re-review passed; package/G0 cannot pass without external evidence |
-| WP-005 | `passed` | lead/contract integrator correction worker; independent architecture/code review accepted | CD-WP005-001 integrated; checkpoint pending; G0 remains blocked by WP-004 |
+| WP-005 | `passed` | lead/contract integrator correction worker; independent architecture/code review accepted | CD-WP005-001 integrated; checkpoint `020064b` pushed; G0 remains blocked by WP-004 |
 
 ## File leases
 
@@ -137,6 +138,7 @@ WP-003 and WP-004 leases are disjoint. Source, test, configuration, package, rep
 | WP-005 lead full-test rerun | restricted run hit known esbuild `spawn EPERM`; permitted rerun exit 0; 26 files and 106 tests passed; duration 6.52 s |
 | WP-005 lead build rerun | permitted rerun exit 0; TypeScript passed; 668 modules transformed; Vite built in 14.72 s; existing large-chunk warning remains |
 | WP-005 lead final scope/whitespace check | exit 0; only accepted tracked WP-005/ADR/ledger paths modified; untracked plan and WP-004 files remain excluded; line-ending warnings only |
+| WP-005 checkpoint commit/push | exit 0; commit `020064b`; pushed `4236dcd..020064b` to `origin/feat/skew-plate-analysis`; remote relocation notice only |
 | WP-004 worker protocol checks | exit 0; three JSON files parsed; leased documentation/data `git diff --check` and trailing-whitespace scan clean |
 | WP-004 independent source review | `fail`; fail-closed numeric/source qualification passed, but source access, instantiated shell case, tolerance timing, author order, controlled states, and one access classification require resolution |
 | WP-004 correction checks | exit 0; three JSON files parse; 22 controlled unverified transcription records; all four no-index whitespace checks clean |
@@ -176,10 +178,10 @@ WP-003 and WP-004 leases are disjoint. Source, test, configuration, package, rep
 - Proposed migration/test: WP-021 annotates its real `core/supports.ts` export with the callable type; WP-032B promotes/removes collision members atomically; compile fixtures prove positive names and negative warning/schema/field/support assignments.
 - Lead decision: approved for integration; no numerical/sign/warning-authority semantics change.
 - WP-004 protocol preparation is complete but benchmark acceptance is blocked: Morley 1962 and Razzaque 1973 originals were not acquired, and the rectangular analytical source chain is incomplete. No executable acceptance fixture or empirical tolerance was added.
-- WP-003 is accepted and green; checkpoint `4236dcd` is pushed. WP-005 worker handoff is complete and its independent review is active.
+- WP-003 and WP-005 are accepted, green, and pushed at checkpoints `4236dcd` and `020064b`. G0 remains blocked solely by WP-004.
 
 ## Next three delegations
 
-1. WP-005 lead checkpoint - stage, commit, and push only the accepted WP-005/ADR/ledger files.
-2. WP-004 external evidence/source-case resolution - blocked pending original sources and an instantiated commercial-shell case.
+1. WP-004 external evidence/source-case resolution - blocked pending original sources and an instantiated commercial-shell case.
+2. WP-004 independent evidence re-review - blocked until the missing sources and shell case are supplied.
 3. G0 review/Wave 1 dispatch - blocked until WP-004 passes; no Wave 1 lease may activate early.
