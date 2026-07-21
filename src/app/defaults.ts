@@ -3,7 +3,9 @@ import type {
   ConstraintSet,
   ConstraintSetting,
   DisplayToggles,
+  LegacyConstraintSet,
   MeshSettings,
+  PersistedModelV2SkewLegacySupports,
   SectionAxisMode,
   SectionSettings,
   SlabGeometry,
@@ -156,11 +158,7 @@ export const errorResults = (
 
 export const sanitizeLoadedModel = (input: unknown): SlabModel => {
   const defaults = createDefaultModel();
-  if (!isRecord(input)) {
-    return defaults;
-  }
-
-  const candidate = input;
+  const candidate = parsePersistedModel(input);
   const geometry = sanitizeGeometry(candidate.geometry, defaults.geometry);
 
   return {
@@ -183,6 +181,374 @@ export const sanitizeLoadedModel = (input: unknown): SlabModel => {
     section: sanitizeSection(candidate.section, defaults.section),
   };
 };
+
+export const serializeModelForSave = (model: SlabModel): string => {
+  const snapshot: PersistedModelV2SkewLegacySupports = {
+    schemaVersion: 2,
+    supportSchema: "legacy-generalized-v1",
+    projectName: model.projectName,
+    description: model.description,
+    assumptions: model.assumptions,
+    geometry: {
+      lengthM: model.geometry.lengthM,
+      widthM: model.geometry.widthM,
+      thicknessM: model.geometry.thicknessM,
+      skewAngleDeg: sanitizeSkewAngle(model.geometry.skewAngleDeg, 0),
+    },
+    material: {
+      elasticModulusMPa: model.material.elasticModulusMPa,
+      poisson: model.material.poisson,
+      densityKnPerM3: model.material.densityKnPerM3,
+    },
+    mesh: {
+      density: model.mesh.density,
+      autoTargetElementM: model.mesh.autoTargetElementM,
+    },
+    supports: model.supports.map((support) =>
+      support.kind === "line"
+        ? {
+            id: support.id,
+            name: support.name,
+            kind: "line" as const,
+            constraints: copyConstraintSet(support.constraints),
+            x1: support.x1,
+            y1: support.y1,
+            x2: support.x2,
+            y2: support.y2,
+          }
+        : {
+            id: support.id,
+            name: support.name,
+            kind: "point" as const,
+            constraints: copyConstraintSet(support.constraints),
+            x: support.x,
+            y: support.y,
+          },
+    ),
+    vehicle: {
+      name: model.vehicle.name,
+      mode: model.vehicle.mode,
+      transverseSpacingM: model.vehicle.transverseSpacingM,
+      wheelsPerAxle: model.vehicle.wheelsPerAxle,
+      wheelPatchLongM: model.vehicle.wheelPatchLongM,
+      wheelPatchTransM: model.vehicle.wheelPatchTransM,
+      axleInputs: model.vehicle.axleInputs.map((axle) => ({
+        id: axle.id,
+        spacingFromPreviousM: axle.spacingFromPreviousM,
+        axleLoadKn: axle.axleLoadKn,
+      })),
+      directWheels: model.vehicle.directWheels.map((wheel) => ({
+        id: wheel.id,
+        xM: wheel.xM,
+        yM: wheel.yM,
+        loadKn: wheel.loadKn,
+        patchLongM: wheel.patchLongM,
+        patchTransM: wheel.patchTransM,
+      })),
+    },
+    placement: {
+      centerXM: model.placement.centerXM,
+      centerYM: model.placement.centerYM,
+      headingDeg: model.placement.headingDeg,
+      transverseOffsetM: model.placement.transverseOffsetM,
+      travelDirection: model.placement.travelDirection,
+      pathStartM: model.placement.pathStartM,
+      pathEndM: model.placement.pathEndM,
+      pathStepM: model.placement.pathStepM,
+    },
+    display: {
+      plotMode: model.display.plotMode,
+      mesh: model.display.mesh,
+      supports: model.display.supports,
+      wheelPatches: model.display.wheelPatches,
+      contours: model.display.contours,
+      tables: model.display.tables,
+    },
+    section: {
+      axis: model.section.axis,
+      centerPerpM: model.section.centerPerpM,
+      widthM: model.section.widthM,
+    },
+  };
+
+  return JSON.stringify(snapshot, null, 2);
+};
+
+const COMMON_SNAPSHOT_KEYS = [
+  "projectName",
+  "description",
+  "assumptions",
+  "geometry",
+  "material",
+  "mesh",
+  "supports",
+  "vehicle",
+  "placement",
+  "display",
+  "section",
+] as const;
+
+function parsePersistedModel(input: unknown): Record<string, unknown> {
+  const candidate = expectRecord(input, "model", "unknown");
+  if (!hasOwn(candidate, "schemaVersion")) {
+    expectExactKeys(candidate, COMMON_SNAPSHOT_KEYS, "model", "V1");
+    validateCommonSnapshot(candidate, "V1", false);
+    return candidate;
+  }
+
+  if (candidate.schemaVersion !== 2) {
+    throw migrationError(
+      `schemaVersion ${String(candidate.schemaVersion)}`,
+      "only implicit V1 and schemaVersion 2 are supported",
+    );
+  }
+  if (candidate.supportSchema !== "legacy-generalized-v1") {
+    throw migrationError("V2", "supportSchema must be legacy-generalized-v1");
+  }
+  expectExactKeys(
+    candidate,
+    [...COMMON_SNAPSHOT_KEYS, "schemaVersion", "supportSchema"],
+    "model",
+    "V2",
+  );
+  validateCommonSnapshot(candidate, "V2", true);
+  return candidate;
+}
+
+function validateCommonSnapshot(
+  candidate: Record<string, unknown>,
+  version: "V1" | "V2",
+  requiresSkew: boolean,
+): void {
+  expectString(candidate.projectName, "projectName", version);
+  expectString(candidate.description, "description", version);
+  expectString(candidate.assumptions, "assumptions", version);
+
+  expectExactKeys(
+    expectRecord(candidate.geometry, "geometry", version),
+    requiresSkew
+      ? ["lengthM", "widthM", "thicknessM", "skewAngleDeg"]
+      : ["lengthM", "widthM", "thicknessM"],
+    "geometry",
+    version,
+  );
+  expectExactKeys(
+    expectRecord(candidate.material, "material", version),
+    ["elasticModulusMPa", "poisson", "densityKnPerM3"],
+    "material",
+    version,
+  );
+  expectExactKeys(
+    expectRecord(candidate.mesh, "mesh", version),
+    ["density", "autoTargetElementM"],
+    "mesh",
+    version,
+  );
+  validateSupports(candidate.supports, version);
+  validateVehicle(candidate.vehicle, version);
+  validatePlacement(candidate.placement, version);
+  validateDisplay(candidate.display, version);
+  validateSection(candidate.section, version);
+}
+
+function validateSupports(input: unknown, version: "V1" | "V2"): void {
+  if (!Array.isArray(input)) {
+    throw migrationError(version, "supports must be an array");
+  }
+  input.forEach((item, index) => {
+    const support = expectRecord(item, `supports[${index}]`, version);
+    expectString(support.id, `supports[${index}].id`, version);
+    expectString(support.name, `supports[${index}].name`, version);
+    if (support.kind === "line") {
+      expectExactKeys(
+        support,
+        ["id", "name", "kind", "constraints", "x1", "y1", "x2", "y2"],
+        `supports[${index}]`,
+        version,
+      );
+    } else if (support.kind === "point") {
+      expectExactKeys(
+        support,
+        ["id", "name", "kind", "constraints", "x", "y"],
+        `supports[${index}]`,
+        version,
+      );
+    } else {
+      throw migrationError(version, `supports[${index}] is not a legacy coordinate support`);
+    }
+    validateConstraintSet(support.constraints, `supports[${index}].constraints`, version);
+  });
+}
+
+function validateConstraintSet(
+  input: unknown,
+  path: string,
+  version: "V1" | "V2",
+): void {
+  const constraints = expectRecord(input, path, version);
+  expectExactKeys(constraints, ["uz", "rx", "ry"], path, version);
+  (["uz", "rx", "ry"] as const).forEach((dof) => {
+    const setting = expectRecord(constraints[dof], `${path}.${dof}`, version);
+    if (setting.type === "spring") {
+      expectExactKeys(setting, ["type", "stiffness"], `${path}.${dof}`, version);
+    } else if (
+      setting.type === "free" ||
+      setting.type === "fixed" ||
+      setting.type === "pinned"
+    ) {
+      expectExactKeys(setting, ["type"], `${path}.${dof}`, version);
+    } else {
+      throw migrationError(version, `${path}.${dof}.type is invalid`);
+    }
+  });
+}
+
+function validateVehicle(input: unknown, version: "V1" | "V2"): void {
+  const vehicle = expectRecord(input, "vehicle", version);
+  expectExactKeys(
+    vehicle,
+    [
+      "name",
+      "mode",
+      "transverseSpacingM",
+      "wheelsPerAxle",
+      "wheelPatchLongM",
+      "wheelPatchTransM",
+      "axleInputs",
+      "directWheels",
+    ],
+    "vehicle",
+    version,
+  );
+  expectString(vehicle.name, "vehicle.name", version);
+  if (vehicle.mode !== "axle" && vehicle.mode !== "direct") {
+    throw migrationError(version, "vehicle.mode is invalid");
+  }
+  if (!Array.isArray(vehicle.axleInputs) || !Array.isArray(vehicle.directWheels)) {
+    throw migrationError(version, "vehicle axleInputs/directWheels must be arrays");
+  }
+  vehicle.axleInputs.forEach((item, index) => {
+    const axle = expectRecord(item, `vehicle.axleInputs[${index}]`, version);
+    expectExactKeys(
+      axle,
+      ["id", "spacingFromPreviousM", "axleLoadKn"],
+      `vehicle.axleInputs[${index}]`,
+      version,
+    );
+    expectString(axle.id, `vehicle.axleInputs[${index}].id`, version);
+  });
+  vehicle.directWheels.forEach((item, index) => {
+    const wheel = expectRecord(item, `vehicle.directWheels[${index}]`, version);
+    expectExactKeys(
+      wheel,
+      ["id", "xM", "yM", "loadKn", "patchLongM", "patchTransM"],
+      `vehicle.directWheels[${index}]`,
+      version,
+    );
+    expectString(wheel.id, `vehicle.directWheels[${index}].id`, version);
+  });
+}
+
+function validatePlacement(input: unknown, version: "V1" | "V2"): void {
+  const placement = expectRecord(input, "placement", version);
+  expectExactKeys(
+    placement,
+    [
+      "centerXM",
+      "centerYM",
+      "headingDeg",
+      "transverseOffsetM",
+      "travelDirection",
+      "pathStartM",
+      "pathEndM",
+      "pathStepM",
+    ],
+    "placement",
+    version,
+  );
+  if (!isTravelDirection(placement.travelDirection)) {
+    throw migrationError(version, "placement.travelDirection is invalid");
+  }
+}
+
+function validateDisplay(input: unknown, version: "V1" | "V2"): void {
+  const display = expectRecord(input, "display", version);
+  expectExactKeys(
+    display,
+    ["plotMode", "mesh", "supports", "wheelPatches", "contours", "tables"],
+    "display",
+    version,
+  );
+  if (!isPlotMode(display.plotMode)) {
+    throw migrationError(version, "display.plotMode is invalid");
+  }
+  ["mesh", "supports", "wheelPatches", "contours", "tables"].forEach((key) => {
+    if (typeof display[key] !== "boolean") {
+      throw migrationError(version, `display.${key} must be boolean`);
+    }
+  });
+}
+
+function validateSection(input: unknown, version: "V1" | "V2"): void {
+  const section = expectRecord(input, "section", version);
+  expectExactKeys(section, ["axis", "centerPerpM", "widthM"], "section", version);
+  if (section.axis !== "auto" && section.axis !== "x" && section.axis !== "y") {
+    throw migrationError(version, "section.axis is invalid");
+  }
+}
+
+function copyConstraintSet(input: ConstraintSet): LegacyConstraintSet {
+  const copySetting = (
+    setting: ConstraintSetting,
+  ): LegacyConstraintSet[keyof LegacyConstraintSet] =>
+    setting.type === "spring"
+      ? { type: "spring", stiffness: finiteNumber(setting.stiffness, 0) }
+      : { type: setting.type };
+
+  return {
+    uz: copySetting(input.uz),
+    rx: copySetting(input.rx),
+    ry: copySetting(input.ry),
+  };
+}
+
+function expectRecord(
+  input: unknown,
+  path: string,
+  version: string,
+): Record<string, unknown> {
+  if (!isRecord(input) || Array.isArray(input)) {
+    throw migrationError(version, `${path} must be an object`);
+  }
+  return input;
+}
+
+function expectExactKeys(
+  input: Record<string, unknown>,
+  expected: readonly string[],
+  path: string,
+  version: string,
+): void {
+  const actual = Object.keys(input).sort();
+  const wanted = [...expected].sort();
+  if (actual.length !== wanted.length || actual.some((key, index) => key !== wanted[index])) {
+    throw migrationError(version, `${path} has an invalid snapshot shape`);
+  }
+}
+
+function expectString(input: unknown, path: string, version: string): void {
+  if (typeof input !== "string") {
+    throw migrationError(version, `${path} must be a string`);
+  }
+}
+
+function hasOwn(input: Record<string, unknown>, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(input, key);
+}
+
+function migrationError(version: string, detail: string): Error {
+  return new Error(`Model migration error (${version}): ${detail}.`);
+}
 
 export const sanitizeVehicleDefinition = (
   input: unknown,
@@ -219,8 +585,20 @@ function sanitizeGeometry(input: unknown, fallback: SlabGeometry): SlabGeometry 
     lengthM: positiveNumber(input.lengthM, fallback.lengthM),
     widthM: positiveNumber(input.widthM, fallback.widthM),
     thicknessM: positiveNumber(input.thicknessM, fallback.thicknessM),
-    skewAngleDeg: fallback.skewAngleDeg,
+    skewAngleDeg: sanitizeSkewAngle(input.skewAngleDeg, fallback.skewAngleDeg),
   };
+}
+
+function sanitizeSkewAngle(input: unknown, fallback: number): number {
+  if (
+    typeof input !== "number" ||
+    !Number.isFinite(input) ||
+    input < -45 ||
+    input > 45
+  ) {
+    return fallback === 0 ? 0 : fallback;
+  }
+  return input === 0 ? 0 : input;
 }
 
 function sanitizeMaterial(input: unknown, fallback: MaterialProps): MaterialProps {
