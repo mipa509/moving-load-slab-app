@@ -2,11 +2,11 @@
 
 ## Current integration
 
-- Integration hash: `b304e83c3a472f0b3db16fca5d004a8fdff3fa74`
+- Integration hash: `8aa6c78`
 - Worktree: `C:\MyEngineering\04-Apps\moving-load-slab-app`
 - Branch: `feat/skew-plate-analysis`
-- Active wave/package: Wave 1A / WP-010, WP-012, and WP-013 ready for parallel dispatch; WP-004 deferred
-- Package state: `Wave 1A dispatch pending governance checkpoint`
+- Active wave/package: Wave 1B / WP-011, WP-014A, and WP-031A ready for parallel dispatch; WP-004 deferred
+- Package state: `Wave 1A accepted and pushed; Wave 1B dispatch ready`
 - Gate state: G0 verification criteria are not passed; implementation-only exception `CD-G0-001` authorizes Wave 1 while release/verification gates remain fail-closed
 - Worktree at dispatch: clean at the integration hash except user-owned untracked plan and frozen untracked WP-004 verification files
 
@@ -44,6 +44,11 @@
 - WP-005 checkpoint `020064b` is pushed to GitHub. G0 remains fail-closed solely on WP-004; Wave 1 is not dispatched.
 - User/owner direction on 2026-07-21 defers WP-004 verification work until the end of implementation. `CD-G0-001` permits implementation packages to treat the code-contract prerequisites as satisfied, but it does not pass WP-004 or G0 verification evidence.
 - Under `CD-G0-001`, published-benchmark, commercial-shell, physical-validation, standards-compliance, and release claims remain prohibited; the non-zero-skew experimental warning remains mandatory and G6/G7 cannot pass until WP-004 is completed and independently reviewed.
+- WP-010 passed independent numerical review and checkpoint `799e190` is pushed to GitHub.
+- `CD-WP012-001` is integrated: the mathematical kernel uses the open +/-90-degree domain, while WP-014B retains the app/persistence +/-45-degree limit and containment remains separate from total affine transforms.
+- WP-012 passed independent correction review and checkpoint `6ed093c` is pushed to GitHub.
+- WP-013 passed independent correction review after all five geometry/tolerance/immutability evidence findings were closed; checkpoint `8aa6c78` is pushed to GitHub.
+- Wave 1A is accepted. G1 remains open until WP-011 passes; no G1 claim is made from WP-010/WP-012/WP-013 alone.
 
 ## Packet states
 
@@ -54,9 +59,9 @@
 | WP-003 | `passed` | data/API contract architecture worker; independent architecture review accepted | checkpoint `4236dcd` pushed |
 | WP-004 | `deferred_verification` | engineering reference-data worker; independent source review | owner deferred missing external evidence until end; not passed and still required before G6/G7/release |
 | WP-005 | `passed` | lead/contract integrator correction worker; independent architecture/code review accepted | checkpoint `020064b` pushed; CD-G0-001 authorizes provisional downstream implementation |
-| WP-010 | `ready` | Q4 geometry worker; fresh numerical reviewer required | implementation-only prerequisite authorized by CD-G0-001 |
-| WP-012 | `ready` | deck-coordinate geometry worker; independent geometry review required | implementation-only prerequisite authorized by CD-G0-001 |
-| WP-013 | `ready` | convex-polygon worker; independent computational-geometry review required | implementation-only prerequisite authorized by CD-G0-001 |
+| WP-010 | `passed` | Q4 geometry worker; independent numerical review accepted | checkpoint `799e190` pushed |
+| WP-012 | `passed` | deck-coordinate geometry correction worker; independent correction review accepted | checkpoint `6ed093c` pushed; CD-WP012-001 integrated |
+| WP-013 | `passed` | lead correction under original geometry lease; independent computational-geometry correction review accepted | checkpoint `8aa6c78` pushed |
 
 ## File leases
 
@@ -74,9 +79,15 @@
 | Lead CD-WP005-001 contract correction | write/integration | `docs/adr/ADR-skew-data-api-contracts.md` and ledger only | released; amendment synchronized and frozen for correction review |
 | WP-005 correction worker | write | `src/solver/model/types.ts`, `src/app/types.ts`, `src/tests/skewContractScaffold.test.ts` only; geometry file remains frozen | released; corrected handoff complete and files write-frozen |
 | WP-005 independent correction reviewer | read-only | corrected WP-005 files, CD-WP005-001 ADR amendment, ledger, and directly relevant boundaries | released; final recommendation `pass`, no open findings |
-| WP-010 Q4 geometry worker | reserved write | `src/solver/core/element.ts`, new `src/solver/core/q4Geometry.ts`, new `src/tests/q4Geometry.test.ts` only | reserved; activates only after CD-G0-001 checkpoint push |
-| WP-012 deck-coordinate worker | reserved write | new `src/solver/geometry/deckCoordinates.ts`, new `src/tests/deckCoordinates.test.ts` only | reserved; activates only after CD-G0-001 checkpoint push |
-| WP-013 convex-polygon worker | reserved write | new `src/solver/geometry/convexPolygon.ts`, new `src/tests/convexPolygon.test.ts` only | reserved; activates only after CD-G0-001 checkpoint push |
+| WP-010 Q4 geometry worker | write | `src/solver/core/element.ts`, new `src/solver/core/q4Geometry.ts`, new `src/tests/q4Geometry.test.ts` only | released; handoff complete, files write-frozen for review |
+| WP-012 deck-coordinate worker | write | new `src/solver/geometry/deckCoordinates.ts`, new `src/tests/deckCoordinates.test.ts` only | released; handoff complete, files write-frozen for review |
+| WP-013 convex-polygon worker | write | new `src/solver/geometry/convexPolygon.ts`, new `src/tests/convexPolygon.test.ts` only | released; handoff complete, files write-frozen for review |
+| WP-012 fresh geometry reviewer | read-only | WP-012 files, canonical geometry contracts, accepted mathematical/data ADRs, plan and ledger | released; correction re-review `pass`, no open findings |
+| WP-013 fresh computational-geometry reviewer | read-only | WP-013 files, canonical polygon contracts, patch obligations, plan and ledger | released; correction re-review `pass`, no open findings |
+| WP-010 fresh numerical reviewer | read-only | WP-010 files, current/accepted element conventions, zero-skew fixture, plan and ledger | released; recommendation `pass`, no open findings |
+| Lead CD-WP012-001 contract clarification | write/integration | `docs/adr/ADR-skew-data-api-contracts.md` and ledger only | released; amendment synchronized and frozen for correction review |
+| WP-012 correction worker | write | `src/solver/geometry/deckCoordinates.ts`, `src/tests/deckCoordinates.test.ts` only | released; corrected handoff complete and accepted |
+| Lead WP-013 correction | write/integration | `src/solver/geometry/convexPolygon.ts`, `src/tests/convexPolygon.test.ts` only | released; bounded correction completed after agent thread limit; independently accepted |
 
 WP-003 and WP-004 leases are disjoint. Source, test, configuration, package, report, live type, app, solver, viewer, and user-owned files are outside both scopes.
 
@@ -147,10 +158,28 @@ WP-003 and WP-004 leases are disjoint. Source, test, configuration, package, rep
 | WP-005 lead build rerun | permitted rerun exit 0; TypeScript passed; 668 modules transformed; Vite built in 14.72 s; existing large-chunk warning remains |
 | WP-005 lead final scope/whitespace check | exit 0; only accepted tracked WP-005/ADR/ledger paths modified; untracked plan and WP-004 files remain excluded; line-ending warnings only |
 | WP-005 checkpoint commit/push | exit 0; commit `020064b`; pushed `4236dcd..020064b` to `origin/feat/skew-plate-analysis`; remote relocation notice only |
+| CD-G0-001 governance checkpoint | exit 0; commit `b412ce7`; pushed `b304e83..b412ce7` to `origin/feat/skew-plate-analysis`; remote relocation notice only |
+| WP-012 focused final | exit 0; 1 file and 20 tests passed; duration 1.33 s; first permitted run had one test-helper-only failure corrected without production change |
+| WP-012 concurrent full test/build | exit 0; 28 files and 137 tests passed; TypeScript passed; 669 modules transformed; Vite built in 20.56 s; existing large-chunk warning remains |
+| WP-013 focused final | exit 0; 1 file and 11 tests passed; duration 1.24 s |
+| WP-013 concurrent full test/build | exit 0; 28 files and 137 tests passed; TypeScript passed; 669 modules transformed; Vite built in 21.00 s; existing large-chunk warning remains |
+| WP-010 focused Q4 final | exit 0; 1 file and 8 tests passed; restricted startup separately hit known esbuild `spawn EPERM` |
+| WP-010 zero-skew characterization | exit 0; 1 file and 1 test passed unchanged within the recorded stiffness policy |
+| WP-010 concurrent full test/build | exit 0; 29 files and 145 tests passed; TypeScript passed; 669 modules transformed; existing large-chunk warning remains |
+| WP-010 independent numerical review | `pass`; J^-T derivation, genuinely sheared oracle, node order, determinant rejection, unchanged integration rules, symmetry metric, and zero-skew tolerance all accepted; no findings |
+| WP-012 independent geometry review | `fail`; kernel incorrectly froze app-only +/-45-degree limit, sign oracle was partly self-referential, scale evidence was narrow, and off-deck transform ownership was undocumented |
+| WP-013 independent computational-geometry review | `fail`; self-intersecting rings accepted, absolute offset dominated tolerance, near-duplicate canonicalization was traversal-dependent, return aliases were mutable, and one conservation test was self-referential |
 | WP-004 worker protocol checks | exit 0; three JSON files parsed; leased documentation/data `git diff --check` and trailing-whitespace scan clean |
 | WP-004 independent source review | `fail`; fail-closed numeric/source qualification passed, but source access, instantiated shell case, tolerance timing, author order, controlled states, and one access classification require resolution |
 | WP-004 correction checks | exit 0; three JSON files parse; 22 controlled unverified transcription records; all four no-index whitespace checks clean |
 | WP-004 independent correction re-review | local `pass`; no local findings; WP-004/G0 `fail` pending originals, V28 authority, and instantiated pre-results shell case |
+| WP-010 checkpoint commit/push | exit 0; commit `799e190`; pushed `b412ce7..799e190` to `origin/feat/skew-plate-analysis`; remote relocation notice only |
+| WP-012 corrected focused/full/build | exit 0; focused 34 tests, full 29 files/162 tests, TypeScript and 669-module Vite build passed; existing chunk warning remains |
+| WP-012 independent correction re-review | `pass`; all four original findings closed; no remaining findings |
+| WP-012 checkpoint commit/push | exit 0; commit `6ed093c`; pushed `799e190..6ed093c` to `origin/feat/skew-plate-analysis`; remote relocation notice only |
+| WP-013 corrected focused/full/build | exit 0; focused 14 tests, integrated full 29 files/162 tests, TypeScript and 669-module Vite build passed; existing chunk warning remains |
+| WP-013 independent correction re-review | `pass`; all five original findings closed, including additional cyclic/remote/mutation/analytic probes; no remaining findings |
+| WP-013 checkpoint commit/push | exit 0; commit `8aa6c78`; pushed `6ed093c..8aa6c78` to `origin/feat/skew-plate-analysis`; remote relocation notice only |
 
 ## Gate evidence and tolerances
 
@@ -196,9 +225,18 @@ WP-003 and WP-004 leases are disjoint. Source, test, configuration, package, rep
 - Backward-compatibility impact: none; no runtime type, numerical convention, warning, or persistence contract changes.
 - Proposed migration/test: retain all WP-004 files and missing-evidence markers; independently review each implementation packet; run zero-skew/mathematical/internal verification as planned; complete and re-review WP-004 before published-benchmark/commercial-shell packets or any release claim.
 - Lead decision: approved from explicit user/owner direction; implementation authorization only, not verification acceptance.
+- Contract deviation integrated and closed: `CD-WP012-001`.
+- Decision/contract ID: canonical deck-kernel angle domain and transform containment responsibility.
+- Current definition: the ADR limits persisted app input to +/-45 degrees but does not explicitly state the wider normalized-kernel domain or whether transforms extend outside the physical deck.
+- Required change: canonical deck kernels accept finite `-90 < skewAngleDeg < 90`; WP-014B retains the inclusive +/-45-degree app/persistence limit. The forward/inverse transforms are total affine maps for any finite coordinate; deck containment is a separate consumer/polygon predicate responsibility.
+- Why this packet cannot continue: WP-012 privately narrowed the kernel to the app limit and its off-deck test otherwise freezes an undocumented API decision.
+- Affected packets: WP-012, WP-014B, WP-015, WP-020, WP-022, WP-023, WP-035, and WP-060.
+- Backward-compatibility impact: none for app inputs or saved models; the kernel accepts a wider mathematical domain and preserves existing finite mappings.
+- Proposed migration/test: test +/-45 as ordinary accepted cases, accept representative +/-60 and values approaching but below 90, reject +/-90 and beyond, add analytic sign/corner/inverse oracles, multi-scale error cases, and explicit off-deck affine-extension tests.
+- Lead decision: approved; no change to the release UI limit, skew sign, warning policy, or engineering-verification status.
 
 ## Next three delegations
 
-1. WP-010 Q4 geometry extraction/verification - dispatch after this governance checkpoint is pushed.
-2. WP-012 affine deck-coordinate kernel - dispatch in parallel on disjoint new geometry/test files.
-3. WP-013 convex polygon/quadrature kernel - dispatch in parallel on disjoint new geometry/test files.
+1. WP-011 numerical stability audit after accepted WP-010; production changes require a separate lead decision.
+2. WP-014A mechanical app skew-type activation after accepted WP-005 and WP-012 validation contract.
+3. WP-031A generalized-to-physical reaction-moment mapping after accepted WP-002.
