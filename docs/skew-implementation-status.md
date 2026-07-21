@@ -2,12 +2,12 @@
 
 ## Current integration
 
-- Integration hash: `020064b3cdea7e3e3d8b95f2be993c14cd29165c`
+- Integration hash: `b304e83c3a472f0b3db16fca5d004a8fdff3fa74`
 - Worktree: `C:\MyEngineering\04-Apps\moving-load-slab-app`
 - Branch: `feat/skew-plate-analysis`
-- Active wave/package: Wave 0C / WP-004 external evidence resolution; WP-005 complete
-- Package state: `WP-005 passed and pushed`
-- Gate state: G0 `blocked` solely by WP-004; no Wave 1 package is active
+- Active wave/package: Wave 1A / WP-010, WP-012, and WP-013 ready for parallel dispatch; WP-004 deferred
+- Package state: `Wave 1A dispatch pending governance checkpoint`
+- Gate state: G0 verification criteria are not passed; implementation-only exception `CD-G0-001` authorizes Wave 1 while release/verification gates remain fail-closed
 - Worktree at dispatch: clean at the integration hash except user-owned untracked plan and frozen untracked WP-004 verification files
 
 ## Decision digests
@@ -42,6 +42,8 @@
 - CD-WP005-001 is approved by the lead: replace the erased ambient support-normalizer value declaration with a callable type contract for WP-021; explicitly stage every colliding target app contract in `StagedSkewAppContract`; add the omitted generalized-support DOF union; remove inline target lookalikes; and strengthen compile fixtures. WP-032B promotes/removes the additional app collision members. Shared facade/result transport types remain app-owned for this scaffold; the solver's dependency is type-only and WP-026/WP-032A remove it when their boundaries activate.
 - WP-005 passed independent correction re-review with no open findings. The scaffold is compile-safe, keeps every live app union/legacy contract unchanged, and consumes no WP-004 evidence.
 - WP-005 checkpoint `020064b` is pushed to GitHub. G0 remains fail-closed solely on WP-004; Wave 1 is not dispatched.
+- User/owner direction on 2026-07-21 defers WP-004 verification work until the end of implementation. `CD-G0-001` permits implementation packages to treat the code-contract prerequisites as satisfied, but it does not pass WP-004 or G0 verification evidence.
+- Under `CD-G0-001`, published-benchmark, commercial-shell, physical-validation, standards-compliance, and release claims remain prohibited; the non-zero-skew experimental warning remains mandatory and G6/G7 cannot pass until WP-004 is completed and independently reviewed.
 
 ## Packet states
 
@@ -50,8 +52,11 @@
 | WP-001 | `passed` | lead/integrator; independent review accepted | none |
 | WP-002 | `passed` | lead/integrator; independent mathematical review accepted | WP-001 passed at `e990eb5` |
 | WP-003 | `passed` | data/API contract architecture worker; independent architecture review accepted | checkpoint `4236dcd` pushed |
-| WP-004 | `blocked_external` | engineering reference-data worker; independent source review | local correction re-review passed; package/G0 cannot pass without external evidence |
-| WP-005 | `passed` | lead/contract integrator correction worker; independent architecture/code review accepted | CD-WP005-001 integrated; checkpoint `020064b` pushed; G0 remains blocked by WP-004 |
+| WP-004 | `deferred_verification` | engineering reference-data worker; independent source review | owner deferred missing external evidence until end; not passed and still required before G6/G7/release |
+| WP-005 | `passed` | lead/contract integrator correction worker; independent architecture/code review accepted | checkpoint `020064b` pushed; CD-G0-001 authorizes provisional downstream implementation |
+| WP-010 | `ready` | Q4 geometry worker; fresh numerical reviewer required | implementation-only prerequisite authorized by CD-G0-001 |
+| WP-012 | `ready` | deck-coordinate geometry worker; independent geometry review required | implementation-only prerequisite authorized by CD-G0-001 |
+| WP-013 | `ready` | convex-polygon worker; independent computational-geometry review required | implementation-only prerequisite authorized by CD-G0-001 |
 
 ## File leases
 
@@ -69,6 +74,9 @@
 | Lead CD-WP005-001 contract correction | write/integration | `docs/adr/ADR-skew-data-api-contracts.md` and ledger only | released; amendment synchronized and frozen for correction review |
 | WP-005 correction worker | write | `src/solver/model/types.ts`, `src/app/types.ts`, `src/tests/skewContractScaffold.test.ts` only; geometry file remains frozen | released; corrected handoff complete and files write-frozen |
 | WP-005 independent correction reviewer | read-only | corrected WP-005 files, CD-WP005-001 ADR amendment, ledger, and directly relevant boundaries | released; final recommendation `pass`, no open findings |
+| WP-010 Q4 geometry worker | reserved write | `src/solver/core/element.ts`, new `src/solver/core/q4Geometry.ts`, new `src/tests/q4Geometry.test.ts` only | reserved; activates only after CD-G0-001 checkpoint push |
+| WP-012 deck-coordinate worker | reserved write | new `src/solver/geometry/deckCoordinates.ts`, new `src/tests/deckCoordinates.test.ts` only | reserved; activates only after CD-G0-001 checkpoint push |
+| WP-013 convex-polygon worker | reserved write | new `src/solver/geometry/convexPolygon.ts`, new `src/tests/convexPolygon.test.ts` only | reserved; activates only after CD-G0-001 checkpoint push |
 
 WP-003 and WP-004 leases are disjoint. Source, test, configuration, package, report, live type, app, solver, viewer, and user-owned files are outside both scopes.
 
@@ -179,9 +187,18 @@ WP-003 and WP-004 leases are disjoint. Source, test, configuration, package, rep
 - Lead decision: approved for integration; no numerical/sign/warning-authority semantics change.
 - WP-004 protocol preparation is complete but benchmark acceptance is blocked: Morley 1962 and Razzaque 1973 originals were not acquired, and the rectangular analytical source chain is incomplete. No executable acceptance fixture or empirical tolerance was added.
 - WP-003 and WP-005 are accepted, green, and pushed at checkpoints `4236dcd` and `020064b`. G0 remains blocked solely by WP-004.
+- Contract deviation active: `CD-G0-001`.
+- Decision/contract ID: G0 verification-source prerequisite for implementation waves.
+- Current definition: G0 requires WP-004 verification-source protocol approval before Wave 1.
+- Required change: defer WP-004 external verification acquisition and allow implementation-only Wave 1 execution from the accepted WP-001/WP-002/WP-003/WP-005 baseline.
+- Why this packet cannot continue: the missing historical full texts and instantiated commercial-shell case are external verification inputs and do not alter the frozen code contracts needed by WP-010/WP-012/WP-013.
+- Affected packets: G0 and implementation Waves 1-5 may proceed provisionally; WP-060/WP-061 may generate internal evidence; WP-062, WP-064, G6, G7, release-policy revision, and engineering reliance remain blocked pending WP-004 completion.
+- Backward-compatibility impact: none; no runtime type, numerical convention, warning, or persistence contract changes.
+- Proposed migration/test: retain all WP-004 files and missing-evidence markers; independently review each implementation packet; run zero-skew/mathematical/internal verification as planned; complete and re-review WP-004 before published-benchmark/commercial-shell packets or any release claim.
+- Lead decision: approved from explicit user/owner direction; implementation authorization only, not verification acceptance.
 
 ## Next three delegations
 
-1. WP-004 external evidence/source-case resolution - blocked pending original sources and an instantiated commercial-shell case.
-2. WP-004 independent evidence re-review - blocked until the missing sources and shell case are supplied.
-3. G0 review/Wave 1 dispatch - blocked until WP-004 passes; no Wave 1 lease may activate early.
+1. WP-010 Q4 geometry extraction/verification - dispatch after this governance checkpoint is pushed.
+2. WP-012 affine deck-coordinate kernel - dispatch in parallel on disjoint new geometry/test files.
+3. WP-013 convex polygon/quadrature kernel - dispatch in parallel on disjoint new geometry/test files.
