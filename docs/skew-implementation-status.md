@@ -2,11 +2,11 @@
 
 ## Current integration
 
-- Integration hash: `1060d4b`
+- Integration hash: `4253976`
 - Worktree: `C:\MyEngineering\04-Apps\moving-load-slab-app`
 - Branch: `feat/skew-plate-analysis`
 - Active wave/package: Wave 2A / WP-020 skew structured mesh and quality diagnostics plus WP-022 wheel-patch polygon generation; WP-004 and formal approvals remain deferred to the end-of-plan review register
-- Package state: `G1 passed; WP-020 and WP-022 dispatched in disjoint lanes from 1060d4b; G2 open`
+- Package state: `G1 passed; WP-020 stopped cleanly and is reissued under CD-WP020-001; WP-022 remains active; G2 open`
 - Gate state: G1 remains passed for implementation progression. WP-020 must pass before WP-021/WP-023; WP-022 may integrate independently but WP-024 remains blocked until WP-020, WP-022, and WP-023 pass. No physical-validation, standards-compliance, engineering-reliance, or release claim is authorized
 - Worktree at dispatch: clean at `1060d4b` except user-owned untracked plan and frozen untracked WP-004 verification files
 
@@ -71,6 +71,7 @@
 - WP-015 now normalizes the legacy solver slab fields once, propagates exact zero and signed skew through `fromAppModel`, and derives transverse target counts from WP-012's canonical physical support-edge length. Independent review passed with no findings; checkpoint `79ccf06` is pushed.
 - G1 passed its independent internal gate audit at `79ccf06`: 11 focused files/188 tests, the full 33-file/281-test suite, strict TypeScript, and the 671-module Vite build passed. No known executable sign, transform, rank, non-finite, positive-definiteness, locking, recovery, or stability failure remains. Deferred formal approvals still prohibit engineering reliance, warning removal, or release.
 - Wave 2A dispatches WP-020 and WP-022 from ledger checkpoint `1060d4b` under disjoint leases. WP-020 owns live mesh-type promotion, structured skew geometry, point-support forcing, and quality diagnostics; WP-022 owns staged patch polygon generation and deck clipping only. Any need to edit recovery, patch integration, shared contracts, or another package's files is a stop/deviation condition.
+- `CD-WP020-001` resolves the literal AABB/centre acceptance conflict without crossing prerequisites: WP-020 must produce coordinate-identical element polygons, containing metadata AABBs, and a tested Q4 `(0,0)` centre utility. WP-024 remains the sole owner that replaces AABB load integration, and WP-030 remains the sole owner that activates Q4 centres in recovery. Until both consumer packets pass, no nonzero-skew load/recovery correctness claim is permitted.
 
 ## Packet states
 
@@ -94,7 +95,7 @@
 | EF-004 | `passed` | zero-skew rebaseline worker; independent numerical impact review accepted | checkpoint `b4cbbec` pushed; complete old/new evidence and limitations recorded |
 | EF-005 | `passed_reentry` | lead/integrator computational re-entry | available G1 suites passed 170/170; main path re-entered at WP-015, not a G1 pass |
 | WP-015 | `passed` | app/solver boundary worker; independent architecture/numerical review accepted | checkpoint `79ccf06` pushed; exact normalization and canonical physical-edge sizing accepted; G1 passed |
-| WP-020 | `dispatched` | mesh worker; independent numerical/architecture review required | prerequisites passed at G1; exclusive mesh/type/quality lease active from `1060d4b`; WP-021/WP-023 blocked |
+| WP-020 | `reissued` | mesh worker; independent numerical/architecture review required | initial worker stopped before edits on the lease/acceptance conflict; CD-WP020-001 approved; same exclusive lease reissued from `4253976`; WP-021/WP-023 blocked |
 | WP-022 | `dispatched` | load-geometry worker; independent computational-geometry review required | WP-012/WP-013/WP-015 and patch contract passed; exclusive vehicle/polygon-test lease active from `1060d4b`; WP-024 blocked |
 
 ## File leases
@@ -140,7 +141,7 @@
 | WP-015 app/solver boundary worker | write | `src/solver/model/fromAppModel.ts`, `src/app/meshSizing.ts`, `src/tests/meshSizing.test.ts` only | released; accepted and pushed at `79ccf06` |
 | WP-015 independent architecture/numerical reviewer | read-only | exact three-file diff, accepted geometry/mesh-sizing policy, compatibility, and focused evidence | released; recommendation `pass`, no findings |
 | G1 lead/integrator and independent gate reviewer | verification/integration | committed Wave 1 tree, all G1 focused/numerical suites, full suite, build, and repository integrity | released; internal implementation-progression gate `pass` at `79ccf06` |
-| WP-020 mesh worker | write | `src/solver/model/types.ts`, `src/solver/core/mesh.ts`, new `src/solver/core/meshQuality.ts`, new `src/tests/mesh.test.ts`, `src/tests/recoverNodal.test.ts`, `src/tests/skewContractScaffold.test.ts` only | active from `1060d4b`; no recovery/load/support/facade/app/ADR edits |
+| WP-020 mesh worker | write | `src/solver/model/types.ts`, `src/solver/core/mesh.ts`, new `src/solver/core/meshQuality.ts`, new `src/tests/mesh.test.ts`, `src/tests/recoverNodal.test.ts`, `src/tests/skewContractScaffold.test.ts` only | initial lease stopped with zero edits; reissued under CD-WP020-001 from `4253976`; no recovery/load/support/facade/app/ADR edits |
 | WP-022 load-geometry worker | write | `src/solver/loads/vehicle.ts`, new `src/tests/vehiclePatchGeometry.test.ts` only | active from `1060d4b`; staged polygon generation/clipping only; no patch integration/type promotion/viewer edits |
 
 WP-003 and WP-004 leases are disjoint. Source, test, configuration, package, report, live type, app, solver, viewer, and user-owned files are outside both scopes.
@@ -366,6 +367,15 @@ WP-003 and WP-004 leases are disjoint. Source, test, configuration, package, rep
 - Backward-compatibility impact: none at this decision point; no production code, result, persistence, or public contract changes.
 - Proposed migration/test: execute the internal rank, sign, transform, finite-value, locking, distortion, and recovery tests during implementation; record every deferred human/external item below; complete the register before any release or engineering-reliance decision.
 - Lead decision: approved from explicit user/owner direction on 2026-07-21. This is implementation authorization only.
+- Contract deviation integrated and active: `CD-WP020-001`.
+- Decision/contract ID: split mesh geometry production from prerequisite-owned AABB consumer removal.
+- Current definition: WP-020 tasks require Q4 `(0,0)` element centres and its literal acceptance says no stiffness/load code treats an AABB as physical geometry, while `src/solver/post/recover.ts` and `src/solver/loads/patch.ts` remain exclusively assigned to WP-030 and WP-024.
+- Required change: WP-020 produces coordinate-identical element polygons, containing metadata AABBs, and a tested shared Q4-centre utility without editing either consumer. WP-024 alone replaces rectangle/AABB patch integration; WP-030 alone changes recovered element-centre coordinates.
+- Why this packet cannot continue unchanged: satisfying the literal acceptance would either cross the exclusive leases or start WP-024 before WP-022/WP-023 prerequisites and WP-030 outside its ordered wave.
+- Affected packets: WP-020, WP-024, WP-030, G2/G3, and every downstream nonzero-skew solve/result consumer.
+- Backward-compatibility impact: WP-020 preserves exact zero-skew topology and compatibility axes. Later WP-024 may change skew load distribution while preserving force/first moments; later WP-030 changes skew reported centres from AABB midpoints to Q4 centres. No such consumer behavior is claimed by WP-020.
+- Proposed migration/test: WP-020 tests polygon/node identity, containing AABBs, and Q4 centres. WP-024 tests polygon quadrature plus force/first-moment conservation and zero-skew equivalence. WP-030 tests centre recovery at zero and +/-19 degrees. Until both later packets pass, nonzero-skew load/recovery correctness is explicitly unavailable.
+- Lead decision: approved as the only dependency-safe interpretation. The original file leases remain unchanged; expanding WP-020 into load integration or recovery is rejected.
 
 ## Deferred end-of-plan review register
 
