@@ -248,7 +248,12 @@ export interface NodalDisplacement {
   ry: number;
 }
 
-/** Averaged field values at a single mesh node (one entry per node, not per element centre). */
+/**
+ * Area-weighted averages of the surrounding element-centre (superconvergent)
+ * field values at a single mesh node (one entry per node). Moments and shears
+ * are smoothed averages, not extrapolated corner peaks or singular extrema;
+ * deflection is the exact nodal degree of freedom.
+ */
 export interface NodalFieldValues {
   nodeId: number;
   x: number;
@@ -256,6 +261,7 @@ export interface NodalFieldValues {
   deflection: number;
   mx: number;
   my: number;
+  mxy: number;
   qx: number;
   qy: number;
 }

@@ -88,6 +88,7 @@ export function assertFiniteNodalFieldValues(nodalFields: NodalFieldValues[]): v
     assertFiniteNumber(node.deflection, `nodal field ${index} deflection`);
     assertFiniteNumber(node.mx, `nodal field ${index} mx`);
     assertFiniteNumber(node.my, `nodal field ${index} my`);
+    assertFiniteNumber(node.mxy, `nodal field ${index} mxy`);
     assertFiniteNumber(node.qx, `nodal field ${index} qx`);
     assertFiniteNumber(node.qy, `nodal field ${index} qy`);
   });
