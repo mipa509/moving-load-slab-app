@@ -6,6 +6,7 @@ import type {
   SupportDofAssignment,
   SupportReaction,
 } from "./model/types";
+import type { SignedEquilibriumReport } from "./core/equilibrium";
 
 export function assertStableSupportConfiguration(assignments: SupportDofAssignment[]): void {
   if (assignments.length === 0) {
@@ -95,5 +96,28 @@ export function assertFiniteNodalFieldValues(nodalFields: NodalFieldValues[]): v
 function assertFiniteNumber(value: number, label: string): void {
   if (!Number.isFinite(value)) {
     throw new Error(`Analysis produced a non-finite ${label}. Check the support restraints and rerun.`);
+  }
+}
+
+/**
+ * Reject a solve whose signed global equilibrium residual exceeds a tolerance
+ * that the caller ties to the integration precision and iterative solver
+ * residual (never an arbitrary display percentage). All three normalized
+ * residuals (vertical force and both global moments) must be within tolerance.
+ */
+export function assertEquilibriumWithinTolerance(
+  report: SignedEquilibriumReport,
+  normalizedTolerance: number,
+): void {
+  const worst = Math.max(
+    report.normalizedResidual.fz,
+    report.normalizedResidual.momentX,
+    report.normalizedResidual.momentY,
+  );
+  if (!Number.isFinite(worst) || worst > normalizedTolerance) {
+    throw new Error(
+      `Global equilibrium residual ${worst} exceeds tolerance ${normalizedTolerance}. ` +
+        "The assembled load, support reactions, or their signs are inconsistent; do not rely on the results.",
+    );
   }
 }
