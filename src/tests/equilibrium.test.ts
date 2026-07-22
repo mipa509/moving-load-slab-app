@@ -78,6 +78,8 @@ describe("signed force/moment equilibrium", () => {
     );
     expect(report.reaction.fz).toBeCloseTo(-100, 9);
     expect(report.residual.fz).toBeCloseTo(0, 9);
+    expect(report.residual.momentX).toBeCloseTo(0, 9);
+    expect(report.residual.momentY).toBeCloseTo(0, 9);
   });
 
   it("deduplicates a fixed DOF claimed by two supports and attributes it once", () => {
@@ -96,6 +98,10 @@ describe("signed force/moment equilibrium", () => {
     expect(report.residual.fz).toBeCloseTo(0, 9);
     const totalBySupport = report.bySupport.reduce((sum, entry) => sum + entry.fz, 0);
     expect(totalBySupport).toBeCloseTo(report.reaction.fz, 9);
+    // The redundant support is still surfaced (with a zero contribution), not dropped.
+    expect(report.bySupport.map((entry) => entry.supportId).sort()).toEqual(["A", "B"]);
+    const b = report.bySupport.find((entry) => entry.supportId === "B")!;
+    expect(b.fz).toBe(0);
   });
 
   it("balances a global moment with a generalized rotational reaction via WP-031A mapping", () => {
@@ -173,6 +179,62 @@ describe("signed force/moment equilibrium", () => {
     const totalMx = report.bySupport.reduce((sum, entry) => sum + entry.momentX, 0);
     expect(totalFz).toBeCloseTo(report.reaction.fz, 9);
     expect(totalMx).toBeCloseTo(report.reaction.momentX, 9);
+  });
+
+  it("balances a global moment with a spring rotational reaction (double sign flip)", () => {
+    // Spring stored value = +k*u = -100 -> external +100 -> coupleX -100, which
+    // balances the applied momentX = +100. Exercises the ry-spring double flip.
+    const report = computeSignedEquilibrium({
+      appliedLoads: [{ nodeId: 0, x: 0, y: 1, fz: 100 }],
+      supportActions: [
+        { supportId: "A", nodeId: 1, x: 0, y: 0, dof: "w", kind: "fixed", value: -100 },
+        { supportId: "B", nodeId: 1, x: 0, y: 0, dof: "ry", kind: "spring", value: -100 },
+      ],
+      origin: ORIGIN,
+      characteristicLengthM: LCHAR,
+    });
+    expect(report.reaction.momentX).toBeCloseTo(-100, 9);
+    expect(report.residual.fz).toBeCloseTo(0, 9);
+    expect(report.residual.momentX).toBeCloseTo(0, 9);
+    expect(report.residual.momentY).toBeCloseTo(0, 9);
+  });
+
+  it("balances at the canonical reporting origin (0, W/2)", () => {
+    const report = computeSignedEquilibrium(baseInput({ origin: { x: 0, y: 2.5 } }));
+    expect(report.origin).toEqual({ x: 0, y: 2.5 });
+    expect(report.residual.fz).toBeCloseTo(0, 9);
+    expect(report.residual.momentX).toBeCloseTo(0, 9);
+    expect(report.residual.momentY).toBeCloseTo(0, 9);
+  });
+
+  it("sums two springs acting on the same DOF", () => {
+    const report = computeSignedEquilibrium({
+      appliedLoads: [{ nodeId: 0, x: 0, y: 0, fz: 100 }],
+      supportActions: [
+        { supportId: "A", nodeId: 1, x: 0, y: 0, dof: "w", kind: "spring", value: 40 },
+        { supportId: "B", nodeId: 1, x: 0, y: 0, dof: "w", kind: "spring", value: 60 },
+      ],
+      origin: ORIGIN,
+      characteristicLengthM: LCHAR,
+    });
+    // externals -40 and -60 sum to -100 (springs on one DOF are not deduped).
+    expect(report.reaction.fz).toBeCloseTo(-100, 9);
+    expect(report.residual.fz).toBeCloseTo(0, 9);
+  });
+
+  it("assembles multiple applied loads including an upward load", () => {
+    const report = computeSignedEquilibrium({
+      appliedLoads: [
+        { nodeId: 0, x: 1, y: 0, fz: 80 },
+        { nodeId: 1, x: 3, y: 0, fz: -30 },
+      ],
+      supportActions: [{ supportId: "A", nodeId: 2, x: 0, y: 0, dof: "w", kind: "fixed", value: -50 }],
+      origin: ORIGIN,
+      characteristicLengthM: LCHAR,
+    });
+    expect(report.applied.fz).toBeCloseTo(50, 9);
+    expect(report.reaction.fz).toBeCloseTo(-50, 9);
+    expect(report.residual.fz).toBeCloseTo(0, 9);
   });
 });
 

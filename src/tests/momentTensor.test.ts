@@ -49,6 +49,23 @@ describe("plate moment tensor transformation", () => {
     }
   });
 
+  it("preserves the trace invariant with a non-zero twist and mx != my", () => {
+    // Exercises the +2 mxy cs and -2 mxy cs cancellation in the trace.
+    for (const deg of [0, 30, 45, 75, 90]) {
+      const t = transformMomentTensor({ mx: 6, my: -2, mxy: 3 }, deg * DEG);
+      close(t.mNN + t.mTT, 4);
+    }
+  });
+
+  it("matches an independently hand-computed tensor at a general 30-degree angle", () => {
+    // Ground truth computed offline from mNN=n^T M n, mTT=t^T M t, mNT=n^T M t
+    // with n=(cos30, sin30), t=(-sin30, cos30) and M=[[6,3],[3,-2]].
+    const t = transformMomentTensor({ mx: 6, my: -2, mxy: 3 }, 30 * DEG);
+    close(t.mNN, 6.598076211353316, 9);
+    close(t.mTT, -2.598076211353316, 9);
+    close(t.mNT, -1.964101615137754, 9);
+  });
+
   it("round trips through a rotation and its inverse", () => {
     const m = { mx: 6, my: -2, mxy: 3 };
     const theta = 37 * DEG;
@@ -83,18 +100,19 @@ describe("support normal/tangent axes", () => {
   });
 
   it("gives a support-normal moment equal to mx for an edge along global y", () => {
-    // Edge along global y -> normal along global x -> mNN = mx.
+    // Edge along global y -> normal along global x (angle 0) -> mNN=mx, mTT=my, mNT=mxy.
     const t = transformMomentsToSupportAxes({ mx: 5, my: -3, mxy: 2 }, { x: 0, y: 0 }, { x: 0, y: 4 });
     close(t.mNN, 5);
     close(t.mTT, -3);
-    close(Math.abs(t.mNT), 2);
+    close(t.mNT, 2);
   });
 
   it("uses a proper orthonormal frame (not oblique s/t) for a skew edge", () => {
-    // A 45-degree inclined edge: pure twist becomes principal +/-7 with zero cross.
+    // A 45-degree inclined edge has normal (1,-1)/sqrt2 (angle -45); pure twist
+    // becomes signed principal moments mNN=-7, mTT=+7 with zero cross term.
     const t = transformMomentsToSupportAxes({ mx: 0, my: 0, mxy: 7 }, { x: 0, y: 0 }, { x: 1, y: 1 });
-    close(Math.abs(t.mNN), 7);
-    close(Math.abs(t.mTT), 7);
+    close(t.mNN, -7);
+    close(t.mTT, 7);
     close(t.mNT, 0);
   });
 

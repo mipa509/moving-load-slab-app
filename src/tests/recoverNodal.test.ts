@@ -155,6 +155,84 @@ describe("recoverNodalFields", () => {
       expect(node.mxy).toBeCloseTo(centres[0].moments.mxy, 6);
     }
   });
+
+  it("area-weights differing element-centre values (distinguishable from a count average)", () => {
+    // A spatially varying (bilinear rotation) field makes each surrounding
+    // element's centre moment different, so area weighting and a plain count
+    // average give different node values. The node must match the AREA-weighted
+    // mean computed by hand from the independent element-centre recovery.
+    const mesh = nonuniformMesh(0);
+    const displacement = new Float64Array(mesh.nodes.length * 3);
+    for (const node of mesh.nodes) {
+      const base = node.id * 3;
+      displacement[base + 1] = 0.001 * node.x * node.y; // rx
+      displacement[base + 2] = 0.0008 * node.x * node.y; // ry
+    }
+
+    const centres = recoverElementCenterResults(mesh, MATERIAL, THICKNESS, displacement);
+    const nodal = recoverNodalFields(mesh, MATERIAL, THICKNESS, displacement);
+
+    const interiorNodeId = mesh.nodeIdsByIJ[1][1];
+    const touching = mesh.elements.filter((element) => element.nodeIds.includes(interiorNodeId));
+    expect(touching.length).toBe(4);
+
+    const elementArea = (element: (typeof mesh.elements)[number]): number => {
+      const ns = element.nodeIds.map((id) => mesh.nodes[id]);
+      let a = 0;
+      for (let i = 0; i < 4; i++) {
+        const p = ns[i];
+        const q = ns[(i + 1) % 4];
+        a += p.x * q.y - q.x * p.y;
+      }
+      return Math.abs(a) / 2;
+    };
+
+    let sumArea = 0;
+    let sumWeighted = 0;
+    let sumPlain = 0;
+    for (const element of touching) {
+      const centre = centres.find((c) => c.elementId === element.id)!;
+      const area = elementArea(element);
+      sumArea += area;
+      sumWeighted += area * centre.moments.mxy;
+      sumPlain += centre.moments.mxy;
+    }
+    const areaWeighted = sumWeighted / sumArea;
+    const countAverage = sumPlain / touching.length;
+    const nodeValue = nodal.find((n) => n.nodeId === interiorNodeId)!.mxy;
+
+    expect(Math.abs(areaWeighted - countAverage)).toBeGreaterThan(1e-6);
+    expect(nodeValue).toBeCloseTo(areaWeighted, 9);
+    expect(nodeValue).not.toBeCloseTo(countAverage, 6);
+  });
+
+  it("recovers a constant transverse-shear state (zero curvature) at every node", () => {
+    // w = c*x, rx = ry = 0 gives a constant raw transverse shear and zero
+    // curvature, so qx is a nonzero constant, qy and all moments are ~zero.
+    const mesh = nonuniformMesh(0);
+    const c = 0.001;
+    const displacement = new Float64Array(mesh.nodes.length * 3);
+    for (const node of mesh.nodes) {
+      displacement[node.id * 3] = c * node.x;
+    }
+
+    const centres = recoverElementCenterResults(mesh, MATERIAL, THICKNESS, displacement);
+    const expectedQx = centres[0].shears.qx;
+    expect(Math.abs(expectedQx)).toBeGreaterThan(1e-3);
+    for (const centre of centres) {
+      expect(centre.shears.qx).toBeCloseTo(expectedQx, 6);
+      expect(Math.abs(centre.shears.qy)).toBeLessThan(1e-6);
+      expect(Math.abs(centre.moments.mx)).toBeLessThan(1e-6);
+    }
+
+    const nodal = recoverNodalFields(mesh, MATERIAL, THICKNESS, displacement);
+    for (const node of nodal) {
+      expect(node.qx).toBeCloseTo(expectedQx, 6);
+      expect(Math.abs(node.qy)).toBeLessThan(1e-6);
+      expect(Math.abs(node.mx)).toBeLessThan(1e-6);
+      expect(Math.abs(node.mxy)).toBeLessThan(1e-6);
+    }
+  });
 });
 
 describe("recoverElementCenterResults", () => {

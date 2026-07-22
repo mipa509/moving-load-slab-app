@@ -15,7 +15,13 @@ import { mapGeneralizedMomentToPhysicalCouple } from "../post/reactionMomentMapp
  * calls the guard; nothing here mutates solver state or shared result types.
  */
 
-/** Applied vertical (downward-positive) nodal load, kN. */
+/**
+ * Applied vertical (downward-positive) nodal load, kN. Consistent wheel/patch
+ * loads are work-conjugate to `w` only (a transverse pressure produces no nodal
+ * `betaX/betaY` moment), so applied couples are intentionally not represented
+ * here; couples enter only on the reaction side. A future applied-load type that
+ * carries nodal moments would need an applied-couple channel added.
+ */
 export interface NodalVerticalLoad {
   nodeId: number;
   x: number;
@@ -129,6 +135,16 @@ export function computeSignedEquilibrium(input: EquilibriumInput): SignedEquilib
     accumulateSupport(bySupportMap, action.supportId, contribution);
   }
 
+  // Surface every support that submitted an action, even one whose only action
+  // was a deduplicated (redundant) fixed DOF absorbed by another support: it
+  // appears with a zero contribution rather than silently vanishing, so a
+  // per-support report can still see it and detect the duplication.
+  for (const action of input.supportActions) {
+    if (!bySupportMap.has(action.supportId)) {
+      bySupportMap.set(action.supportId, { supportId: action.supportId, fz: 0, momentX: 0, momentY: 0 });
+    }
+  }
+
   const residual: EquilibriumResultant = {
     fz: applied.fz + reaction.fz,
     momentX: applied.momentX + reaction.momentX,
@@ -136,6 +152,11 @@ export function computeSignedEquilibrium(input: EquilibriumInput): SignedEquilib
   };
 
   const forceScale = Math.max(sumAbsAppliedForce, 1);
+  // The moment-scale denominators use per-axis applied-moment magnitudes, which
+  // are origin-dependent. The moment residual numerator is origin-independent
+  // only for a force-balanced system; a force imbalance trips the force residual
+  // regardless, so the origin-sensitivity of the normalized moment threshold is
+  // not exploitable. The caller fixes the origin (the ADR reporting origin).
   const momentScaleX = Math.max(sumAbsAppliedForce * characteristicLengthM + sumAbsAppliedMomentX, 1);
   const momentScaleY = Math.max(sumAbsAppliedForce * characteristicLengthM + sumAbsAppliedMomentY, 1);
   const normalizedResidual: EquilibriumResultant = {

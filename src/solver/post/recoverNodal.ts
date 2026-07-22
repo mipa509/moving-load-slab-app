@@ -17,6 +17,8 @@ import type { MaterialDefinition, MeshElement, MeshNode, NodalFieldValues, Struc
  * A constant-curvature state recovers exactly at every node on any (including
  * nonuniform or skew) mesh, because every surrounding element shares the same
  * centre value and the area-weighted mean of equal values is that value.
+ * Convergence of NON-constant fields under mesh refinement is verified in the
+ * WP-061 skew-convergence suite, not here.
  */
 export function recoverNodalFields(
   mesh: StructuredMesh,

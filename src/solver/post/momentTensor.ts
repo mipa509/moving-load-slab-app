@@ -57,6 +57,11 @@ export function transformMomentTensor(
  * tangent runs along the edge; the normal is the in-plane perpendicular. Both
  * are unit vectors, so a skew (inclined) support edge yields proper Cartesian
  * axes rather than the oblique deck parameters.
+ *
+ * `normal` is always the tangent rotated -90 degrees; it is not guaranteed to be
+ * the inward vs outward normal for a given edge. This does not affect the moment
+ * components (`mNN/mTT/mNT` are invariant under a normal sign flip), but a
+ * consumer that needs a directed normal (e.g. a polar reaction) must orient it.
  */
 export function supportAxisFrame(start: Point2D, end: Point2D): OrthonormalFrame {
   const dx = end.x - start.x;
