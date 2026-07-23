@@ -55,6 +55,7 @@ describe("analysis guards", () => {
           deflection: Number.NaN,
           mx: 0,
           my: 0,
+          mxy: 0,
           qx: 0,
           qy: 0,
         },

@@ -14,6 +14,7 @@ function buildBaseAppModel(): SlabModel {
       lengthM: 10,
       widthM: 5,
       thicknessM: 0.4,
+      skewAngleDeg: 0,
     },
     material: {
       elasticModulusMPa: 32000,

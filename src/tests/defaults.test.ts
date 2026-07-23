@@ -3,98 +3,637 @@ import {
   createDefaultModel,
   errorResults,
   sanitizeLoadedModel,
+  serializeModelForSave,
   validateModelForRun,
 } from "../app/defaults";
 
+const IMPLICIT_V1_SNAPSHOT = {
+  projectName: "Legacy slab",
+  description: "Legacy description",
+  assumptions: "Legacy assumptions",
+  geometry: {
+    lengthM: "12",
+    widthM: "6",
+    thicknessM: "0.35",
+  },
+  material: {
+    elasticModulusMPa: 32000,
+    poisson: 0.2,
+    densityKnPerM3: 25,
+  },
+  mesh: {
+    density: 10,
+    autoTargetElementM: 0.5,
+  },
+  supports: [
+    {
+      id: "S1",
+      name: "Legacy line",
+      kind: "line",
+      x1: "0",
+      y1: "0",
+      x2: "0",
+      y2: "6",
+      constraints: {
+        uz: { type: "pinned" },
+        rx: { type: "pinned" },
+        ry: { type: "pinned" },
+      },
+    },
+  ],
+  vehicle: {
+    name: "Legacy vehicle",
+    mode: "axle",
+    transverseSpacingM: "1.2",
+    wheelsPerAxle: "4",
+    wheelPatchLongM: "0.45",
+    wheelPatchTransM: "0.3",
+    axleInputs: [{ id: "A1", spacingFromPreviousM: "0", axleLoadKn: "120" }],
+    directWheels: [],
+  },
+  placement: {
+    centerXM: 5,
+    centerYM: 2.5,
+    headingDeg: 0,
+    transverseOffsetM: 0,
+    travelDirection: "x+",
+    pathStartM: 0,
+    pathEndM: 10,
+    pathStepM: 1,
+  },
+  display: {
+    plotMode: "structure",
+    mesh: true,
+    supports: true,
+    wheelPatches: true,
+    contours: true,
+    tables: true,
+  },
+  section: {
+    axis: "auto",
+    centerPerpM: 2.5,
+    widthM: 1,
+  },
+} as const;
+
+const implicitV1Snapshot = (): Record<string, any> =>
+  structuredClone(IMPLICIT_V1_SNAPSHOT);
+
+const v2Snapshot = (skewAngleDeg: unknown): Record<string, any> => {
+  const v1 = implicitV1Snapshot();
+  return {
+    ...v1,
+    schemaVersion: 2,
+    supportSchema: "legacy-generalized-v1",
+    geometry: {
+      ...v1.geometry,
+      skewAngleDeg,
+    },
+  };
+};
+
+const EXPECTED_DISTINCT_V2_SNAPSHOT = {
+  schemaVersion: 2,
+  supportSchema: "legacy-generalized-v1",
+  projectName: "Distinct V2 project",
+  description: "Distinct persisted description",
+  assumptions: "Distinct persisted assumptions",
+  geometry: {
+    lengthM: 13.25,
+    widthM: 7.75,
+    thicknessM: 0.42,
+    skewAngleDeg: -19,
+  },
+  material: {
+    elasticModulusMPa: 31001,
+    poisson: 0.23,
+    densityKnPerM3: 24.5,
+  },
+  mesh: {
+    density: 17,
+    autoTargetElementM: 0.37,
+  },
+  supports: [
+    {
+      id: "LINE-distinct",
+      name: "Distinct legacy line",
+      kind: "line",
+      constraints: {
+        uz: { type: "fixed" },
+        rx: { type: "spring", stiffness: 1234 },
+        ry: { type: "free" },
+      },
+      x1: 1.1,
+      y1: 2.2,
+      x2: 3.3,
+      y2: 4.4,
+    },
+    {
+      id: "POINT-distinct",
+      name: "Distinct legacy point",
+      kind: "point",
+      constraints: {
+        uz: { type: "spring", stiffness: 9876 },
+        rx: { type: "free" },
+        ry: { type: "fixed" },
+      },
+      x: 5.5,
+      y: 6.6,
+    },
+  ],
+  vehicle: {
+    name: "Distinct vehicle",
+    mode: "direct",
+    transverseSpacingM: 1.31,
+    wheelsPerAxle: 3,
+    wheelPatchLongM: 0.46,
+    wheelPatchTransM: 0.27,
+    axleInputs: [
+      { id: "AX-distinct", spacingFromPreviousM: 2.7, axleLoadKn: 111 },
+    ],
+    directWheels: [
+      {
+        id: "WH-distinct",
+        xM: 7.1,
+        yM: 3.2,
+        loadKn: 61,
+        patchLongM: 0.41,
+        patchTransM: 0.22,
+      },
+    ],
+  },
+  placement: {
+    centerXM: 8.1,
+    centerYM: 3.7,
+    headingDeg: 31,
+    transverseOffsetM: -0.8,
+    travelDirection: "y-",
+    pathStartM: -1.2,
+    pathEndM: 11.4,
+    pathStepM: 0.6,
+  },
+  display: {
+    plotMode: "deformed",
+    mesh: false,
+    supports: true,
+    wheelPatches: false,
+    contours: true,
+    tables: false,
+  },
+  section: {
+    axis: "y",
+    centerPerpM: 4.3,
+    widthM: 1.6,
+  },
+} as const;
+
+const distinctV2Snapshot = (): Record<string, any> =>
+  structuredClone(EXPECTED_DISTINCT_V2_SNAPSHOT);
+
+type InvalidSnapshotCase = {
+  name: string;
+  expectedError: string;
+  mutate: (snapshot: Record<string, any>) => void;
+};
+
+const INVALID_SNAPSHOT_CASES: InvalidSnapshotCase[] = [
+  {
+    name: "top-level extra key",
+    expectedError: "Model migration error (V2): model has an invalid snapshot shape.",
+    mutate: (snapshot) => { snapshot.unexpected = true; },
+  },
+  {
+    name: "geometry extra key",
+    expectedError: "Model migration error (V2): geometry has an invalid snapshot shape.",
+    mutate: (snapshot) => { snapshot.geometry.unexpected = true; },
+  },
+  {
+    name: "geometry missing required field",
+    expectedError: "Model migration error (V2): geometry has an invalid snapshot shape.",
+    mutate: (snapshot) => { delete snapshot.geometry.widthM; },
+  },
+  {
+    name: "geometry wrong container",
+    expectedError: "Model migration error (V2): geometry must be an object.",
+    mutate: (snapshot) => { snapshot.geometry = []; },
+  },
+  {
+    name: "material extra key",
+    expectedError: "Model migration error (V2): material has an invalid snapshot shape.",
+    mutate: (snapshot) => { snapshot.material.unexpected = 1; },
+  },
+  {
+    name: "material missing required field",
+    expectedError: "Model migration error (V2): material has an invalid snapshot shape.",
+    mutate: (snapshot) => { delete snapshot.material.poisson; },
+  },
+  {
+    name: "material wrong container",
+    expectedError: "Model migration error (V2): material must be an object.",
+    mutate: (snapshot) => { snapshot.material = null; },
+  },
+  {
+    name: "mesh extra key",
+    expectedError: "Model migration error (V2): mesh has an invalid snapshot shape.",
+    mutate: (snapshot) => { snapshot.mesh.unexpected = 1; },
+  },
+  {
+    name: "mesh missing required field",
+    expectedError: "Model migration error (V2): mesh has an invalid snapshot shape.",
+    mutate: (snapshot) => { delete snapshot.mesh.density; },
+  },
+  {
+    name: "mesh wrong container",
+    expectedError: "Model migration error (V2): mesh must be an object.",
+    mutate: (snapshot) => { snapshot.mesh = "mesh"; },
+  },
+  {
+    name: "supports wrong array container",
+    expectedError: "Model migration error (V2): supports must be an array.",
+    mutate: (snapshot) => { snapshot.supports = {}; },
+  },
+  {
+    name: "null support array entry",
+    expectedError: "Model migration error (V2): supports[0] must be an object.",
+    mutate: (snapshot) => { snapshot.supports[0] = null; },
+  },
+  {
+    name: "support extra key",
+    expectedError: "Model migration error (V2): supports[0] has an invalid snapshot shape.",
+    mutate: (snapshot) => { snapshot.supports[0].unexpected = 1; },
+  },
+  {
+    name: "support missing coordinate",
+    expectedError: "Model migration error (V2): supports[1] has an invalid snapshot shape.",
+    mutate: (snapshot) => { delete snapshot.supports[1].x; },
+  },
+  {
+    name: "support constraints wrong container",
+    expectedError: "Model migration error (V2): supports[0].constraints must be an object.",
+    mutate: (snapshot) => { snapshot.supports[0].constraints = []; },
+  },
+  {
+    name: "support constraints extra key",
+    expectedError: "Model migration error (V2): supports[0].constraints has an invalid snapshot shape.",
+    mutate: (snapshot) => { snapshot.supports[0].constraints.unexpected = {}; },
+  },
+  {
+    name: "support constraint missing DOF",
+    expectedError: "Model migration error (V2): supports[0].constraints has an invalid snapshot shape.",
+    mutate: (snapshot) => { delete snapshot.supports[0].constraints.ry; },
+  },
+  {
+    name: "null support constraint setting",
+    expectedError: "Model migration error (V2): supports[0].constraints.uz must be an object.",
+    mutate: (snapshot) => { snapshot.supports[0].constraints.uz = null; },
+  },
+  {
+    name: "vehicle extra key",
+    expectedError: "Model migration error (V2): vehicle has an invalid snapshot shape.",
+    mutate: (snapshot) => { snapshot.vehicle.unexpected = 1; },
+  },
+  {
+    name: "vehicle missing required field",
+    expectedError: "Model migration error (V2): vehicle has an invalid snapshot shape.",
+    mutate: (snapshot) => { delete snapshot.vehicle.mode; },
+  },
+  {
+    name: "vehicle wrong container",
+    expectedError: "Model migration error (V2): vehicle must be an object.",
+    mutate: (snapshot) => { snapshot.vehicle = []; },
+  },
+  {
+    name: "axle array wrong container",
+    expectedError: "Model migration error (V2): vehicle axleInputs/directWheels must be arrays.",
+    mutate: (snapshot) => { snapshot.vehicle.axleInputs = {}; },
+  },
+  {
+    name: "null axle array entry",
+    expectedError: "Model migration error (V2): vehicle.axleInputs[0] must be an object.",
+    mutate: (snapshot) => { snapshot.vehicle.axleInputs[0] = null; },
+  },
+  {
+    name: "axle extra key",
+    expectedError: "Model migration error (V2): vehicle.axleInputs[0] has an invalid snapshot shape.",
+    mutate: (snapshot) => { snapshot.vehicle.axleInputs[0].unexpected = 1; },
+  },
+  {
+    name: "axle missing required field",
+    expectedError: "Model migration error (V2): vehicle.axleInputs[0] has an invalid snapshot shape.",
+    mutate: (snapshot) => { delete snapshot.vehicle.axleInputs[0].axleLoadKn; },
+  },
+  {
+    name: "direct-wheel array wrong container",
+    expectedError: "Model migration error (V2): vehicle axleInputs/directWheels must be arrays.",
+    mutate: (snapshot) => { snapshot.vehicle.directWheels = null; },
+  },
+  {
+    name: "null direct-wheel array entry",
+    expectedError: "Model migration error (V2): vehicle.directWheels[0] must be an object.",
+    mutate: (snapshot) => { snapshot.vehicle.directWheels[0] = null; },
+  },
+  {
+    name: "direct-wheel extra key",
+    expectedError: "Model migration error (V2): vehicle.directWheels[0] has an invalid snapshot shape.",
+    mutate: (snapshot) => { snapshot.vehicle.directWheels[0].unexpected = 1; },
+  },
+  {
+    name: "direct-wheel missing required field",
+    expectedError: "Model migration error (V2): vehicle.directWheels[0] has an invalid snapshot shape.",
+    mutate: (snapshot) => { delete snapshot.vehicle.directWheels[0].loadKn; },
+  },
+  {
+    name: "placement extra key",
+    expectedError: "Model migration error (V2): placement has an invalid snapshot shape.",
+    mutate: (snapshot) => { snapshot.placement.unexpected = 1; },
+  },
+  {
+    name: "placement missing required field",
+    expectedError: "Model migration error (V2): placement has an invalid snapshot shape.",
+    mutate: (snapshot) => { delete snapshot.placement.headingDeg; },
+  },
+  {
+    name: "placement wrong container",
+    expectedError: "Model migration error (V2): placement must be an object.",
+    mutate: (snapshot) => { snapshot.placement = null; },
+  },
+  {
+    name: "display extra key",
+    expectedError: "Model migration error (V2): display has an invalid snapshot shape.",
+    mutate: (snapshot) => { snapshot.display.unexpected = true; },
+  },
+  {
+    name: "display missing required field",
+    expectedError: "Model migration error (V2): display has an invalid snapshot shape.",
+    mutate: (snapshot) => { delete snapshot.display.tables; },
+  },
+  {
+    name: "display wrong container",
+    expectedError: "Model migration error (V2): display must be an object.",
+    mutate: (snapshot) => { snapshot.display = []; },
+  },
+  {
+    name: "section extra key",
+    expectedError: "Model migration error (V2): section has an invalid snapshot shape.",
+    mutate: (snapshot) => { snapshot.section.unexpected = 1; },
+  },
+  {
+    name: "section missing required field",
+    expectedError: "Model migration error (V2): section has an invalid snapshot shape.",
+    mutate: (snapshot) => { delete snapshot.section.widthM; },
+  },
+  {
+    name: "section wrong container",
+    expectedError: "Model migration error (V2): section must be an object.",
+    mutate: (snapshot) => { snapshot.section = null; },
+  },
+];
+
 describe("app model sanitization", () => {
-  it("normalizes legacy pinned constraints and parses numeric strings", () => {
-    const model = sanitizeLoadedModel({
-      geometry: {
-        lengthM: "12",
-        widthM: "6",
-        thicknessM: "0.35",
-      },
-      supports: [
-        {
-          id: "S1",
-          name: "Legacy line",
-          kind: "line",
-          x1: "0",
-          y1: "0",
-          x2: "0",
-          y2: "6",
-          constraints: {
-            uz: { type: "pinned" },
-            rx: { type: "pinned" },
-            ry: { type: "pinned" },
-          },
-        },
-      ],
-      vehicle: {
-        name: "Legacy vehicle",
-        mode: "axle",
-        trackM: "2.5",
-        wheelsPerAxle: "4",
-        wheelPatchLongM: "0.45",
-        wheelPatchTransM: "0.3",
-        axleInputs: [{ id: "A1", spacingFromPreviousM: "0", axleLoadKn: "120" }],
-        directWheels: [],
-      },
-      display: {
-        plotMode: "mesh",
-      },
-    });
+  it("creates the live default with exact positive zero skew", () => {
+    const model = createDefaultModel();
+
+    expect(model.geometry.skewAngleDeg).toBe(0);
+    expect(Object.is(model.geometry.skewAngleDeg, -0)).toBe(false);
+  });
+
+  it("migrates a complete implicit V1 snapshot to exact positive zero", () => {
+    const model = sanitizeLoadedModel(implicitV1Snapshot());
 
     expect(model.geometry.lengthM).toBe(12);
     expect(model.geometry.widthM).toBe(6);
     expect(model.geometry.thicknessM).toBe(0.35);
+    expect(model.geometry.skewAngleDeg).toBe(0);
+    expect(Object.is(model.geometry.skewAngleDeg, -0)).toBe(false);
     expect(model.supports[0].constraints.uz.type).toBe("fixed");
     expect(model.supports[0].constraints.rx.type).toBe("free");
     expect(model.supports[0].constraints.ry.type).toBe("free");
-    expect(model.vehicle.transverseSpacingM).toBeCloseTo(2.5 / 3, 8);
+    expect(model.vehicle.transverseSpacingM).toBe(1.2);
     expect(model.vehicle.wheelsPerAxle).toBe(4);
     expect(model.vehicle.axleInputs[0].axleLoadKn).toBe(120);
     expect(model.display.plotMode).toBe("structure");
     expect(model.display.mesh).toBe(true);
   });
 
-  it("prefers explicit transverse spacing when loading current models", () => {
-    const model = sanitizeLoadedModel({
-      vehicle: {
-        mode: "axle",
-        transverseSpacingM: "1.2",
-        trackM: "9.9",
-        wheelsPerAxle: "4",
-      },
-    });
+  it.each([0, -0, 19, -19, 45, -45, 45 - 1e-10, -45 + 1e-10])(
+    "accepts an in-range V2 skew angle of %s degrees",
+    (skewAngleDeg) => {
+      const model = sanitizeLoadedModel(v2Snapshot(skewAngleDeg));
 
-    expect(model.vehicle.transverseSpacingM).toBe(1.2);
-    expect(model.vehicle.wheelsPerAxle).toBe(4);
+      if (skewAngleDeg === 0) {
+        expect(model.geometry.skewAngleDeg).toBe(0);
+        expect(Object.is(model.geometry.skewAngleDeg, -0)).toBe(false);
+      } else {
+        expect(model.geometry.skewAngleDeg).toBe(skewAngleDeg);
+      }
+    },
+  );
+
+  it.each([45 + 1e-10, -45 - 1e-10, Number.NaN, Infinity, -Infinity, "19", null, {}])(
+    "falls back to zero without clamping invalid skew input %s",
+    (skewAngleDeg) => {
+      const model = sanitizeLoadedModel(v2Snapshot(skewAngleDeg));
+
+      expect(model.geometry.skewAngleDeg).toBe(0);
+      expect(Object.is(model.geometry.skewAngleDeg, -0)).toBe(false);
+    },
+  );
+
+  it("keeps structural skew independent from vehicle heading", () => {
+    const snapshot = v2Snapshot(19);
+    snapshot.placement.headingDeg = -33;
+
+    const model = sanitizeLoadedModel(snapshot);
+
+    expect(model.geometry.skewAngleDeg).toBe(19);
+    expect(model.placement.headingDeg).toBe(-33);
   });
 
-  it("falls back safely when nested arrays contain malformed items", () => {
-    const defaults = createDefaultModel();
-    const model = sanitizeLoadedModel({
-      geometry: {
-        widthM: "7.5",
+  it("rejects partial, unsupported, and discriminator/shape-mismatched snapshots", () => {
+    const v1WithV2Field = implicitV1Snapshot();
+    v1WithV2Field.supportSchema = "legacy-generalized-v1";
+    const v1WithSkew = implicitV1Snapshot();
+    v1WithSkew.geometry.skewAngleDeg = 19;
+    const v2MissingSkew = v2Snapshot(19);
+    delete v2MissingSkew.geometry.skewAngleDeg;
+    const wrongSupportSchema = v2Snapshot(19);
+    wrongSupportSchema.supportSchema = "physical-v1";
+    const wrongSectionSchema = v2Snapshot(19);
+    wrongSectionSchema.sectionSchema = "deck-local-v1";
+    const physicalSupport = v2Snapshot(19);
+    physicalSupport.supports = [
+      {
+        id: "E1",
+        name: "Physical edge",
+        kind: "edge",
+        edge: "start",
+        restraint: { w: { type: "fixed" } },
       },
-      supports: [null, { kind: "point" }],
-      vehicle: {
-        mode: "direct",
-        directWheels: [null],
-      },
-    });
+    ];
+    const wrongSection = v2Snapshot(19);
+    wrongSection.section = { mode: "longitudinal", centerTM: 2, widthM: 1 };
 
-    expect(model.geometry.widthM).toBe(7.5);
-    expect(model.supports.length).toBeGreaterThan(0);
-    expect(model.supports[0].kind).toBe("line");
-    if (model.supports[0].kind !== "line") {
-      throw new Error("Expected default line support.");
-    }
-    expect(model.supports[0].y2).toBe(7.5);
-    expect(model.vehicle.directWheels).toEqual(defaults.vehicle.directWheels);
-    expect(model.display.plotMode).toBe(defaults.display.plotMode);
+    [
+      {},
+      { ...v2Snapshot(19), schemaVersion: 3 },
+      v1WithV2Field,
+      v1WithSkew,
+      v2MissingSkew,
+      wrongSupportSchema,
+      wrongSectionSchema,
+      physicalSupport,
+      wrongSection,
+    ].forEach((snapshot) => {
+      expect(() => sanitizeLoadedModel(snapshot)).toThrow(/migration error/i);
+    });
   });
+
+  it("serializes exact V2 fields and round-trips V1 and V2 snapshots", () => {
+    const fromV1 = sanitizeLoadedModel(implicitV1Snapshot());
+    const fromV2 = sanitizeLoadedModel(v2Snapshot(-19));
+    fromV2.placement.headingDeg = 27;
+
+    const persisted = JSON.parse(serializeModelForSave(fromV2)) as Record<string, any>;
+
+    expect(Object.keys(persisted).sort()).toEqual(
+      [
+        "schemaVersion",
+        "supportSchema",
+        "projectName",
+        "description",
+        "assumptions",
+        "geometry",
+        "material",
+        "mesh",
+        "supports",
+        "vehicle",
+        "placement",
+        "display",
+        "section",
+      ].sort(),
+    );
+    expect(persisted.schemaVersion).toBe(2);
+    expect(persisted.supportSchema).toBe("legacy-generalized-v1");
+    expect(persisted).not.toHaveProperty("sectionSchema");
+    expect(persisted.geometry.skewAngleDeg).toBe(-19);
+    expect(persisted.placement.headingDeg).toBe(27);
+    expect(sanitizeLoadedModel(persisted)).toEqual(fromV2);
+    expect(sanitizeLoadedModel(JSON.parse(serializeModelForSave(fromV1)))).toEqual(fromV1);
+  });
+
+  it("matches an independently constructed complete V2 serialization oracle", () => {
+    const model = createDefaultModel();
+    model.projectName = "Distinct V2 project";
+    model.description = "Distinct persisted description";
+    model.assumptions = "Distinct persisted assumptions";
+    model.geometry = {
+      lengthM: 13.25,
+      widthM: 7.75,
+      thicknessM: 0.42,
+      skewAngleDeg: -19,
+    };
+    model.material = {
+      elasticModulusMPa: 31001,
+      poisson: 0.23,
+      densityKnPerM3: 24.5,
+    };
+    model.mesh = { density: 17, autoTargetElementM: 0.37 };
+    model.supports = [
+      {
+        id: "LINE-distinct",
+        name: "Distinct legacy line",
+        kind: "line",
+        constraints: {
+          uz: { type: "fixed" },
+          rx: { type: "spring", stiffness: 1234 },
+          ry: { type: "free" },
+        },
+        x1: 1.1,
+        y1: 2.2,
+        x2: 3.3,
+        y2: 4.4,
+      },
+      {
+        id: "POINT-distinct",
+        name: "Distinct legacy point",
+        kind: "point",
+        constraints: {
+          uz: { type: "spring", stiffness: 9876 },
+          rx: { type: "free" },
+          ry: { type: "fixed" },
+        },
+        x: 5.5,
+        y: 6.6,
+      },
+    ];
+    model.vehicle = {
+      name: "Distinct vehicle",
+      mode: "direct",
+      transverseSpacingM: 1.31,
+      wheelsPerAxle: 3,
+      wheelPatchLongM: 0.46,
+      wheelPatchTransM: 0.27,
+      axleInputs: [
+        { id: "AX-distinct", spacingFromPreviousM: 2.7, axleLoadKn: 111 },
+      ],
+      directWheels: [
+        {
+          id: "WH-distinct",
+          xM: 7.1,
+          yM: 3.2,
+          loadKn: 61,
+          patchLongM: 0.41,
+          patchTransM: 0.22,
+        },
+      ],
+    };
+    model.placement = {
+      centerXM: 8.1,
+      centerYM: 3.7,
+      headingDeg: 31,
+      transverseOffsetM: -0.8,
+      travelDirection: "y-",
+      pathStartM: -1.2,
+      pathEndM: 11.4,
+      pathStepM: 0.6,
+    };
+    model.display = {
+      plotMode: "deformed",
+      mesh: false,
+      supports: true,
+      wheelPatches: false,
+      contours: true,
+      tables: false,
+    };
+    model.section = { axis: "y", centerPerpM: 4.3, widthM: 1.6 };
+
+    const serialized = JSON.parse(serializeModelForSave(model));
+
+    expect(serialized).toEqual(EXPECTED_DISTINCT_V2_SNAPSHOT);
+    expect(serialized.supports).toEqual([
+      EXPECTED_DISTINCT_V2_SNAPSHOT.supports[0],
+      EXPECTED_DISTINCT_V2_SNAPSHOT.supports[1],
+    ]);
+  });
+
+  it.each(INVALID_SNAPSHOT_CASES)(
+    "rejects $name before numeric sanitization",
+    ({ mutate, expectedError }) => {
+      const snapshot = distinctV2Snapshot();
+      snapshot.geometry.skewAngleDeg = Number.POSITIVE_INFINITY;
+      mutate(snapshot);
+
+      let thrown: unknown;
+      try {
+        sanitizeLoadedModel(snapshot);
+      } catch (error) {
+        thrown = error;
+      }
+
+      expect(thrown).toBeInstanceOf(Error);
+      expect((thrown as Error).message).toBe(expectedError);
+    },
+  );
 });
 
 describe("run validation", () => {

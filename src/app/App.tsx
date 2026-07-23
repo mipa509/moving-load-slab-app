@@ -4,6 +4,7 @@ import {
   errorResults,
   idleResults,
   sanitizeLoadedModel,
+  serializeModelForSave,
   validateModelForRun,
 } from "./defaults";
 import { buildAutoRunSignature } from "./autoRun";
@@ -178,7 +179,7 @@ export const App = () => {
   }, [vehicleLibrary]);
 
   const handleSaveJson = () => {
-    const payload = JSON.stringify(model, null, 2);
+    const payload = serializeModelForSave(model);
     const safeName = model.projectName.trim().replace(/\s+/g, "-").toLowerCase() || "slab-model";
     downloadFile(`${safeName}.json`, payload, "application/json");
   };

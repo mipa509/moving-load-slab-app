@@ -7,10 +7,25 @@ import type {
   WheelPatch,
 } from "../model/types";
 
+import { normalizeSolverGeometry } from "../model/fromAppModel";
+import { buildDeckPolygon } from "../geometry/deckCoordinates";
+import {
+  clipConvexPolygons,
+  getPolygonAabb,
+  normalizeConvexPolygon,
+  polygonArea,
+  polygonCentroid,
+} from "../geometry/convexPolygon";
+import type { Polygon2D } from "../geometry/types";
+import type { StagedSkewSolverContract } from "../model/types";
+
+export type GeneratedWheelPatch =
+  WheelPatch & StagedSkewSolverContract.WheelPatchV2;
+
 export function generateWheelPatches(
   vehicle: VehicleDefinition,
   slab: SlabGeometry,
-): WheelPatch[] {
+): GeneratedWheelPatch[] {
   if (vehicle.kind === "explicit-wheels") {
     return vehicle.wheels.map((wheel, index) =>
       createWheelPatch({
@@ -32,11 +47,12 @@ export function generateWheelPatches(
 function buildAxleWheelPatches(
   vehicle: AxleBuilderVehicleDefinition,
   slab: SlabGeometry,
-): WheelPatch[] {
-  const patches: WheelPatch[] = [];
+): GeneratedWheelPatch[] {
+  const patches: GeneratedWheelPatch[] = [];
   const vectors = getDirectionVectors(vehicle.direction);
   const baseCenterX = vehicle.reference.x + vectors.transverse.x * (vehicle.transverseOffset ?? 0);
   const baseCenterY = vehicle.reference.y + vectors.transverse.y * (vehicle.transverseOffset ?? 0);
+  vehicle.axles.forEach((axle, axleIndex) => validateAxle(axle, axleIndex));
   const rawAxleOffsets = vehicle.axles.map((_, axleIndex) =>
     resolveAxleOffset(vehicle.axles, axleIndex),
   );
@@ -46,16 +62,26 @@ function buildAxleWheelPatches(
   );
 
   vehicle.axles.forEach((axle, axleIndex) => {
-    validateAxle(axle, axleIndex);
     const axleOffset = axleOffsets[axleIndex];
     const transverseSpacing = axle.transverseSpacing ?? vehicle.defaultTransverseSpacing;
     const patchLength = axle.patchLength ?? vehicle.defaultPatchLength;
     const patchWidth = axle.patchWidth ?? vehicle.defaultPatchWidth;
-    const wheelCount = Math.max(1, Math.round(axle.wheelCount ?? 2));
+    const requestedWheelCount = axle.wheelCount ?? 2;
+    const wheelCount = Math.max(1, Math.round(requestedWheelCount));
+    if (!Number.isSafeInteger(wheelCount)) {
+      throw new Error(`Axle ${axleIndex + 1} wheelCount rounds to an unsafe count.`);
+    }
 
-    if (transverseSpacing <= 0 || patchLength <= 0 || patchWidth <= 0) {
+    if (
+      !Number.isFinite(transverseSpacing)
+      || !Number.isFinite(patchLength)
+      || !Number.isFinite(patchWidth)
+      || transverseSpacing <= 0
+      || patchLength <= 0
+      || patchWidth <= 0
+    ) {
       throw new Error(
-        `Axle ${axleIndex + 1} has non-positive transverse wheel spacing or patch dimensions.`,
+        `Axle ${axleIndex + 1} must have finite positive transverse wheel spacing and patch dimensions.`,
       );
     }
 
@@ -63,6 +89,9 @@ function buildAxleWheelPatches(
     const axleCenterY = baseCenterY + vectors.along.y * axleOffset;
     const axleLabel = axle.id ?? `axle-${axleIndex + 1}`;
     const loadPerWheel = axle.axleLoad / wheelCount;
+    if (!Number.isFinite(loadPerWheel) || loadPerWheel <= 0) {
+      throw new Error(`Axle ${axleIndex + 1} produces a non-finite or non-positive load per wheel.`);
+    }
     const offsets = buildTransverseOffsets(transverseSpacing, wheelCount);
 
     offsets.forEach((offset, wheelIndex) => {
@@ -122,8 +151,17 @@ function validateAxle(axle: VehicleAxleDefinition, index: number): void {
   if (!Number.isFinite(axle.axleLoad) || axle.axleLoad <= 0) {
     throw new Error(`Axle ${index + 1} must have a positive axleLoad.`);
   }
-  if (axle.spacingToNext !== undefined && axle.spacingToNext < 0) {
-    throw new Error(`Axle ${index + 1} spacingToNext must be non-negative when provided.`);
+  if (axle.wheelCount !== undefined && !Number.isFinite(axle.wheelCount)) {
+    throw new Error(`Axle ${index + 1} wheelCount must be finite when provided.`);
+  }
+  if (
+    axle.spacingToNext !== undefined
+    && (!Number.isFinite(axle.spacingToNext) || axle.spacingToNext < 0)
+  ) {
+    throw new Error(`Axle ${index + 1} spacingToNext must be finite and non-negative when provided.`);
+  }
+  if (axle.offset !== undefined && !Number.isFinite(axle.offset)) {
+    throw new Error(`Axle ${index + 1} offset must be finite when provided.`);
   }
 }
 
@@ -175,12 +213,30 @@ function createWheelPatch(input: {
   patchLength: number;
   patchWidth: number;
   slab: SlabGeometry;
-}): WheelPatch {
-  if (input.patchLength <= 0 || input.patchWidth <= 0) {
+}): GeneratedWheelPatch {
+  if (
+    !Number.isFinite(input.patchLength)
+    || !Number.isFinite(input.patchWidth)
+    || input.patchLength <= 0
+    || input.patchWidth <= 0
+  ) {
     throw new Error(`Wheel patch "${input.id}" has non-positive dimensions.`);
   }
-  if (input.load <= 0) {
+  if (!Number.isFinite(input.load) || input.load <= 0) {
     throw new Error(`Wheel patch "${input.id}" must have a positive load.`);
+  }
+
+  if (!Number.isFinite(input.centerX) || !Number.isFinite(input.centerY)) {
+    throw new Error(`Wheel patch "${input.id}" has a non-finite center.`);
+  }
+
+  const originalAreaM2 = input.patchLength * input.patchWidth;
+  if (!Number.isFinite(originalAreaM2) || originalAreaM2 <= 0) {
+    throw new Error(`Wheel patch "${input.id}" has a non-finite or non-positive area.`);
+  }
+  const pressureKnPerM2 = input.load / originalAreaM2;
+  if (!Number.isFinite(pressureKnPerM2) || pressureKnPerM2 <= 0) {
+    throw new Error(`Wheel patch "${input.id}" has a non-finite or non-positive pressure.`);
   }
 
   const { dx, dy } = patchDimensionsForDirection(
@@ -189,29 +245,34 @@ function createWheelPatch(input: {
     input.patchWidth,
   );
 
-  const originalBounds = {
-    xMin: input.centerX - dx * 0.5,
-    xMax: input.centerX + dx * 0.5,
-    yMin: input.centerY - dy * 0.5,
-    yMax: input.centerY + dy * 0.5,
-  };
+  const rectangle: Polygon2D = [
+    { x: input.centerX - dx * 0.5, y: input.centerY - dy * 0.5 },
+    { x: input.centerX + dx * 0.5, y: input.centerY - dy * 0.5 },
+    { x: input.centerX + dx * 0.5, y: input.centerY + dy * 0.5 },
+    { x: input.centerX - dx * 0.5, y: input.centerY + dy * 0.5 },
+  ];
+  const originalPolygon = normalizeConvexPolygon(rectangle);
+  if (!originalPolygon) {
+    throw new Error(`Wheel patch "${input.id}" does not define a finite physical polygon.`);
+  }
+  const originalBounds = getPolygonAabb(originalPolygon);
+  if (!originalBounds) {
+    throw new Error(`Wheel patch "${input.id}" does not define finite bounds.`);
+  }
 
-  const slabBounds = {
-    xMin: 0,
-    xMax: input.slab.lengthX,
-    yMin: 0,
-    yMax: input.slab.lengthY,
-  };
-  const clippedBounds = intersectRectangles(originalBounds, slabBounds);
-  const clippedArea = clippedBounds ? rectangleArea(clippedBounds) : 0;
-  const area = dx * dy;
+  const normalizedSlab = normalizeSolverGeometry(input.slab);
+  const deckPolygon = buildDeckPolygon(normalizedSlab);
+  const clippedPolygon = clipConvexPolygons(originalPolygon, deckPolygon);
+  const clippedBounds = getPolygonAabb(clippedPolygon);
+  const clippedAreaM2 = clippedPolygon ? polygonArea(clippedPolygon) : 0;
+  const clippedCentroid = polygonCentroid(clippedPolygon);
 
   return {
     id: input.id,
     sourceWheelId: input.sourceWheelId,
     direction: input.direction,
     load: input.load,
-    pressure: input.load / area,
+    pressure: pressureKnPerM2,
     patchLength: input.patchLength,
     patchWidth: input.patchWidth,
     center: {
@@ -220,7 +281,16 @@ function createWheelPatch(input: {
     },
     originalBounds,
     clippedBounds,
-    clippedArea,
+    clippedArea: clippedAreaM2,
+    wheelLoadKn: input.load,
+    pressureKnPerM2,
+    patchLengthM: input.patchLength,
+    patchWidthM: input.patchWidth,
+    originalPolygon,
+    clippedPolygon,
+    originalAreaM2,
+    clippedAreaM2,
+    clippedCentroid,
   };
 }
 
@@ -233,27 +303,4 @@ function patchDimensionsForDirection(
     return { dx: patchLength, dy: patchWidth };
   }
   return { dx: patchWidth, dy: patchLength };
-}
-
-function intersectRectangles(
-  a: { xMin: number; xMax: number; yMin: number; yMax: number },
-  b: { xMin: number; xMax: number; yMin: number; yMax: number },
-): { xMin: number; xMax: number; yMin: number; yMax: number } | null {
-  const xMin = Math.max(a.xMin, b.xMin);
-  const xMax = Math.min(a.xMax, b.xMax);
-  const yMin = Math.max(a.yMin, b.yMin);
-  const yMax = Math.min(a.yMax, b.yMax);
-  if (xMax <= xMin || yMax <= yMin) {
-    return null;
-  }
-  return { xMin, xMax, yMin, yMax };
-}
-
-function rectangleArea(rect: {
-  xMin: number;
-  xMax: number;
-  yMin: number;
-  yMax: number;
-}): number {
-  return Math.max(0, rect.xMax - rect.xMin) * Math.max(0, rect.yMax - rect.yMin);
 }
