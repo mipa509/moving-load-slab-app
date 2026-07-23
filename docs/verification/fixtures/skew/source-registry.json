@@ -1,0 +1,307 @@
+{
+  "schemaVersion": "1.0.0",
+  "recordKind": "skew-verification-source-registry",
+  "protocolStatus": "Proposed",
+  "preparedDate": "2026-07-21",
+  "integrationBaseline": "7f4c77f24b0712075b754f13a232b9d9e7ac9c13",
+  "acceptanceState": "blocked_pending_primary_source_acquisition_and_independent_review",
+  "rightsPolicy": "Do not commit copyrighted source artifacts unless redistribution is permitted; store direct URL, access date and a hash of any lawfully archived review copy.",
+  "acquisitionStates": [
+    "primary_full_text_acquired",
+    "publisher_record_and_text_acquired",
+    "publisher_metadata_only",
+    "authoritative_secondary_full_text",
+    "landing_page_only",
+    "not_acquired"
+  ],
+  "sources": [
+    {
+      "sourceId": "SRC-INTERNAL-ADR-SKEW-001",
+      "sourceRole": "governing_internal_convention",
+      "citation": "ADR-skew-mathematical-conventions.md",
+      "directUrl": "../../../adr/ADR-skew-mathematical-conventions.md",
+      "accessDate": "2026-07-21",
+      "acquisitionState": "primary_full_text_acquired",
+      "locators": [
+        {
+          "locator": "accepted ADR, complete document",
+          "supports": "axes, displacement and rotation conventions, physical couple mapping, support-action residual and equilibrium origin/equations"
+        }
+      ],
+      "permittedUse": "governance_only"
+    },
+    {
+      "sourceId": "SRC-MORLEY-1962",
+      "sourceRole": "original_benchmark_source",
+      "authors": ["L. S. D. Morley"],
+      "title": "Bending of a Simply Supported Rhombic Plate under Uniform Normal Loading",
+      "journal": "The Quarterly Journal of Mechanics and Applied Mathematics",
+      "year": 1962,
+      "volume": "15",
+      "issue": "4",
+      "pages": "413-426",
+      "publicationDate": "1962-11-01",
+      "doi": "10.1093/qjmam/15.4.413",
+      "directUrl": "https://academic.oup.com/qjmam/article/15/4/413/1864853",
+      "accessDate": "2026-07-21",
+      "acquisitionState": "publisher_metadata_only",
+      "artifactPath": null,
+      "artifactSha256": null,
+      "locators": [
+        {
+          "locator": "publisher record and abstract",
+          "supports": "bibliographic identity and high-level method only"
+        }
+      ],
+      "correctedBy": ["SRC-MORLEY-1963-CORRIGENDUM"],
+      "ambiguities": [
+        "Full original equations, figures and tables were not acquired.",
+        "Published axes and signs cannot be mapped to the governing ADR.",
+        "No original numeric datum has an independently checked locator."
+      ],
+      "permittedUse": "identity_and_acquisition_target_only"
+    },
+    {
+      "sourceId": "SRC-MORLEY-1963-CORRIGENDUM",
+      "sourceRole": "primary_correction",
+      "authors": ["L. S. D. Morley"],
+      "title": "Corrigendum",
+      "journal": "The Quarterly Journal of Mechanics and Applied Mathematics",
+      "year": 1963,
+      "volume": "16",
+      "issue": "2",
+      "pages": "271",
+      "doi": "10.1093/qjmam/16.2.271",
+      "directUrl": "https://academic.oup.com/qjmam/article/16/2/271/1914673",
+      "accessDate": "2026-07-21",
+      "acquisitionState": "publisher_record_and_text_acquired",
+      "locators": [
+        {
+          "printedPage": 271,
+          "locator": "complete correction text",
+          "supports": "Figures 4 and 5 coordinate labels should read x, y"
+        }
+      ],
+      "permittedUse": "mandatory_correction_to_SRC-MORLEY-1962"
+    },
+    {
+      "sourceId": "SRC-RAZZAQUE-1973",
+      "sourceRole": "original_benchmark_source",
+      "authors": ["A. Razzaque"],
+      "title": "Program for Triangular Bending Elements with Derivative Smoothing",
+      "journal": "International Journal for Numerical Methods in Engineering",
+      "year": 1973,
+      "volume": "6",
+      "issue": "3",
+      "pages": "333-343",
+      "doi": "10.1002/nme.1620060305",
+      "directUrl": "https://doi.org/10.1002/nme.1620060305",
+      "accessDate": "2026-07-21",
+      "acquisitionState": "not_acquired",
+      "artifactPath": null,
+      "artifactSha256": null,
+      "ambiguities": [
+        "Secondary bibliographies conflict between terminal pages 343 and 345; 333-343 is retained provisionally.",
+        "Original geometry figure, supported-edge identity, axes, rotations, equations and tables were not acquired."
+      ],
+      "permittedUse": "identity_and_acquisition_target_only"
+    },
+    {
+      "sourceId": "SRC-GRBAC-RIBARIC-2022",
+      "sourceRole": "authoritative_secondary_transcription_and_numerical_crosscheck",
+      "authors": ["Marin Grbac", "Dragan Ribaric"],
+      "title": "Accurate Numerical Solutions for Standard Skew Plate Benchmark Problems",
+      "journal": "Proceedings of the Faculty of Civil Engineering",
+      "year": 2022,
+      "volume": "25",
+      "issue": "1",
+      "pages": "237-246",
+      "doi": "10.32762/zr.25.1.15",
+      "directUrl": "https://hrcak.srce.hr/file/417358",
+      "articleUrl": "https://ojs3.uniri.hr/index.php/zr/en/article/view/186",
+      "accessDate": "2026-07-21",
+      "acquisitionState": "authoritative_secondary_full_text",
+      "artifactPath": null,
+      "artifactSha256": null,
+      "locators": [
+        {
+          "printedPages": "239-243",
+          "pdfPagesOneBased": "3-7",
+          "locator": "Morley case text, Figure 1 and Tables 1-5",
+          "supports": "secondary case transcription and later FE cross-check"
+        },
+        {
+          "printedPages": "243-245",
+          "pdfPagesOneBased": "7-9",
+          "locator": "Razzaque case text, Figure 2 and Tables 6-10",
+          "supports": "secondary case transcription and later FE cross-check"
+        }
+      ],
+      "permittedUse": "source_discovery_secondary_transcription_and_crosscheck_not_acceptance"
+    },
+    {
+      "sourceId": "SRC-LEVINSON-COOKE-1983",
+      "sourceRole": "candidate_primary_analytical_reference",
+      "authors": ["M. Levinson", "D. W. Cooke"],
+      "title": "Thick Rectangular Plates-I: The Generalized Navier Solution",
+      "journal": "International Journal of Mechanical Sciences",
+      "year": 1983,
+      "volume": "25",
+      "issue": "3",
+      "pages": "199-205",
+      "doi": "10.1016/0020-7403(83)90093-0",
+      "directUrl": "https://www.sciencedirect.com/science/article/pii/0020740383900930",
+      "accessDate": "2026-07-21",
+      "acquisitionState": "publisher_metadata_only",
+      "locators": [
+        {
+          "locator": "publisher abstract",
+          "supports": "candidate scope includes generalized Navier solution and Mindlin theory"
+        }
+      ],
+      "permittedUse": "candidate_acquisition_target_only"
+    },
+    {
+      "sourceId": "SRC-NAUMENKO-ETAL-2001",
+      "sourceRole": "candidate_primary_analytical_reference",
+      "authors": ["K. Naumenko", "J. Altenbach", "H. Altenbach", "V. K. Naumenko"],
+      "title": "Closed and Approximate Analytical Solutions for Rectangular Mindlin Plates",
+      "journal": "Acta Mechanica",
+      "year": 2001,
+      "volume": "147",
+      "pages": "153-172",
+      "doi": "10.1007/BF01182359",
+      "directUrl": "https://link.springer.com/article/10.1007/BF01182359",
+      "accessDate": "2026-07-21",
+      "acquisitionState": "publisher_metadata_only",
+      "locators": [
+        {
+          "locator": "official Springer publisher metadata and Summary",
+          "supports": "bibliographic identity and abstract-level scope; full article remains subscription content"
+        }
+      ],
+      "permittedUse": "candidate_acquisition_target_only"
+    },
+    {
+      "sourceId": "SRC-BATHE-DVORKIN-1985",
+      "sourceRole": "primary_formulation_and_numerical_crosscheck",
+      "authors": ["Klaus-Jurgen Bathe", "Eduardo N. Dvorkin"],
+      "title": "A Four-Node Plate Bending Element Based on Mindlin/Reissner Plate Theory and a Mixed Interpolation",
+      "journal": "International Journal for Numerical Methods in Engineering",
+      "year": 1985,
+      "volume": "21",
+      "pages": "367-383",
+      "doi": "10.1002/nme.1620210213",
+      "directUrl": "https://web.mit.edu/kjb/www/Publications_Prior_to_1998/A_Four-Node_Plate_Bending_Element_Based_on_Mindlin_Reissner_Plate_Theory_and_a_Mixed_Interpolation.pdf",
+      "accessDate": "2026-07-21",
+      "acquisitionState": "primary_full_text_acquired",
+      "artifactPath": null,
+      "artifactSha256": null,
+      "locators": [
+        {
+          "printedPages": "369-372",
+          "pdfPagesOneBased": "3-6",
+          "locator": "equations (1)-(9), Figures 1-2",
+          "supports": "Mindlin/Reissner kinematics, constitutive terms, k=5/6 and mixed shear interpolation"
+        },
+        {
+          "printedPages": "376-377",
+          "pdfPagesOneBased": "10-11",
+          "locator": "Figures 8-10",
+          "supports": "plotted thin square-plate numerical comparisons only"
+        }
+      ],
+      "ambiguities": [
+        "Square-plate reference values are plotted rather than tabulated.",
+        "The comparison reference is Kirchhoff thin-plate theory, not a finite-thickness analytical Mindlin table."
+      ],
+      "permittedUse": "formulation_evidence_and_crosscheck_not_V28_acceptance"
+    },
+    {
+      "sourceId": "SRC-DARILMAZ-2005",
+      "sourceRole": "primary_later_numerical_study_and_secondary_analytical_transcription",
+      "authors": ["Kutlu Darilmaz"],
+      "title": "An Assumed-Stress Finite Element for Static and Free Vibration Analysis of Reissner-Mindlin Plates",
+      "journal": "Structural Engineering and Mechanics",
+      "year": 2005,
+      "volume": "19",
+      "issue": "2",
+      "pages": "199-215",
+      "doi": "10.12989/sem.2005.19.2.199",
+      "directUrl": "https://www.techno-press.org/download.php?journal=sem&num=2&ordernum=6&volume=19",
+      "accessDate": "2026-07-21",
+      "acquisitionState": "primary_full_text_acquired",
+      "artifactPath": null,
+      "artifactSha256": null,
+      "locators": [
+        {
+          "printedPage": 200,
+          "pdfPageOneBased": 2,
+          "locator": "equation (2)",
+          "supports": "Reissner-Mindlin compliance including 5/6 shear correction"
+        },
+        {
+          "printedPage": 205,
+          "pdfPageOneBased": 7,
+          "locator": "Example 2, Figure 3 and Table 1",
+          "supports": "square-plate definition, normalization and attributed analytical row"
+        }
+      ],
+      "ambiguities": [
+        "Table 1 analytical values are attributed to Timoshenko and Woinowsky-Krieger (1959), which was not acquired.",
+        "The exact underlying analytical support convention and derivation were not independently verified."
+      ],
+      "permittedUse": "secondary_analytical_transcription_and_numerical_crosscheck_not_V28_acceptance"
+    },
+    {
+      "sourceId": "SRC-TIMOSHENKO-WOINOWSKY-KRIEGER-1959",
+      "sourceRole": "underlying_rectangular_analytical_source_cited_by_Darilmaz",
+      "authors": ["S. P. Timoshenko", "S. Woinowsky-Krieger"],
+      "title": "Theory of Plates and Shells",
+      "edition": "2nd",
+      "publisher": "McGraw-Hill",
+      "publicationPlace": "New York",
+      "year": 1959,
+      "doi": null,
+      "directUrl": null,
+      "accessDate": "2026-07-21",
+      "acquisitionState": "not_acquired",
+      "locators": [
+        {
+          "printedPage": 214,
+          "sourceId": "SRC-DARILMAZ-2005",
+          "locator": "Darilmaz reference list",
+          "supports": "edition and bibliographic identity only"
+        }
+      ],
+      "ambiguities": [
+        "Darilmaz does not give the exact book page, equation or table supporting its Table 1 analytical row.",
+        "The book content was not acquired during WP-004."
+      ],
+      "permittedUse": "acquisition_target_only"
+    },
+    {
+      "sourceId": "SRC-BSI-EN-1991-2-2023",
+      "sourceRole": "official_standard_metadata_not_kernel_validation",
+      "organization": "British Standards Institution",
+      "title": "BS EN 1991-2:2023 Eurocode 1. Actions on structures. Traffic loads on bridges and other civil engineering works",
+      "year": 2023,
+      "publicationDate": "2023-11-30",
+      "directUrl": "https://knowledge.bsigroup.com/products/eurocode-1-actions-on-structures-traffic-loads-on-bridges-and-other-civil-engineering-works",
+      "accessDate": "2026-07-21",
+      "acquisitionState": "publisher_metadata_only",
+      "permittedUse": "future_project_compliance_basis_only"
+    },
+    {
+      "sourceId": "SRC-BSI-PD-6688-2-2011",
+      "sourceRole": "official_UK_NA_background_metadata_not_kernel_validation",
+      "organization": "British Standards Institution",
+      "title": "PD 6688-2:2011 Background to the National Annex to BS EN 1991-2",
+      "year": 2011,
+      "directUrl": "https://knowledge.bsigroup.com/products/background-to-the-national-annex-to-bs-en-1991-2-traffic-loads-on-bridges",
+      "accessDate": "2026-07-21",
+      "acquisitionState": "publisher_metadata_only",
+      "permittedUse": "future_project_compliance_basis_only"
+    }
+  ]
+}

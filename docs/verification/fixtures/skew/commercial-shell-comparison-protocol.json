@@ -1,0 +1,442 @@
+{
+  "schemaVersion": "1.0.0",
+  "recordKind": "commercial-shell-pre-results-comparison-protocol",
+  "protocolStatus": "Proposed",
+  "preparedDate": "2026-07-21",
+  "integrationBaseline": "7f4c77f24b0712075b754f13a232b9d9e7ac9c13",
+  "governingConventionSourceId": "SRC-INTERNAL-ADR-SKEW-001",
+  "artifactRole": "schema_template_only",
+  "wp004Task6Met": false,
+  "wp004Task6State": "blocked_uninstantiated",
+  "instantiationState": "uninstantiated",
+  "preRunApprovalRequired": true,
+  "preRunApprovalSatisfied": false,
+  "runPermitted": false,
+  "candidateResultGenerationViewingImportInspectionPermitted": false,
+  "resultsPresent": false,
+  "acceptanceTolerancesPresent": false,
+  "purpose": "Define the schema for a future independently reviewed commercial-shell comparison. This file does not instantiate or select a product, element, comparison case or mesh.",
+  "instantiation": {
+    "valuesSupplied": false,
+    "blocker": "Repository context does not select a licensed external solver/product or supply the exact comparison case and mesh decisions required by WP-004 task 6.",
+    "requiredExternalDecisions": [
+      "licensedProductName",
+      "licensedProductVersion",
+      "licensedProductBuild",
+      "solverNameAndVersion",
+      "shellElementLibraryAndCode",
+      "shellElementBendingShearIntegrationAndStabilizationFormulation",
+      "exactComparisonFixtureGeometry",
+      "exactComparisonFixtureMaterial",
+      "exactComparisonFixtureSupports",
+      "exactComparisonFixtureLoads",
+      "exactComparisonFixtureLoadStations",
+      "exactComparisonFixtureExtractionStations",
+      "exactNestedMeshSubdivisionsForEveryLevel",
+      "independentPreRunReviewerAndApproval"
+    ],
+    "unblockCriteria": "A separately reviewed instantiated revision must fill every required external decision and approve acceptance quantities and tolerances before any candidate implementation or commercial result is generated, viewed, imported or inspected.",
+    "prohibitedInference": "Do not invent, infer or choose missing external values from repository context or after observing candidate results."
+  },
+  "nonClaims": [
+    "A commercial-shell comparison is not an analytical proof of the kernel.",
+    "Mesh convergence does not make a commercial result exact.",
+    "This protocol does not establish Eurocode or UK National Annex compliance."
+  ],
+  "independence": {
+    "modelPreparedByMustBeIndependentOfKernelImplementation": true,
+    "independentAuditPermittedInstead": true,
+    "requiredFieldsBeforeRun": [
+      "preparerName",
+      "preparerRole",
+      "reviewerName",
+      "reviewerRole",
+      "independenceStatement",
+      "approvalDate",
+      "approvedProtocolRevision"
+    ]
+  },
+  "caseFreeze": {
+    "requiredFieldsBeforeRun": [
+      "comparisonCaseId",
+      "caseRevision",
+      "appInputFixtureSha256",
+      "governingADRRevision",
+      "physicalVertexOrder",
+      "globalVertexCoordinates",
+      "skewAngleDefinition",
+      "thickness",
+      "material",
+      "supportLines",
+      "loadStations",
+      "loadPatches",
+      "extractionStations"
+    ],
+    "changeRule": "Any change after pre-run approval creates a new case revision; do not overwrite or silently amend the approved case."
+  },
+  "softwareAndSolver": {
+    "requiredFieldsBeforeRun": [
+      "productName",
+      "productVersion",
+      "productBuild",
+      "solverName",
+      "solverVersion",
+      "licenseOrEdition",
+      "analysisType",
+      "linearOrNonlinear",
+      "smallOrLargeDisplacement",
+      "equationSolver",
+      "convergenceSettings",
+      "warningHandling",
+      "runPlatform",
+      "runDate"
+    ],
+    "requiredAnalysis": {
+      "static": true,
+      "linearElastic": true,
+      "smallDisplacement": true
+    },
+    "deviationRule": "A different analysis regime requires a separately approved comparison case and rationale."
+  },
+  "shellElement": {
+    "requiredFieldsBeforeRun": [
+      "elementLibraryName",
+      "elementCode",
+      "nodeCount",
+      "elementShape",
+      "interpolationOrder",
+      "bendingTheory",
+      "transverseShearFormulation",
+      "shearCorrectionTreatment",
+      "bendingIntegrationRule",
+      "shearIntegrationRule",
+      "membraneIntegrationRule",
+      "drillingRotationTreatment",
+      "hourglassOrZeroEnergyControl",
+      "warpingOrAllmanEnhancement",
+      "stressResultLocation",
+      "stressExtrapolation",
+      "nodalAveraging",
+      "documentationLocator"
+    ],
+    "compatibilityReview": [
+      "State whether the element is Reissner-Mindlin, Kirchhoff-Love or another shell theory.",
+      "State whether transverse shear is included and how locking is controlled.",
+      "State all stabilization and report available stabilization energies or forces.",
+      "Do not select an element only because its output happens to agree with the app."
+    ]
+  },
+  "unitsAndAxes": {
+    "requiredFieldsBeforeRun": [
+      "commercialUnitSystem",
+      "appUnitSystem",
+      "globalXDefinition",
+      "globalYDefinition",
+      "globalZDefinition",
+      "shellLocal1Definition",
+      "shellLocal2Definition",
+      "shellNormalDefinition",
+      "midsurfaceOrReferenceSurface",
+      "shellOffset",
+      "rotationRightHandRules",
+      "pressurePositiveDirection",
+      "reportedMomentSignConvention",
+      "reportedReactionSignConvention"
+    ],
+    "ADRTarget": {
+      "positiveZ": "downward",
+      "positiveW": "downward",
+      "internalRotations": ["betaX", "betaY"],
+      "physicalRotationMapping": {
+        "phi_x": "-betaY",
+        "phi_y": "betaX"
+      },
+      "physicalCoupleMapping": {
+        "Cx": "-Gy",
+        "Cy": "Gx"
+      },
+      "rawBendingTensorBasis": "global orthonormal x-y"
+    },
+    "mappingWorksheetRequired": true,
+    "mappingProofRequired": "Demonstrate each raw-to-ADR sign and axis mapping with a documented unit load or other independently reviewable sign check before comparison outputs are interpreted."
+  },
+  "geometry": {
+    "constructionRule": "Create the shell midsurface from the same four physical global vertices and vertex order as the approved app fixture; do not recreate geometry from a screenshot or nominal angle alone.",
+    "requiredFieldsBeforeRun": [
+      "vertexIds",
+      "vertexCoordinates",
+      "edgeIds",
+      "edgeConnectivity",
+      "deckLengthDefinition",
+      "deckWidthDefinition",
+      "skewAngleValue",
+      "skewAngleUnit",
+      "skewAngleDefinition",
+      "globalToObliqueCoordinateTransform",
+      "area",
+      "thickness",
+      "midsurfaceOffset"
+    ],
+    "obliqueAxisRule": "Oblique s/t geometry directions are not tensor axes unless an explicit orthonormal tensor transformation is supplied and reviewed."
+  },
+  "material": {
+    "requiredFieldsBeforeRun": [
+      "modelName",
+      "elasticModulus",
+      "elasticModulusUnit",
+      "poissonRatio",
+      "thickness",
+      "thicknessUnit",
+      "shearModulusUsedByProduct",
+      "transverseShearCorrectionUsedByProduct",
+      "density",
+      "densityActiveInStaticCase"
+    ],
+    "consistencyChecks": [
+      "Record whether shear modulus is computed from E and nu or entered independently.",
+      "Record whether density, self-weight, thermal strain or other unintended action is active.",
+      "Record section orientation and all through-thickness integration points."
+    ]
+  },
+  "supportsAndRigidBodyControl": {
+    "plateEquivalenceRule": "On each physical clamped plate support line restrain transverse translation and the two bending rotations required by the approved plate case. Do not automatically restrain all six shell DOFs.",
+    "membraneRigidBodyRule": "Because the app plate has no in-plane DOFs, leave shell in-plane translations free except for the minimum geometrically frozen constraints needed to remove rigid membrane modes.",
+    "requiredFieldsBeforeRun": [
+      "supportLineIds",
+      "supportLineCoordinates",
+      "constrainedCommercialComponentsByLine",
+      "commercialToADRConstraintMapping",
+      "membraneStabilizationNodeIds",
+      "membraneStabilizationComponents",
+      "geometricRuleSelectingStabilizationNodes",
+      "drillingRotationConstraints",
+      "constraintMethod",
+      "constraintEquationOrCouplingDetails"
+    ],
+    "requiredPostRunDisclosures": [
+      "membraneStabilizationReactions",
+      "membraneForceResultants",
+      "drillingOrHourglassStabilizationMeasures",
+      "supportConstraintWarnings"
+    ],
+    "prohibitedShortcut": "Fully fixing every commercial shell DOF on an edge without demonstrating equivalence to the plate case."
+  },
+  "loads": {
+    "requiredFieldsBeforeRunPerPatch": [
+      "loadPatchId",
+      "loadStationId",
+      "grossContactLength",
+      "grossContactWidth",
+      "grossContactArea",
+      "grossPatchGlobalVertices",
+      "clippedPatchGlobalVertices",
+      "clippedLoadedArea",
+      "pressureMagnitude",
+      "pressureUnit",
+      "pressureDirection",
+      "grossUnclippedForce",
+      "appliedClippedForce",
+      "edgeClippingRule",
+      "loadApplicationMethod",
+      "meshBoundaryConformity"
+    ],
+    "pressureRule": "Preserve the approved pressure after geometric clipping. Do not renormalize to recover gross patch force unless the approved case explicitly requires it.",
+    "loadAudit": "Integrate commercial applied nodal or surface loads independently and compare the signed force and moments with the approved clipped polygon before solving."
+  },
+  "meshFamilies": {
+    "minimumNestedLevels": 4,
+    "requiredFieldsBeforeRunPerLevel": [
+      "meshId",
+      "parentMeshId",
+      "generationRule",
+      "edgeSubdivisions",
+      "elementCount",
+      "nodeCount",
+      "elementTopology",
+      "nominalElementDimensions",
+      "minimumAndMaximumAspectRatio",
+      "minimumAndMaximumJacobianMetric",
+      "minimumAndMaximumSkewMetric",
+      "localRefinementRegions",
+      "loadBoundaryConformity",
+      "supportBoundaryConformity"
+    ],
+    "freezeRule": "All levels, refinements and extraction stations are approved before results. Do not add a mesh level solely to obtain a desired comparison.",
+    "comparisonRule": "Use one systematic family with comparable geometry and loading rather than unrelated hand-tuned meshes."
+  },
+  "extraction": {
+    "requiredFieldsBeforeRunPerStation": [
+      "stationId",
+      "quantityIds",
+      "globalCoordinates",
+      "obliqueCoordinatesIfUsed",
+      "selectionRule",
+      "distanceFromSupports",
+      "distanceFromLoadDiscontinuities",
+      "distanceFromSingularCorners",
+      "surfaceOrLayer",
+      "integrationPointOrSection",
+      "extrapolationRule",
+      "nodalAveragingRule",
+      "sectionCutIntegrationRule"
+    ],
+    "singularityRule": "Do not use a known singular corner or discontinuity for pointwise acceptance unless singular behaviour is the explicit purpose of the case.",
+    "rawDataRule": "Retain unaveraged integration-point or section-cut data alongside any processed display value."
+  },
+  "signedExportSchemas": {
+    "displacementRotation": [
+      "caseId",
+      "meshId",
+      "loadStationId",
+      "pointId",
+      "x",
+      "y",
+      "z",
+      "rawTranslation1",
+      "rawTranslation2",
+      "rawTranslation3",
+      "rawRotation1",
+      "rawRotation2",
+      "rawRotation3",
+      "rawAxes",
+      "rawUnits",
+      "mappedW",
+      "mappedBetaX",
+      "mappedBetaY",
+      "mappingRevision"
+    ],
+    "bendingResultants": [
+      "caseId",
+      "meshId",
+      "loadStationId",
+      "pointOrSectionId",
+      "x",
+      "y",
+      "z",
+      "surfaceOrLayer",
+      "extractionMethod",
+      "rawMoment11",
+      "rawMoment22",
+      "rawMoment12",
+      "rawAxes",
+      "rawUnits",
+      "mappedMx",
+      "mappedMy",
+      "mappedMxy",
+      "mappingRevision"
+    ],
+    "supportActions": [
+      "caseId",
+      "meshId",
+      "loadStationId",
+      "supportSegmentId",
+      "nodeOrSectionId",
+      "x",
+      "y",
+      "z",
+      "rawForce1",
+      "rawForce2",
+      "rawForce3",
+      "rawCouple1",
+      "rawCouple2",
+      "rawCouple3",
+      "rawAxes",
+      "rawUnits",
+      "mappedRz",
+      "mappedCx",
+      "mappedCy",
+      "mappingRevision"
+    ],
+    "equilibrium": [
+      "caseId",
+      "meshId",
+      "loadStationId",
+      "originX",
+      "originY",
+      "appliedFz",
+      "supportFz",
+      "residualFz",
+      "appliedMx",
+      "supportMx",
+      "residualMx",
+      "appliedMy",
+      "supportMy",
+      "residualMy",
+      "rawTermManifest",
+      "units"
+    ],
+    "meshSummary": [
+      "caseId",
+      "meshId",
+      "elementCount",
+      "nodeCount",
+      "qualityMetrics",
+      "solverWarnings",
+      "discardedModes",
+      "stabilizationMeasure",
+      "artifactManifestId"
+    ]
+  },
+  "equilibrium": {
+    "origin": "O = (0, W/2)",
+    "ADRExpressions": {
+      "forceZ": "sum(Fz)",
+      "momentXPerAction": "(y - W/2) * Fz + Cx",
+      "momentYPerAction": "-x * Fz + Cy"
+    },
+    "reportingRule": "Report signed applied, support and residual totals and the individual action terms used to calculate each total.",
+    "normalizationRule": "If normalized residuals are later approved, retain the dimensional signed residuals and freeze the denominator before results."
+  },
+  "artifactManifest": {
+    "requiredArtifacts": [
+      "nativeCommercialModel",
+      "neutralOrTextInputDeckIfAvailable",
+      "solverInputListing",
+      "solverOutputLog",
+      "softwareAndElementDocumentationLocator",
+      "geometryAndAxesScreenshot",
+      "supportAndStabilizationScreenshot",
+      "loadPatchScreenshot",
+      "meshScreenshotsForEveryLevel",
+      "rawUnaveragedResultExports",
+      "mappedSignedResultExports",
+      "equilibriumWorkbookOrScript",
+      "mappingWorksheet",
+      "runManifest"
+    ],
+    "requiredFieldsPerArtifact": [
+      "artifactId",
+      "fileName",
+      "mediaType",
+      "sha256",
+      "createdBy",
+      "createdDate",
+      "softwareVersion",
+      "rightsOrLicenseRestriction",
+      "repositoryPathOrControlledStoreReference"
+    ]
+  },
+  "reviewGates": [
+    {
+      "gateId": "CS-PRE-01",
+      "decision": "case_geometry_axes_supports_loads_and_stations_frozen",
+      "mustPassBefore": "model_run"
+    },
+    {
+      "gateId": "CS-PRE-02",
+      "decision": "software_element_formulation_and_mesh_families_frozen",
+      "mustPassBefore": "model_run"
+    },
+    {
+      "gateId": "CS-PRE-03",
+      "decision": "raw_to_ADR_sign_mapping_independently_reviewed",
+      "mustPassBefore": "result_interpretation"
+    },
+    {
+      "gateId": "CS-PRE-04",
+      "decision": "acceptance_quantities_and_tolerances_independently_approved_without_candidate_results",
+      "mustPassBefore": "any_candidate_implementation_or_commercial_result_is_generated_viewed_imported_or_inspected"
+    }
+  ],
+  "contractDeviationRule": "No run or result generation, viewing, import or inspection is permitted while this template is uninstantiated or before CS-PRE-04 passes. Any result, changed tolerance, mesh, station, restraint, load or mapping introduced before the applicable gate requires a new controlled revision and independent disposition."
+}

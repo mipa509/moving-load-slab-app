@@ -1,0 +1,394 @@
+{
+  "schemaVersion": "1.0.0",
+  "recordKind": "skew-benchmark-source-status",
+  "protocolStatus": "Proposed",
+  "preparedDate": "2026-07-21",
+  "integrationBaseline": "7f4c77f24b0712075b754f13a232b9d9e7ac9c13",
+  "governingConventionSourceId": "SRC-INTERNAL-ADR-SKEW-001",
+  "acceptanceTolerancesDefined": false,
+  "observedImplementationResultsPresent": false,
+  "standardsClaim": {
+    "claimMade": false,
+    "standard": null,
+    "nationalAnnex": null,
+    "note": "Published benchmarks and implementation comparisons do not establish standards compliance."
+  },
+  "qualificationRule": "A numeric reference is not acceptance-eligible until its original source, exact locator, units, normalization, convention and independent transcription review are complete.",
+  "cases": [
+    {
+      "caseId": "MORLEY-RHOMBUS-30-UDL",
+      "title": "Morley 30-degree simply supported rhombus under uniform normal load",
+      "acceptanceState": "blocked_original_not_acquired",
+      "executableFixtureAllowed": false,
+      "originalSourceId": "SRC-MORLEY-1962",
+      "secondarySourceId": "SRC-GRBAC-RIBARIC-2022",
+      "geometry": [
+        {
+          "field": "edgeLengthL",
+          "value": 100,
+          "originalUnit": "unspecified_consistent_length_unit",
+          "sourceId": "SRC-GRBAC-RIBARIC-2022",
+          "sourceLocator": "printed p.239, PDF p.3, Morley problem text; Figure 1 on printed p.240",
+          "sourceRelation": "secondary_transcription",
+          "transcriptionReviewState": "unverified",
+          "ambiguityStatus": "original_not_checked"
+        },
+        {
+          "field": "acuteInteriorAngle",
+          "value": 30,
+          "originalUnit": "degree",
+          "sourceId": "SRC-GRBAC-RIBARIC-2022",
+          "sourceLocator": "printed p.239, PDF p.3, Morley problem text; Figure 1 on printed p.240",
+          "sourceRelation": "secondary_transcription",
+          "transcriptionReviewState": "unverified",
+          "ambiguityStatus": "original_angle_definition_not_checked"
+        }
+      ],
+      "load": {
+        "type": "uniform_normal_pressure",
+        "q": 1,
+        "originalUnit": "unspecified_consistent_force_per_area_unit",
+        "sourceId": "SRC-GRBAC-RIBARIC-2022",
+        "sourceLocator": "printed pp.238-239, PDF pp.2-3, numerical-procedure and Morley problem text",
+        "sourceRelation": "secondary_transcription",
+        "transcriptionReviewState": "unverified",
+        "ambiguityStatus": "published_sign_not_mapped_to_ADR"
+      },
+      "boundaryCondition": {
+        "sourceLiteralSummary": "all four edges soft simply supported: w=0 and both reported coordinate rotations unrestrained",
+        "sourceId": "SRC-GRBAC-RIBARIC-2022",
+        "sourceLocator": "printed p.239, PDF p.3, Morley problem text; Figure 1 on printed p.240",
+        "sourceRelation": "secondary_transcription",
+        "transcriptionReviewState": "unverified",
+        "ambiguityStatus": "rotation_symbols_and_edge_axes_not_verified_in_original"
+      },
+      "secondaryStudyModel": {
+        "plateTheory": "Reissner-Mindlin as reported by the secondary study",
+        "degreesOfFreedom": ["w", "theta_x", "theta_y"],
+        "material": {
+          "E": 10.92,
+          "EOriginalUnit": "unspecified_consistent_modulus_unit",
+          "nu": 0.3,
+          "shearCorrectionK": "5/6"
+        },
+        "thicknessRatiosLOverH": [1000, 100, 10],
+        "meshFamilies": ["128x128", "256x256", "512x512", "1024x1024"],
+        "element": "three-node T3 triangular plate element in FEAP",
+        "centreMomentExtraction": "Gauss point closest to the plate centre",
+        "sourceId": "SRC-GRBAC-RIBARIC-2022",
+        "sourceLocator": "printed pp.238-242, PDF pp.2-6, numerical procedure and Tables 1-4",
+        "sourceRelation": "primary_for_2022_study_only",
+        "transcriptionReviewState": "unverified",
+        "ambiguityStatus": "not_original_Morley_case_metadata"
+      },
+      "sourceReportedOriginalReferenceData": [
+        {
+          "quantity": "centralDeflectionNormalized",
+          "value": 0.408,
+          "originalUnit": "dimensionless",
+          "sourceId": "SRC-GRBAC-RIBARIC-2022",
+          "sourceLocator": "printed p.240, PDF p.4, displayed normalization and value; repeated in Table 4, printed p.242, original-reference row",
+          "normalizationExpression": "w_cN = w_c / (10^-3 q L^4 / D)",
+          "inverseConversionExpression": "w_c = value * 10^-3 * q * L^4 / D",
+          "variableDefinition": "D = E h^3 / (12 (1 - nu^2))",
+          "significantDigits": 3,
+          "sourceRelation": "secondary_transcription",
+          "transcriptionReviewState": "unverified",
+          "ambiguityStatus": "original_locator_rounding_and_sign_not_checked",
+          "acceptanceEligible": false
+        },
+        {
+          "quantity": "centralPrincipalMoment1Normalized",
+          "value": 1.91,
+          "originalUnit": "dimensionless",
+          "sourceId": "SRC-GRBAC-RIBARIC-2022",
+          "sourceLocator": "printed p.240, PDF p.4, displayed normalization and value; repeated in Table 4, printed p.242, original-reference row",
+          "normalizationExpression": "M_1,cN = M_1,c / (10^-2 q L^2)",
+          "inverseConversionExpression": "M_1,c = value * 10^-2 * q * L^2",
+          "significantDigits": 3,
+          "sourceRelation": "secondary_transcription",
+          "transcriptionReviewState": "unverified",
+          "ambiguityStatus": "principal_direction_order_and_sign_not_checked",
+          "acceptanceEligible": false
+        },
+        {
+          "quantity": "centralPrincipalMoment2Normalized",
+          "value": 1.08,
+          "originalUnit": "dimensionless",
+          "sourceId": "SRC-GRBAC-RIBARIC-2022",
+          "sourceLocator": "printed p.240, PDF p.4, displayed normalization and value; repeated in Table 4, printed p.242, original-reference row",
+          "normalizationExpression": "M_2,cN = M_2,c / (10^-2 q L^2)",
+          "inverseConversionExpression": "M_2,c = value * 10^-2 * q * L^2",
+          "significantDigits": 3,
+          "sourceRelation": "secondary_transcription",
+          "transcriptionReviewState": "unverified",
+          "ambiguityStatus": "principal_direction_order_and_sign_not_checked",
+          "acceptanceEligible": false
+        }
+      ],
+      "secondaryStudyDenseMeshData": [
+        {
+          "LOverH": 1000,
+          "sourceLocator": "SRC-GRBAC-RIBARIC-2022, printed p.242, PDF p.6, Table 4, L/h=1000 row",
+          "values": {"centralDeflectionNormalized": 0.4134, "principalMoment1Normalized": 1.922, "principalMoment2Normalized": 1.106}
+        },
+        {
+          "LOverH": 100,
+          "sourceLocator": "SRC-GRBAC-RIBARIC-2022, printed p.242, PDF p.6, Table 4, L/h=100 row",
+          "values": {"centralDeflectionNormalized": 0.4248, "principalMoment1Normalized": 1.956, "principalMoment2Normalized": 1.143}
+        },
+        {
+          "LOverH": 10,
+          "sourceLocator": "SRC-GRBAC-RIBARIC-2022, printed p.242, PDF p.6, Table 4, L/h=10 row",
+          "values": {"centralDeflectionNormalized": 0.5177, "principalMoment1Normalized": 2.064, "principalMoment2Normalized": 1.205}
+        }
+      ],
+      "secondaryStudyDenseMeshDataQualification": {
+        "originalUnit": "dimensionless",
+        "normalizations": {
+          "centralDeflectionNormalized": "w_c / (10^-3 q L^4 / D)",
+          "principalMoment1Normalized": "M_1,c / (10^-2 q L^2)",
+          "principalMoment2Normalized": "M_2,c / (10^-2 q L^2)"
+        },
+        "inverseConversions": {
+          "centralDeflectionNormalized": "value * 10^-3 * q * L^4 / D",
+          "principalMoment1Normalized": "value * 10^-2 * q * L^2",
+          "principalMoment2Normalized": "value * 10^-2 * q * L^2"
+        },
+        "sourceRelation": "primary_transcription_of_2022_numerical_study",
+        "transcriptionReviewState": "unverified",
+        "ambiguityStatus": "not_exact_and_not_original_Morley_result",
+        "acceptanceEligible": false
+      },
+      "blockers": [
+        "Lawful original full text not acquired; use institutional OUP access or interlibrary/national-library delivery.",
+        "Exact original equations, normalization, figure/table locators and signs not independently checked.",
+        "The 1963 corrigendum must be applied to Figures 4 and 5."
+      ]
+    },
+    {
+      "caseId": "RAZZAQUE-RHOMBUS-60-UDL",
+      "title": "Razzaque 60-degree rhombus under uniform load",
+      "acceptanceState": "blocked_original_not_acquired_and_axes_ambiguous",
+      "executableFixtureAllowed": false,
+      "originalSourceId": "SRC-RAZZAQUE-1973",
+      "secondarySourceId": "SRC-GRBAC-RIBARIC-2022",
+      "geometry": [
+        {
+          "field": "edgeLengthL",
+          "value": 100,
+          "originalUnit": "unspecified_consistent_length_unit",
+          "sourceId": "SRC-GRBAC-RIBARIC-2022",
+          "sourceLocator": "printed p.243, PDF p.7, Razzaque problem text and Figure 2",
+          "sourceRelation": "secondary_transcription",
+          "transcriptionReviewState": "unverified",
+          "ambiguityStatus": "original_not_checked"
+        },
+        {
+          "field": "acuteInteriorAngle",
+          "value": 60,
+          "originalUnit": "degree",
+          "sourceId": "SRC-GRBAC-RIBARIC-2022",
+          "sourceLocator": "printed p.243, PDF p.7, Razzaque problem text and Figure 2",
+          "sourceRelation": "secondary_transcription",
+          "transcriptionReviewState": "unverified",
+          "ambiguityStatus": "original_angle_definition_not_checked"
+        }
+      ],
+      "load": {
+        "type": "uniform_normal_pressure",
+        "q": 1,
+        "originalUnit": "unspecified_consistent_force_per_area_unit",
+        "sourceId": "SRC-GRBAC-RIBARIC-2022",
+        "sourceLocator": "printed p.243, PDF p.7, Razzaque problem text",
+        "sourceRelation": "secondary_transcription",
+        "transcriptionReviewState": "unverified",
+        "ambiguityStatus": "published_sign_not_mapped_to_ADR"
+      },
+      "boundaryCondition": {
+        "sourceLiteralSummary": "two opposite edges simply supported with w=0 and theta_y=0",
+        "sourceId": "SRC-GRBAC-RIBARIC-2022",
+        "sourceLocator": "printed p.243, PDF p.7, Razzaque problem text and Figure 2",
+        "sourceRelation": "secondary_transcription",
+        "transcriptionReviewState": "unverified",
+        "ambiguityStatus": "exact_edge_pair_axis_direction_and_ADR_rotation_mapping_unresolved"
+      },
+      "sourceReportedOriginalReferenceData": [
+        {
+          "quantity": "centralDeflectionNormalized",
+          "value": 0.7945,
+          "originalUnit": "dimensionless",
+          "sourceId": "SRC-GRBAC-RIBARIC-2022",
+          "sourceLocator": "printed p.243, PDF p.7, displayed normalization and value; repeated in Table 8, printed p.245, original-reference row",
+          "normalizationExpression": "w_cN = w_c / (10^-2 q L^4 / D)",
+          "inverseConversionExpression": "w_c = value * 10^-2 * q * L^4 / D",
+          "variableDefinition": "D = E h^3 / (12 (1 - nu^2))",
+          "significantDigits": 4,
+          "sourceRelation": "secondary_transcription",
+          "transcriptionReviewState": "unverified",
+          "ambiguityStatus": "original_locator_rounding_and_sign_not_checked",
+          "acceptanceEligible": false
+        },
+        {
+          "quantity": "centralMyNormalized",
+          "value": 0.9589,
+          "originalUnit": "dimensionless",
+          "sourceId": "SRC-GRBAC-RIBARIC-2022",
+          "sourceLocator": "printed p.243, PDF p.7, displayed normalization and value; repeated in Table 8, printed p.245, original-reference row",
+          "normalizationExpression": "M_y,cN = M_y,c / (10^-1 q L^2)",
+          "inverseConversionExpression": "M_y,c = value * 10^-1 * q * L^2",
+          "significantDigits": 4,
+          "sourceRelation": "secondary_transcription",
+          "transcriptionReviewState": "unverified",
+          "ambiguityStatus": "source_y_axis_and_sign_not_mapped_to_ADR",
+          "acceptanceEligible": false
+        }
+      ],
+      "sourceReportedDiscretization": {
+        "method": "thin-plate finite difference",
+        "mesh": "16x16",
+        "sourceId": "SRC-GRBAC-RIBARIC-2022",
+        "sourceLocator": "printed p.243, PDF p.7, Razzaque problem text",
+        "sourceRelation": "secondary_transcription",
+        "transcriptionReviewState": "unverified",
+        "ambiguityStatus": "original_grid_and_extraction_not_checked"
+      },
+      "secondaryStudyDenseMeshData": [
+        {
+          "LOverH": 1000,
+          "sourceLocator": "SRC-GRBAC-RIBARIC-2022, printed p.245, PDF p.9, Table 8, L/h=1000 row",
+          "values": {"centralDeflectionNormalized": 0.7912, "centralMyNormalized": 0.9601}
+        },
+        {
+          "LOverH": 100,
+          "sourceLocator": "SRC-GRBAC-RIBARIC-2022, printed p.245, PDF p.9, Table 8, L/h=100 row",
+          "values": {"centralDeflectionNormalized": 0.7937, "centralMyNormalized": 0.9617}
+        },
+        {
+          "LOverH": 10,
+          "sourceLocator": "SRC-GRBAC-RIBARIC-2022, printed p.245, PDF p.9, Table 8, L/h=10 row",
+          "values": {"centralDeflectionNormalized": 0.8438, "centralMyNormalized": 0.9806}
+        }
+      ],
+      "secondaryStudyDenseMeshDataQualification": {
+        "originalUnit": "dimensionless",
+        "normalizations": {
+          "centralDeflectionNormalized": "w_c / (10^-2 q L^4 / D)",
+          "centralMyNormalized": "M_y,c / (10^-1 q L^2)"
+        },
+        "inverseConversions": {
+          "centralDeflectionNormalized": "value * 10^-2 * q * L^4 / D",
+          "centralMyNormalized": "value * 10^-1 * q * L^2"
+        },
+        "sourceRelation": "primary_transcription_of_2022_numerical_study",
+        "transcriptionReviewState": "unverified",
+        "ambiguityStatus": "not_exact_and_not_original_Razzaque_result",
+        "acceptanceEligible": false
+      },
+      "blockers": [
+        "Lawful original full text not acquired; use institutional Wiley access or interlibrary/national-library delivery.",
+        "Exact supported edges and y-axis/rotation convention depend on the unavailable original.",
+        "Bibliographic terminal-page conflict must be settled from the publisher issue or original paper."
+      ]
+    },
+    {
+      "caseId": "RECTANGULAR-MINDLIN-SSSS-UDL-CANDIDATE",
+      "title": "Simply supported square Reissner-Mindlin plate under uniform pressure",
+      "acceptanceState": "blocked_underlying_analytical_source_not_acquired",
+      "executableFixtureAllowed": false,
+      "candidateSourceIds": [
+        "SRC-LEVINSON-COOKE-1983",
+        "SRC-NAUMENKO-ETAL-2001",
+        "SRC-BATHE-DVORKIN-1985",
+        "SRC-DARILMAZ-2005",
+        "SRC-TIMOSHENKO-WOINOWSKY-KRIEGER-1959"
+      ],
+      "secondaryTabularCase": {
+        "geometry": {
+          "shape": "square",
+          "a": 10,
+          "aOriginalUnit": "m",
+          "hOverA": [0.001, 0.05, 0.1, 0.2]
+        },
+        "material": {
+          "E": 10.92,
+          "EOriginalUnit": "kN/m^2_as_printed",
+          "nu": 0.3,
+          "shearCorrection": "5/6_inferred_from_printed_p200_equation_2_compliance_coefficients"
+        },
+        "load": "uniform pressure p; magnitude not fixed because the response is normalized",
+        "boundaryCondition": "simply supported on four edges; exact underlying analytical rotation/moment convention unverified",
+        "modelExtent": "one quadrant with symmetry in the later numerical study",
+        "sourceId": "SRC-DARILMAZ-2005",
+        "sourceLocator": "printed p.205, PDF p.7, Example 2, Figure 3 and Table 1; shear compliance at printed p.200, equation (2)",
+        "sourceRelation": "primary_for_later_study_case_secondary_for_analytical_row",
+        "transcriptionReviewState": "unverified",
+        "ambiguityStatus": "underlying_1959_solution_not_acquired"
+      },
+      "sourceReportedAnalyticalData": [
+        {
+          "hOverA": 0.001,
+          "value": 0.04436,
+          "originalUnit": "dimensionless",
+          "sourceId": "SRC-DARILMAZ-2005",
+          "sourceLocator": "printed p.205, PDF p.7, Table 1, Analytical row, h/a=0.001 column",
+          "normalizationExpression": "w_max E h^3 / (p a^4)",
+          "inverseConversionExpression": "w_max = value * p * a^4 / (E * h^3)",
+          "significantDigits": 4,
+          "sourceRelation": "secondary_transcription",
+          "transcriptionReviewState": "unverified",
+          "ambiguityStatus": "exact_1959_locator_and_support_convention_unknown",
+          "acceptanceEligible": false
+        },
+        {
+          "hOverA": 0.05,
+          "value": 0.04485,
+          "originalUnit": "dimensionless",
+          "sourceId": "SRC-DARILMAZ-2005",
+          "sourceLocator": "printed p.205, PDF p.7, Table 1, Analytical row, h/a=0.05 column",
+          "normalizationExpression": "w_max E h^3 / (p a^4)",
+          "inverseConversionExpression": "w_max = value * p * a^4 / (E * h^3)",
+          "significantDigits": 4,
+          "sourceRelation": "secondary_transcription",
+          "transcriptionReviewState": "unverified",
+          "ambiguityStatus": "exact_1959_locator_and_support_convention_unknown",
+          "acceptanceEligible": false
+        },
+        {
+          "hOverA": 0.1,
+          "value": 0.04632,
+          "originalUnit": "dimensionless",
+          "sourceId": "SRC-DARILMAZ-2005",
+          "sourceLocator": "printed p.205, PDF p.7, Table 1, Analytical row, h/a=0.1 column",
+          "normalizationExpression": "w_max E h^3 / (p a^4)",
+          "inverseConversionExpression": "w_max = value * p * a^4 / (E * h^3)",
+          "significantDigits": 4,
+          "sourceRelation": "secondary_transcription",
+          "transcriptionReviewState": "unverified",
+          "ambiguityStatus": "exact_1959_locator_and_support_convention_unknown",
+          "acceptanceEligible": false
+        },
+        {
+          "hOverA": 0.2,
+          "value": 0.0536,
+          "sourceLiteral": "0.05360",
+          "originalUnit": "dimensionless",
+          "sourceId": "SRC-DARILMAZ-2005",
+          "sourceLocator": "printed p.205, PDF p.7, Table 1, Analytical row, h/a=0.2 column",
+          "normalizationExpression": "w_max E h^3 / (p a^4)",
+          "inverseConversionExpression": "w_max = value * p * a^4 / (E * h^3)",
+          "significantDigits": 4,
+          "sourceRelation": "secondary_transcription",
+          "transcriptionReviewState": "unverified",
+          "ambiguityStatus": "exact_1959_locator_and_support_convention_unknown",
+          "acceptanceEligible": false
+        }
+      ],
+      "blockers": [
+        "Acquire Timoshenko and Woinowsky-Krieger, Theory of Plates and Shells, 2nd ed. (1959), and identify the exact supporting page/equation/table.",
+        "Alternatively acquire and freeze a full primary analytical case from Levinson-Cooke or Naumenko et al.",
+        "Independently review the case definition, theory, shear factor, support convention, normalization and values."
+      ]
+    }
+  ]
+}
