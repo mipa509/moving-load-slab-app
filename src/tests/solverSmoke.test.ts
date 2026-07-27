@@ -49,14 +49,9 @@ function buildSmokeModel(): FixedPositionAnalysisModel {
 }
 
 describe("solver smoke", () => {
-  it("fails closed for public nonzero-skew solves until downstream integration", () => {
-    const model = buildSmokeModel();
-    model.slab.skewAngleDeg = 19;
-
-    expect(() => runFixedPositionAnalysis(model)).toThrow(
-      /nonzero-skew public analysis is temporarily unavailable/i,
-    );
-  });
+  // Non-zero-skew solves are now reachable through the public path (WP-026);
+  // their convergence, equilibrium, and partial-patch behaviour are covered in
+  // skewSolverIntegration.test.ts.
 
   it("converges and maintains basic vertical load-reaction equilibrium", () => {
     const result = runFixedPositionAnalysis(buildSmokeModel());
