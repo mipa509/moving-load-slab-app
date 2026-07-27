@@ -150,8 +150,8 @@ describe("skew contract scaffold", () => {
   });
 
   it("keeps live support and solver geometry compatibility boundaries explicit", () => {
-    expectTypeOf<LiveAppSupport["kind"]>().toEqualTypeOf<"line" | "point">();
-    expectTypeOf<Extract<LiveAppSupport, { kind: "edge" }>>().toEqualTypeOf<never>();
+    expectTypeOf<LiveAppSupport["kind"]>().toEqualTypeOf<"line" | "point" | "edge">();
+    expectTypeOf<Extract<LiveAppSupport, { kind: "edge" }>["edge"]>().toEqualTypeOf<DeckEdge>();
     expectTypeOf<
       Extract<StagedSkewAppContract.SupportV2, { kind: "edge" }>["edge"]
     >().toEqualTypeOf<DeckEdge>();

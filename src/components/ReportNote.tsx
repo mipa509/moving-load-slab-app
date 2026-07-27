@@ -2,6 +2,7 @@ import type {
   AnalysisResults,
   ConstraintSetting,
   Dof,
+  SlabGeometry,
   SlabModel,
   Support,
 } from "../app/types";
@@ -10,6 +11,7 @@ import {
   computeSectionCurve,
   resolveSectionAxis,
 } from "../app/sectionCurve";
+import { getDeckEdgeSegment } from "../solver/geometry/deckCoordinates";
 import { SectionPlot } from "./SectionPlot";
 import { VehicleSideElevation } from "./VehicleSideElevation";
 
@@ -41,9 +43,13 @@ const formatConstraint = (setting: ConstraintSetting): string => {
   return setting.type;
 };
 
-const supportCoords = (support: Support): string => {
+const supportCoords = (support: Support, geometry: SlabGeometry): string => {
   if (support.kind === "line") {
     return `(${support.x1.toFixed(2)}, ${support.y1.toFixed(2)}) → (${support.x2.toFixed(2)}, ${support.y2.toFixed(2)})`;
+  }
+  if (support.kind === "edge") {
+    const [p0, p1] = getDeckEdgeSegment(geometry, support.edge);
+    return `${support.edge}: (${p0.x.toFixed(2)}, ${p0.y.toFixed(2)}) → (${p1.x.toFixed(2)}, ${p1.y.toFixed(2)})`;
   }
   return `(${support.x.toFixed(2)}, ${support.y.toFixed(2)})`;
 };
@@ -177,7 +183,7 @@ export const ReportNote = ({ model, results, images, preparedBy }: ReportNotePro
                 <td>{support.id}</td>
                 <td>{support.name}</td>
                 <td>{support.kind}</td>
-                <td>{supportCoords(support)}</td>
+                <td>{supportCoords(support, model.geometry)}</td>
                 {DOFS.map((dof) => (
                   <td key={dof}>{formatConstraint(support.constraints[dof])}</td>
                 ))}

@@ -531,45 +531,49 @@ export const ControlPanel = ({
               />
             </label>
 
-            <label className="field">
-              <span>Type</span>
-              <select
-                value={support.kind}
-                onChange={(e) =>
-                  setModel((curr) => {
-                    const supports = [...curr.supports];
-                    const prev = supports[supportIndex];
-                    const nextKind = e.target.value as Support["kind"];
-                    supports[supportIndex] =
-                      nextKind === "line"
-                        ? {
-                            id: prev.id,
-                            name: prev.name,
-                            kind: "line",
-                            x1: 0,
-                            y1: 0,
-                            x2: 0,
-                            y2: curr.geometry.widthM,
-                            constraints: prev.constraints,
-                          }
-                        : {
-                            id: prev.id,
-                            name: prev.name,
-                            kind: "point",
-                            x: 0,
-                            y: 0,
-                            constraints: prev.constraints,
-                          };
-                    return { ...curr, supports };
-                  })
-                }
-              >
-                <option value="line">Line</option>
-                <option value="point">Point</option>
-              </select>
-            </label>
+            {support.kind !== "edge" ? (
+              <label className="field">
+                <span>Type</span>
+                <select
+                  value={support.kind}
+                  onChange={(e) =>
+                    setModel((curr) => {
+                      const supports = [...curr.supports];
+                      const prev = supports[supportIndex];
+                      const nextKind = e.target.value as Support["kind"];
+                      supports[supportIndex] =
+                        nextKind === "line"
+                          ? {
+                              id: prev.id,
+                              name: prev.name,
+                              kind: "line",
+                              x1: 0,
+                              y1: 0,
+                              x2: 0,
+                              y2: curr.geometry.widthM,
+                              constraints: prev.constraints,
+                            }
+                          : {
+                              id: prev.id,
+                              name: prev.name,
+                              kind: "point",
+                              x: 0,
+                              y: 0,
+                              constraints: prev.constraints,
+                            };
+                      return { ...curr, supports };
+                    })
+                  }
+                >
+                  <option value="line">Line</option>
+                  <option value="point">Point</option>
+                </select>
+              </label>
+            ) : null}
 
-            {support.kind === "line" ? (
+            {support.kind === "edge" ? (
+              <p className="field-note">Deck edge: {support.edge}</p>
+            ) : support.kind === "line" ? (
               <>
                 {support.x1 !== support.x2 && support.y1 !== support.y2 ? (
                   <p className="field-note">

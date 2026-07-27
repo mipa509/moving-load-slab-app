@@ -1,5 +1,6 @@
 import type { SlabModel } from "../../app/types";
 import { deriveMeshResolution } from "../../app/meshSizing";
+import { getDeckEdgeSegment } from "../geometry/deckCoordinates";
 import type {
   AxisDirection,
   FixedPositionAnalysisModel,
@@ -47,7 +48,7 @@ export function fromAppModel(model: SlabModel): FixedPositionAnalysisModel {
       targetElementsX,
       targetElementsY,
     },
-    supports: model.supports.map(toSupportDefinition),
+    supports: model.supports.map((support) => toSupportDefinition(support, model.geometry)),
     vehicle:
       model.vehicle.mode === "axle"
         ? {
@@ -90,7 +91,10 @@ export function fromAppModel(model: SlabModel): FixedPositionAnalysisModel {
   };
 }
 
-function toSupportDefinition(support: SlabModel["supports"][number]): SupportDefinition {
+function toSupportDefinition(
+  support: SlabModel["supports"][number],
+  geometry: SlabModel["geometry"],
+): SupportDefinition {
   const dofs = {
     w: toSupportConstraint("uz", support.constraints.uz),
     rx: toSupportConstraint("rx", support.constraints.rx),
@@ -106,6 +110,20 @@ function toSupportDefinition(support: SlabModel["supports"][number]): SupportDef
       y1: support.y1,
       x2: support.x2,
       y2: support.y2,
+      dofs,
+    };
+  }
+
+  if (support.kind === "edge") {
+    const [p0, p1] = getDeckEdgeSegment(geometry, support.edge);
+    return {
+      kind: "line",
+      id: support.id,
+      behavior: "custom",
+      x1: p0.x,
+      y1: p0.y,
+      x2: p1.x,
+      y2: p1.y,
       dofs,
     };
   }

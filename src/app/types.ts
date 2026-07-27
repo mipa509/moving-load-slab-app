@@ -2,7 +2,7 @@ import type * as SkewGeometryContract from '../solver/geometry/types';
 
 export type ResultField = "deflection" | "mx" | "my" | "qx" | "qy" | "reactions";
 
-export type SupportKind = "line" | "point";
+export type SupportKind = "line" | "point" | "edge";
 export type Dof = "uz" | "rx" | "ry";
 export type ConstraintType = "free" | "fixed" | "pinned" | "spring";
 export type VehicleInputMode = "axle" | "direct";
@@ -50,7 +50,12 @@ export interface PointSupport extends SupportBase {
   y: number;
 }
 
-export type Support = LineSupport | PointSupport;
+export interface EdgeSupport extends SupportBase {
+  kind: "edge";
+  edge: SkewGeometryContract.DeckEdge;
+}
+
+export type Support = LineSupport | PointSupport | EdgeSupport;
 
 export interface AxleInput {
   id: string;
@@ -328,6 +333,13 @@ export type LegacyCoordinateSupport =
       constraints: LegacyConstraintSet;
       x: number;
       y: number;
+    }
+  | {
+      id: string;
+      name: string;
+      kind: 'edge';
+      constraints: LegacyConstraintSet;
+      edge: SkewGeometryContract.DeckEdge;
     };
 
 export interface PersistedMaterialSnapshotV1 {

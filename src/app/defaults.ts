@@ -16,6 +16,13 @@ import type {
   VehicleDefinition,
   VehiclePlacement,
 } from "./types";
+import type { DeckEdge } from "../solver/geometry/types";
+
+const DECK_EDGES: readonly DeckEdge[] = ["start", "end", "lower-side", "upper-side"];
+
+function isDeckEdge(input: unknown): input is DeckEdge {
+  return typeof input === "string" && (DECK_EDGES as readonly string[]).includes(input);
+}
 
 const isPlotMode = (input: unknown): input is DisplayToggles["plotMode"] =>
   input === "results" || input === "structure" || input === "deformed";
@@ -216,14 +223,22 @@ export const serializeModelForSave = (model: SlabModel): string => {
             x2: support.x2,
             y2: support.y2,
           }
-        : {
-            id: support.id,
-            name: support.name,
-            kind: "point" as const,
-            constraints: copyConstraintSet(support.constraints),
-            x: support.x,
-            y: support.y,
-          },
+        : support.kind === "point"
+          ? {
+              id: support.id,
+              name: support.name,
+              kind: "point" as const,
+              constraints: copyConstraintSet(support.constraints),
+              x: support.x,
+              y: support.y,
+            }
+          : {
+              id: support.id,
+              name: support.name,
+              kind: "edge" as const,
+              constraints: copyConstraintSet(support.constraints),
+              edge: support.edge,
+            },
     ),
     vehicle: {
       name: model.vehicle.name,
@@ -373,6 +388,16 @@ function validateSupports(input: unknown, version: "V1" | "V2"): void {
         `supports[${index}]`,
         version,
       );
+    } else if (support.kind === "edge") {
+      expectExactKeys(
+        support,
+        ["id", "name", "kind", "constraints", "edge"],
+        `supports[${index}]`,
+        version,
+      );
+      if (!isDeckEdge(support.edge)) {
+        throw migrationError(version, `supports[${index}].edge is not a valid deck edge`);
+      }
     } else {
       throw migrationError(version, `supports[${index}] is not a legacy coordinate support`);
     }
@@ -759,6 +784,19 @@ function sanitizeSupport(input: unknown, fallback: Support, index: number): Supp
       y1: finiteNumber(input.y1, fallback.kind === "line" ? fallback.y1 : 0),
       x2: finiteNumber(input.x2, fallback.kind === "line" ? fallback.x2 : 0),
       y2: finiteNumber(input.y2, fallback.kind === "line" ? fallback.y2 : 0),
+      constraints,
+    };
+  }
+
+  if (input.kind === "edge") {
+    if (!isDeckEdge(input.edge)) {
+      return null;
+    }
+    return {
+      id,
+      name,
+      kind: "edge",
+      edge: input.edge,
       constraints,
     };
   }

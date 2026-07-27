@@ -98,7 +98,10 @@ export const StructureOverlay = ({
     [Lx, Ly],
   );
 
-  const supportVisuals = useMemo(() => buildSupportVisuals(model.supports), [model.supports]);
+  const supportVisuals = useMemo(
+    () => buildSupportVisuals(model.supports, model.geometry),
+    [model.supports, model.geometry],
+  );
 
   return (
     <>
