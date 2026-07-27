@@ -1,17 +1,36 @@
-import { recoverNodalFields } from "./post/recoverNodal";
-import { assertFiniteNodalFieldValues } from "./analysisGuards";
 import type { NodalFieldValues } from "./model/types";
-import type { ContourData, NodalContourData, RectOverlay, SlabModel } from "../app/types";
-import { fromAppModel } from "./model/fromAppModel";
+import type {
+  ContourData,
+  ElementCenterPlateResult,
+  MeshQualityReport,
+  NodalContourData,
+  NodalRecoveredPlateResult,
+  RectOverlay,
+  SignedEquilibrium,
+  SlabModel,
+  StagedSkewAppContract,
+  VerificationEvidenceStatus,
+  WheelPatchOverlay,
+} from "../app/types";
+import { fromAppModel, normalizeSolverGeometry } from "./model/fromAppModel";
+import {
+  buildDeckPolygon,
+  getDeckBounds,
+  globalToDeckLocal,
+} from "./geometry/deckCoordinates";
+import { evaluateStructuredMeshQuality } from "./core/meshQuality";
+import type { GeneratedWheelPatch } from "./loads/vehicle";
 import { runFixedPositionAnalysis as runInternalFixedPositionAnalysis } from "./runFixedPositionAnalysis";
 
 type SolverPayload = {
   contours: Record<string, ContourData>;
   nodalContours: Record<string, NodalContourData>;
+  /** @deprecated Local (non-global) rectangular axes; use meshNodeOverlays/meshElementOverlays for skew-general geometry. */
   mesh: { xCoordsM: number[]; yCoordsM: number[] };
   meshNodes: { id: number; xM: number; yM: number }[];
   meshElements: { id: number; nodeIds: [number, number, number, number] }[];
   nodalDisplacements: { nodeId: number; wM: number }[];
+  /** @deprecated Rectangular AABB overlay; use wheelPatchOverlays for full clipped-polygon evidence. */
   wheelPatches: RectOverlay[];
   reactions: {
     supportId: string;
@@ -20,6 +39,9 @@ type SolverPayload = {
     type: "fixed" | "spring";
     value: number;
     units: string;
+    /** Added by WP-032A; optional so existing narrower payload literals (e.g. mocks) remain valid. */
+    xM?: number;
+    yM?: number;
   }[];
   summary: {
     maxDeflectionMm: number;
@@ -27,36 +49,40 @@ type SolverPayload = {
     maxAbsShearKnPerM: number;
   };
   warning?: string;
+
+  // WP-032A evidence fields. The real facade always populates every one of
+  // these; they are typed optional only so pre-existing narrower payload
+  // literals (e.g. mocked solver results in solverAdapter.test.ts, outside
+  // this packet's file lease) remain valid without being edited.
+  deckPolygon?: Array<{ xM: number; yM: number }>;
+  deckBounds?: { xMinM: number; xMaxM: number; yMinM: number; yMaxM: number };
+  meshNodeOverlays?: StagedSkewAppContract.MeshNodeOverlayV2[];
+  meshElementOverlays?: StagedSkewAppContract.MeshElementOverlayV2[];
+  wheelPatchOverlays?: WheelPatchOverlay[];
+  nodalRecovery?: NodalRecoveredPlateResult[];
+  elementResultsFull?: ElementCenterPlateResult[];
+  equilibrium?: SignedEquilibrium;
+  meshQuality?: MeshQualityReport;
+  verification?: VerificationEvidenceStatus;
+  warningRequired?: boolean;
 };
 
 export function runFixedPositionAnalysis(model: SlabModel): SolverPayload {
   const internalModel = fromAppModel(model);
   const result = runInternalFixedPositionAnalysis(internalModel);
-
-  // Reconstruct the full global displacement vector from per-node data
-  const nodeCount = result.mesh.nodes.length;
-  const fullDisp = new Float64Array(nodeCount * 3);
-  for (const nd of result.nodalDisplacements) {
-    fullDisp[nd.nodeId * 3] = nd.w;
-    fullDisp[nd.nodeId * 3 + 1] = nd.rx;
-    fullDisp[nd.nodeId * 3 + 2] = nd.ry;
-  }
-
-  const nodalFields = recoverNodalFields(
-    result.mesh,
-    internalModel.material,
-    internalModel.slab.thickness,
-    fullDisp,
-  );
-  assertFiniteNodalFieldValues(nodalFields);
+  const geometry = normalizeSolverGeometry(internalModel.slab);
 
   const nodalContours: Record<string, NodalContourData> = {
-    deflection: toNodalContour("deflection", nodalFields, (n) => n.deflection * 1000, "mm"),
-    mx: toNodalContour("mx", nodalFields, (n) => n.mx, "kN*m/m"),
-    my: toNodalContour("my", nodalFields, (n) => n.my, "kN*m/m"),
-    qx: toNodalContour("qx", nodalFields, (n) => n.qx, "kN/m"),
-    qy: toNodalContour("qy", nodalFields, (n) => n.qy, "kN/m"),
+    deflection: toNodalContour("deflection", result.nodalFields, (n) => n.deflection * 1000, "mm"),
+    mx: toNodalContour("mx", result.nodalFields, (n) => n.mx, "kN*m/m"),
+    my: toNodalContour("my", result.nodalFields, (n) => n.my, "kN*m/m"),
+    qx: toNodalContour("qx", result.nodalFields, (n) => n.qx, "kN/m"),
+    qy: toNodalContour("qy", result.nodalFields, (n) => n.qy, "kN/m"),
   };
+
+  const nodesById = new Map(result.mesh.nodes.map((node) => [node.id, node]));
+  const wheelPatchesV2 = result.wheelPatches as GeneratedWheelPatch[];
+  const deckBounds = getDeckBounds(geometry);
 
   return {
     contours: {
@@ -100,6 +126,8 @@ export function runFixedPositionAnalysis(model: SlabModel): SolverPayload {
         type: reaction.type,
         value: reaction.value,
         units: mappedDof === "uz" ? "kN" : "kN*m",
+        xM: reaction.x,
+        yM: reaction.y,
       };
     }),
     summary: {
@@ -110,6 +138,142 @@ export function runFixedPositionAnalysis(model: SlabModel): SolverPayload {
       maxAbsShearKnPerM: Math.max(result.summary.maxAbsShearX, result.summary.maxAbsShearY),
     },
     warning: result.warnings.length > 0 ? result.warnings.join(" ") : undefined,
+
+    deckPolygon: buildDeckPolygon(geometry).map((p) => ({ xM: p.x, yM: p.y })),
+    deckBounds: {
+      xMinM: deckBounds.xMin,
+      xMaxM: deckBounds.xMax,
+      yMinM: deckBounds.yMin,
+      yMaxM: deckBounds.yMax,
+    },
+    meshNodeOverlays: result.mesh.nodes.map((n) => ({
+      id: n.id,
+      xM: n.x,
+      yM: n.y,
+      sM: n.s,
+      tM: n.t,
+    })),
+    meshElementOverlays: result.mesh.elements.map((e) => ({
+      id: e.id,
+      nodeIds: e.nodeIds,
+      polygon: e.polygon.map((p) => ({ xM: p.x, yM: p.y })),
+      bounds: {
+        xMinM: e.bounds.xMin,
+        xMaxM: e.bounds.xMax,
+        yMinM: e.bounds.yMin,
+        yMaxM: e.bounds.yMax,
+      },
+    })),
+    wheelPatchOverlays: wheelPatchesV2.map((patch) => ({
+      id: patch.id,
+      sourceWheelId: patch.sourceWheelId,
+      originalPolygon: patch.originalPolygon.map((p) => ({ xM: p.x, yM: p.y })),
+      clippedPolygon: patch.clippedPolygon
+        ? patch.clippedPolygon.map((p) => ({ xM: p.x, yM: p.y }))
+        : null,
+      originalBounds: {
+        xMinM: patch.originalBounds.xMin,
+        xMaxM: patch.originalBounds.xMax,
+        yMinM: patch.originalBounds.yMin,
+        yMaxM: patch.originalBounds.yMax,
+      },
+      clippedBounds: patch.clippedBounds
+        ? {
+            xMinM: patch.clippedBounds.xMin,
+            xMaxM: patch.clippedBounds.xMax,
+            yMinM: patch.clippedBounds.yMin,
+            yMaxM: patch.clippedBounds.yMax,
+          }
+        : null,
+      originalAreaM2: patch.originalAreaM2,
+      clippedAreaM2: patch.clippedAreaM2,
+      clippedCentroidM: patch.clippedCentroid
+        ? { xM: patch.clippedCentroid.x, yM: patch.clippedCentroid.y }
+        : null,
+      wheelLoadKn: patch.wheelLoadKn,
+      pressureKnPerM2: patch.pressureKnPerM2,
+    })),
+    nodalRecovery: result.nodalFields.map((field) => {
+      const node = nodesById.get(field.nodeId);
+      if (!node) {
+        throw new Error(`Nodal field references unknown mesh node id ${field.nodeId}.`);
+      }
+      return {
+        nodeId: field.nodeId,
+        xM: field.x,
+        yM: field.y,
+        sM: node.s,
+        tM: node.t,
+        deflectionMm: field.deflection * 1000,
+        mxKnmPerM: field.mx,
+        myKnmPerM: field.my,
+        mxyKnmPerM: field.mxy,
+      };
+    }),
+    elementResultsFull: result.elementResults.map((e) => {
+      const st = globalToDeckLocal(geometry, { x: e.center.x, y: e.center.y });
+      return {
+        elementId: e.elementId,
+        xM: e.center.x,
+        yM: e.center.y,
+        sM: st.s,
+        tM: st.t,
+        deflectionMm: e.deflection * 1000,
+        mxKnmPerM: e.moments.mx,
+        myKnmPerM: e.moments.my,
+        mxyKnmPerM: e.moments.mxy,
+        qxKnPerM: e.shears.qx,
+        qyKnPerM: e.shears.qy,
+      };
+    }),
+    equilibrium: {
+      originM: { xM: result.equilibrium.origin.x, yM: result.equilibrium.origin.y },
+      applied: {
+        forceZKn: result.equilibrium.applied.fz,
+        momentXKnm: result.equilibrium.applied.momentX,
+        momentYKnm: result.equilibrium.applied.momentY,
+      },
+      reactions: {
+        forceZKn: result.equilibrium.reaction.fz,
+        momentXKnm: result.equilibrium.reaction.momentX,
+        momentYKnm: result.equilibrium.reaction.momentY,
+      },
+      residual: {
+        forceZKn: result.equilibrium.residual.fz,
+        momentXKnm: result.equilibrium.residual.momentX,
+        momentYKnm: result.equilibrium.residual.momentY,
+      },
+      absoluteResidual: {
+        forceZKn: Math.abs(result.equilibrium.residual.fz),
+        momentXKnm: Math.abs(result.equilibrium.residual.momentX),
+        momentYKnm: Math.abs(result.equilibrium.residual.momentY),
+      },
+      normalizedResidual: {
+        forceZ: result.equilibrium.normalizedResidual.fz,
+        momentX: result.equilibrium.normalizedResidual.momentX,
+        momentY: result.equilibrium.normalizedResidual.momentY,
+      },
+      normalization: {
+        characteristicLengthM: result.equilibrium.scales.characteristicLengthM,
+        forceScaleKn: Math.max(result.equilibrium.scales.sumAbsAppliedForce, 1),
+        momentScaleKnm: Math.max(
+          result.equilibrium.scales.sumAbsAppliedForce * result.equilibrium.scales.characteristicLengthM +
+            Math.max(
+              result.equilibrium.scales.sumAbsAppliedMomentX,
+              result.equilibrium.scales.sumAbsAppliedMomentY,
+            ),
+          1,
+        ),
+      },
+    },
+    meshQuality: evaluateStructuredMeshQuality(result.mesh, internalModel.slab.thickness),
+    verification: {
+      formulation: "conditional",
+      referenceStudy19Deg: "not-run",
+      currentModelConvergence: "not-demonstrated",
+      evidenceIds: [],
+    },
+    warningRequired: geometry.skewAngleDeg !== 0,
   };
 }
 
