@@ -9,7 +9,7 @@ import {
 } from "./defaults";
 import { buildAutoRunSignature } from "./autoRun";
 import { runFixedAnalysis } from "./solverAdapter";
-import { runPathEnvelope, type EnvelopeProgress } from "./runPathEnvelope";
+import { runPathEnvelope, toLegacyEnvelopeData, type EnvelopeProgress } from "./runPathEnvelope";
 import {
   cloneVehicleDefinition,
   createVehicleLibraryItem,
@@ -102,9 +102,13 @@ export const App = () => {
       previousEnvelope && previousSignature === nextSignature
         ? previousEnvelope
         : undefined;
+    const carryEnvelopeV2 =
+      results.envelopeV2 && results.envelopeV2.signature === nextSignature
+        ? results.envelopeV2
+        : undefined;
 
     startTransition(() => {
-      setResults({ ...nextResults, envelope: carryEnvelope });
+      setResults({ ...nextResults, envelope: carryEnvelope, envelopeV2: carryEnvelopeV2 });
       setRunning(false);
     });
   };
@@ -119,10 +123,10 @@ export const App = () => {
     setEnvelopeRunning(true);
     setEnvelopeProgress(null);
     try {
-      const envelope = await runPathEnvelope(model, (progress) => {
+      const envelopeV2 = await runPathEnvelope(model, (progress) => {
         setEnvelopeProgress(progress);
       });
-      setResults((prev) => ({ ...prev, envelope }));
+      setResults((prev) => ({ ...prev, envelope: toLegacyEnvelopeData(envelopeV2), envelopeV2 }));
     } catch (error) {
       setResults((prev) => ({
         ...prev,
