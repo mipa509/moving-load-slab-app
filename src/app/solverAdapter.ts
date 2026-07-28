@@ -16,11 +16,18 @@ import type {
   SlabModel,
   StagedSkewAppContract,
   NodalContourData,
+  SupportReactionDistribution,
+  SupportReactionRow,
   VerificationEvidenceStatus,
   WheelPatchOverlay,
 } from "./types";
 import { errorResults } from "./defaults";
 import { summarizeReactions } from "./reactionSummary";
+import {
+  buildPhysicalReactions,
+  buildReactionDistributions,
+  type PayloadReactionRow,
+} from "./reactionDistribution";
 import { runFixedPositionAnalysis } from "../solver";
 
 const contourFields: Exclude<ResultField, "reactions">[] = [
@@ -49,6 +56,47 @@ const isDof = (value: unknown): value is Dof =>
 
 const parseReactionType = (value: unknown): ReactionRow["type"] =>
   value === "fixed" || value === "spring" ? value : undefined;
+
+// WP-034: parses one raw solver-facade reaction record into the engine's
+// `PayloadReactionRow` input. Unlike the other normalize* helpers in this
+// file, a malformed or location-less row is EXCLUDED (`null`) rather than
+// thrown: per WP-034 invariant 6, a reaction lacking a resolvable location or
+// support is never fabricated, and this specific evidence must never turn a
+// normal solve into an error result over one bad row.
+const parsePayloadReactionRow = (raw: unknown): PayloadReactionRow | null => {
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+  const obj = raw as Record<string, unknown>;
+  const supportId = obj.supportId;
+  const nodeId = obj.nodeId;
+  const dof = obj.dof;
+  const type = obj.type;
+  const value = obj.value;
+  const xM = obj.xM;
+  const yM = obj.yM;
+  if (
+    typeof supportId !== "string" ||
+    !isFiniteNumber(nodeId) ||
+    !isDof(dof) ||
+    (type !== "fixed" && type !== "spring") ||
+    !isFiniteNumber(value) ||
+    !isFiniteNumber(xM) ||
+    !isFiniteNumber(yM)
+  ) {
+    return null;
+  }
+  return {
+    supportId,
+    nodeId,
+    dof,
+    type,
+    value,
+    units: typeof obj.units === "string" ? obj.units : dof === "uz" ? "kN" : "kN*m",
+    xM,
+    yM,
+  };
+};
 
 const normalizeContours = (
   rawContours: unknown,
@@ -673,6 +721,28 @@ export const runFixedAnalysis = async (model: SlabModel): Promise<AnalysisResult
     const warningRequired =
       typeof payload.warningRequired === "boolean" ? payload.warningRequired : false;
 
+    // WP-034: physical reaction rows and per-support ordered distributions,
+    // built from the same raw payload.reactions consumed above (not the
+    // already-lossy legacy `reactions` array, which drops xM/yM). Absent on
+    // the payload -> stays undefined; present -> each malformed/location-less
+    // row is excluded by the engine itself (see parsePayloadReactionRow and
+    // reactionDistribution.ts), never thrown, so a normal solve never fails
+    // over this evidence.
+    const physicalReactions: SupportReactionRow[] | undefined =
+      payload.reactions === undefined
+        ? undefined
+        : buildPhysicalReactions(
+            (Array.isArray(payload.reactions) ? payload.reactions : [])
+              .map(parsePayloadReactionRow)
+              .filter((row): row is PayloadReactionRow => row !== null),
+            model.supports,
+            model.geometry,
+          );
+    const reactionDistributions: SupportReactionDistribution[] | undefined =
+      physicalReactions === undefined
+        ? undefined
+        : buildReactionDistributions(physicalReactions, model.supports, model.geometry);
+
     return {
       status: "success",
       source: "solver",
@@ -749,6 +819,8 @@ export const runFixedAnalysis = async (model: SlabModel): Promise<AnalysisResult
       wheelPatchOverlays,
       nodalFields,
       elementFields,
+      physicalReactions,
+      reactionDistributions,
       equilibrium,
       meshQuality,
       verification,
