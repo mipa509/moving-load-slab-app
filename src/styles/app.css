@@ -272,6 +272,41 @@
   font-size: 0.9rem;
 }
 
+.control-readout {
+  display: grid;
+  gap: 0.15rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.5rem 0.65rem;
+  background: #f6f9fc;
+}
+
+.control-readout .field-note {
+  margin: 0;
+}
+
+.control-warning {
+  border: 1px solid #efcd99;
+  border-radius: 8px;
+  background: #fff7ea;
+  color: var(--warning);
+  padding: 0.55rem 0.7rem;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.preset-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.preset-button {
+  flex: 1 1 auto;
+  min-width: 120px;
+  font-weight: 600;
+}
+
 .result-area {
   background: linear-gradient(180deg, #ffffff, #fbfcfe);
   border: 1px solid var(--line);
