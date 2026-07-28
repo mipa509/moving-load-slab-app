@@ -1653,3 +1653,67 @@ th {
     page-break-inside: avoid;
   }
 }
+
+/* WP-044: per-support reaction distribution plot — additive. Reuses
+   `.section-plot-panel` / `.section-plot-header` / `.section-plot` /
+   `.section-plot-caption` / `.field` / `.notice.warning` / `.field-note`
+   idioms already defined above; no existing selector is redefined here. */
+.reaction-distribution-panel {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.reaction-distribution-support-select {
+  min-width: 200px;
+}
+
+.reaction-distribution-plot-controls {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.35rem;
+}
+
+.reaction-distribution-plot-series {
+  min-width: 260px;
+}
+
+.reaction-distribution-plot-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.3rem 0 0;
+}
+
+.reaction-distribution-plot-legend-marker {
+  display: inline-block;
+  width: 0.65rem;
+  height: 0.65rem;
+  margin-left: 0.55rem;
+  border: 1.3px solid #153a63;
+}
+
+.reaction-distribution-plot-legend-marker:first-of-type {
+  margin-left: 0;
+}
+
+.reaction-distribution-plot-legend-marker-normal {
+  background: #153a63;
+  border-radius: 1px;
+}
+
+.reaction-distribution-plot-legend-marker-shared {
+  background: #fff7ea;
+  border-color: #a46c1e;
+  transform: rotate(45deg);
+}
+
+.reaction-distribution-panel-totals {
+  font-variant-numeric: tabular-nums;
+}
+
+.reaction-distribution-mesh-warning-emphasis {
+  border-color: var(--danger);
+  background: #fdeceb;
+  color: #7e2721;
+}

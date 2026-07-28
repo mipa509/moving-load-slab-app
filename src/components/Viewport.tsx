@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type {
   AnalysisResults,
   GlobalResultant,
@@ -28,6 +28,8 @@ import {
   deckSectionValueLabel,
   toSectionPlotCurve,
 } from "../app/deckSectionView";
+import { ReactionDistributionPlot } from "./ReactionDistributionPlot";
+import { distributionHasSharedCorner, type ReactionSeriesKey } from "../app/reactionPlotData";
 
 interface ViewportProps {
   model: SlabModel;
@@ -208,6 +210,8 @@ export const Viewport = ({ model, results, selectedField, onModelChange, onCanva
       </section>
 
       <SkewDiagnosticsPanel results={results} />
+
+      {selectedField === "reactions" ? <ReactionDistributionPanel results={results} /> : null}
 
       {model.display.tables && selectedField === "reactions" ? (
         <div className="table-stack">
@@ -624,6 +628,119 @@ const SkewDiagnosticsPanel = ({ results }: SkewDiagnosticsPanelProps) => {
         <MeshQualitySummary meshQuality={meshQuality} />
         <VerificationSummary verification={verification} />
       </div>
+    </section>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// WP-044: per-support reaction DISTRIBUTION plot — ADDITIVE, alongside (not
+// instead of) the existing reaction summary/nodal tables further below (those
+// are left completely unmodified). Guarded end to end: an absent or empty
+// `results.reactionDistributions` (any non-success result, or a model with no
+// edge/line supports) renders a neutral note instead of the plot, and never
+// throws. `results.reactionDistributions` predates this packet (WP-034); this
+// panel only ever reads it, never re-derives or re-weights its totals.
+// ---------------------------------------------------------------------------
+
+interface ReactionDistributionPanelProps {
+  results: AnalysisResults;
+}
+
+const ReactionDistributionPanel = ({ results }: ReactionDistributionPanelProps) => {
+  const distributions = results.reactionDistributions;
+  const [selectedSupportId, setSelectedSupportId] = useState<string | null>(null);
+  const [seriesKey, setSeriesKey] = useState<ReactionSeriesKey>("forceZKn");
+
+  const hasDistributions = Boolean(distributions && distributions.length > 0);
+
+  // Default to the first support whenever nothing (or a now-stale support id
+  // from a previous analysis) is selected, without needing an effect.
+  const resolvedSupportId = useMemo(() => {
+    if (!distributions || distributions.length === 0) return null;
+    if (selectedSupportId && distributions.some((d) => d.supportId === selectedSupportId)) {
+      return selectedSupportId;
+    }
+    return distributions[0].supportId;
+  }, [distributions, selectedSupportId]);
+
+  const selectedDistribution = useMemo(() => {
+    if (!distributions || !resolvedSupportId) return null;
+    return distributions.find((d) => d.supportId === resolvedSupportId) ?? null;
+  }, [distributions, resolvedSupportId]);
+
+  const hasSharedCorner = distributionHasSharedCorner(selectedDistribution);
+
+  if (!hasDistributions) {
+    return (
+      <section className="section-plot-panel reaction-distribution-panel">
+        <header className="section-plot-header">
+          <div>
+            <p className="viewport-shell-kicker">Support reaction distribution</p>
+            <h3>Reaction vs. distance along support</h3>
+          </div>
+        </header>
+        <p className="field-note">
+          No per-support reaction distribution is available for this result. Run a successful
+          analysis with at least one edge or line support to populate this plot.
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="section-plot-panel reaction-distribution-panel">
+      <header className="section-plot-header">
+        <div>
+          <p className="viewport-shell-kicker">Support reaction distribution</p>
+          <h3>Reaction vs. distance along support</h3>
+        </div>
+        <label className="field reaction-distribution-support-select">
+          <span>Support</span>
+          <select
+            value={resolvedSupportId ?? ""}
+            onChange={(event) => setSelectedSupportId(event.target.value)}
+          >
+            {distributions!.map((dist) => (
+              <option key={dist.supportId} value={dist.supportId}>
+                {dist.supportId} ({dist.supportKind})
+              </option>
+            ))}
+          </select>
+        </label>
+      </header>
+
+      <ReactionDistributionPlot
+        distribution={selectedDistribution}
+        seriesKey={seriesKey}
+        onSeriesKeyChange={setSeriesKey}
+      />
+
+      {selectedDistribution ? (
+        <p className="reaction-distribution-panel-totals field-note">
+          Integrated totals for <strong>{selectedDistribution.supportId}</strong>: Fz ={" "}
+          {selectedDistribution.totals.forceZKn.toFixed(3)} kN, Cx ={" "}
+          {selectedDistribution.totals.coupleXKnm.toFixed(3)} kN*m, Cy ={" "}
+          {selectedDistribution.totals.coupleYKnm.toFixed(3)} kN*m
+        </p>
+      ) : null}
+
+      <p
+        className={`notice warning${
+          hasSharedCorner ? " reaction-distribution-mesh-warning-emphasis" : ""
+        }`}
+      >
+        Reaction values at or near acute skew corners are mesh-sensitive and screening-only;
+        do not rely on individual point values there for design.
+        {hasSharedCorner
+          ? " The selected support currently includes shared/mixed fixed-corner samples — treat these with extra caution."
+          : ""}
+      </p>
+
+      <p className="field-note">
+        Values plotted and totalled here are <strong>nodal-integrated reactions</strong> (kN,
+        kN*m) at each mesh node, not tributary per-metre densities — densities are not computed
+        or shown in this view.
+      </p>
     </section>
   );
 };
