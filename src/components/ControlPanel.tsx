@@ -1,10 +1,12 @@
 import type {
   AxleInput,
   ConstraintType,
+  DeckSectionSettings,
   Dof,
   DirectWheelInput,
   PlotMode,
   ResultField,
+  SectionOrdinate,
   SlabModel,
   Support,
   VehicleLibraryItem,
@@ -72,6 +74,22 @@ const springUnitsByDof: Record<Dof, string> = {
 const parseNumericInput = (value: string, fallback: number): number => {
   const num = Number(value);
   return Number.isFinite(num) ? num : fallback;
+};
+
+const DECK_SECTION_ORDINATE_OPTIONS: { value: SectionOrdinate; label: string }[] = [
+  { value: "mx", label: "Mx" },
+  { value: "my", label: "My" },
+  { value: "mxy", label: "Mxy" },
+];
+
+// Guard fallback for the (always-populated-in-practice) optional
+// `model.deckSection`; keeps the controls below total even before a model
+// has been through `sanitizeLoadedModel`/`createDefaultModel`.
+const DEFAULT_DECK_SECTION: DeckSectionSettings = {
+  mode: "longitudinal",
+  ordinate: "mx",
+  centerTM: 2.5,
+  widthM: 1,
 };
 
 const getLineOrientation = (
@@ -1590,6 +1608,123 @@ export const ControlPanel = ({
                   <option value="x">Along X</option>
                   <option value="y">Along Y</option>
                 </select>
+              </label>
+            </>
+          );
+        })()}
+      </SectionCard>
+
+      <SectionCard
+        title="Deck-Local Section"
+        subtitle="Section cut in deck-local (s/t) coordinates — follows the skewed deck"
+      >
+        {(() => {
+          const deckSection = model.deckSection ?? DEFAULT_DECK_SECTION;
+          const isLongitudinal = deckSection.mode === "longitudinal";
+          const centerLabel = isLongitudinal ? "t (transverse)" : "s (longitudinal)";
+          const centerValue = isLongitudinal ? deckSection.centerTM : deckSection.centerSM;
+
+          return (
+            <>
+              <p className="field-note">
+                Deck-local (s/t) settings, independent of the legacy X/Y section above; the
+                mode/ordinate here are explicit and never inferred from the travel direction. This
+                strip drives the viewer&apos;s section-strip overlay and follows the skewed deck.
+              </p>
+              <label className="field">
+                <span>Mode</span>
+                <select
+                  value={deckSection.mode}
+                  onChange={(e) => {
+                    const nextMode = e.target.value as DeckSectionSettings["mode"];
+                    setModel((curr) => {
+                      const current = curr.deckSection ?? DEFAULT_DECK_SECTION;
+                      if (current.mode === nextMode) {
+                        return curr;
+                      }
+                      const next: DeckSectionSettings =
+                        nextMode === "longitudinal"
+                          ? {
+                              mode: "longitudinal",
+                              ordinate: current.ordinate,
+                              widthM: current.widthM,
+                              centerTM: curr.geometry.widthM / 2,
+                            }
+                          : {
+                              mode: "transverse",
+                              ordinate: current.ordinate,
+                              widthM: current.widthM,
+                              centerSM: curr.geometry.lengthM / 2,
+                            };
+                      return { ...curr, deckSection: next };
+                    });
+                  }}
+                >
+                  <option value="longitudinal">Longitudinal (along s)</option>
+                  <option value="transverse">Transverse (along t)</option>
+                </select>
+              </label>
+              <label className="field">
+                <span>Ordinate</span>
+                <select
+                  value={deckSection.ordinate}
+                  onChange={(e) => {
+                    const ordinate = e.target.value as SectionOrdinate;
+                    setModel((curr) => {
+                      const current = curr.deckSection ?? DEFAULT_DECK_SECTION;
+                      return { ...curr, deckSection: { ...current, ordinate } };
+                    });
+                  }}
+                >
+                  {DECK_SECTION_ORDINATE_OPTIONS.map(({ value, label }) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                <span>Center {centerLabel} (m)</span>
+                <input
+                  type="number"
+                  step="0.05"
+                  value={centerValue}
+                  onChange={(e) => {
+                    setModel((curr) => {
+                      const current = curr.deckSection ?? DEFAULT_DECK_SECTION;
+                      const fallbackCenter =
+                        current.mode === "longitudinal" ? current.centerTM : current.centerSM;
+                      const value = parseNumericInput(e.target.value, fallbackCenter);
+                      return {
+                        ...curr,
+                        deckSection:
+                          current.mode === "longitudinal"
+                            ? { ...current, centerTM: value }
+                            : { ...current, centerSM: value },
+                      };
+                    });
+                  }}
+                />
+              </label>
+              <label className="field">
+                <span>Strip width (m)</span>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={deckSection.widthM}
+                  onChange={(e) => {
+                    setModel((curr) => {
+                      const current = curr.deckSection ?? DEFAULT_DECK_SECTION;
+                      return {
+                        ...curr,
+                        deckSection: {
+                          ...current,
+                          widthM: parseNumericInput(e.target.value, current.widthM),
+                        },
+                      };
+                    });
+                  }}
+                />
               </label>
             </>
           );

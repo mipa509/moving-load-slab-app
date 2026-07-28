@@ -136,6 +136,13 @@ export interface SlabModel {
   placement: VehiclePlacement;
   display: DisplayToggles;
   section: SectionSettings;
+  /**
+   * Deck-local (s/t) section-cut settings (WP-041A), additive alongside the
+   * legacy global-XY `section` above. Optional and live-only: it is defaulted
+   * on load (see `sanitizeLoadedModel`) and is NOT part of the persisted-save
+   * schema (see `serializeModelForSave`), so it never appears in saved JSON.
+   */
+  deckSection?: DeckSectionSettings;
 }
 
 export interface ContourPoint {

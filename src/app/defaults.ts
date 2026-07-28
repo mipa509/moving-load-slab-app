@@ -2,11 +2,13 @@ import type {
   AnalysisResults,
   ConstraintSet,
   ConstraintSetting,
+  DeckSectionSettings,
   DisplayToggles,
   LegacyConstraintSet,
   MeshSettings,
   PersistedModelV2SkewLegacySupports,
   SectionAxisMode,
+  SectionOrdinate,
   SectionSettings,
   SlabGeometry,
   MaterialProps,
@@ -59,6 +61,18 @@ const defaultSupports = (widthM: number): Support[] => [
     },
   },
 ];
+
+/**
+ * Live-only default for `model.deckSection` (WP-041A). Centre is the deck's
+ * transverse mid-point for the default 5 m width; not persisted (see
+ * `serializeModelForSave`) and re-applied by `sanitizeDeckSection` on load.
+ */
+const DEFAULT_DECK_SECTION: DeckSectionSettings = {
+  mode: "longitudinal",
+  ordinate: "mx",
+  centerTM: 2.5,
+  widthM: 1,
+};
 
 const DEFAULT_DESCRIPTION =
   "Linear-elastic plate analysis of a slab subjected to vehicular wheel loads. Maximum reactions, moments and deflections are extracted from a parametric sweep of the load along the defined travel path.";
@@ -125,6 +139,7 @@ export const createDefaultModel = (): SlabModel => ({
     centerPerpM: 2.5,
     widthM: 1.0,
   },
+  deckSection: { ...DEFAULT_DECK_SECTION },
 });
 
 export const idleResults = (): AnalysisResults => ({
@@ -193,6 +208,11 @@ export const sanitizeLoadedModel = (input: unknown): SlabModel => {
     display: sanitizeDisplay(candidate.display, defaults.display),
     supports: sanitizeSupports(candidate.supports, defaultSupports(geometry.widthM)),
     section: sanitizeSection(candidate.section, defaults.section),
+    // Live-only view setting: not part of the persisted schema (see
+    // `serializeModelForSave`), so `candidate.deckSection` is normally
+    // undefined for legitimate saved files and this simply re-applies the
+    // default; see `DEFAULT_DECK_SECTION` above.
+    deckSection: sanitizeDeckSection(candidate.deckSection, defaults.deckSection ?? DEFAULT_DECK_SECTION),
   };
 };
 
@@ -741,6 +761,51 @@ function sanitizeSection(input: unknown, fallback: SectionSettings): SectionSett
     centerPerpM: finiteNumber(input.centerPerpM, fallback.centerPerpM),
     widthM: positiveNumber(input.widthM, fallback.widthM),
   };
+}
+
+const SECTION_ORDINATES: readonly SectionOrdinate[] = ["mx", "my", "mxy"];
+
+function isSectionOrdinate(input: unknown): input is SectionOrdinate {
+  return typeof input === "string" && (SECTION_ORDINATES as readonly string[]).includes(input);
+}
+
+/**
+ * Sanitizes a live-only `model.deckSection` (WP-041A). All-or-nothing: any
+ * invalid or missing field (bad `mode`/`ordinate`, non-positive `widthM`, or
+ * a non-finite centre for the given mode) falls back to the complete
+ * `fallback` object rather than mixing valid/invalid fields.
+ */
+export function sanitizeDeckSection(
+  input: unknown,
+  fallback: DeckSectionSettings,
+): DeckSectionSettings {
+  if (!isRecord(input)) {
+    return fallback;
+  }
+  if (input.mode !== "longitudinal" && input.mode !== "transverse") {
+    return fallback;
+  }
+  if (!isSectionOrdinate(input.ordinate)) {
+    return fallback;
+  }
+  const widthM = finiteNumber(input.widthM, Number.NaN);
+  if (!Number.isFinite(widthM) || widthM <= 0) {
+    return fallback;
+  }
+
+  if (input.mode === "longitudinal") {
+    const centerTM = finiteNumber(input.centerTM, Number.NaN);
+    if (!Number.isFinite(centerTM)) {
+      return fallback;
+    }
+    return { mode: "longitudinal", ordinate: input.ordinate, centerTM, widthM };
+  }
+
+  const centerSM = finiteNumber(input.centerSM, Number.NaN);
+  if (!Number.isFinite(centerSM)) {
+    return fallback;
+  }
+  return { mode: "transverse", ordinate: input.ordinate, centerSM, widthM };
 }
 
 function sanitizeSupports(input: unknown, fallback: Support[]): Support[] {

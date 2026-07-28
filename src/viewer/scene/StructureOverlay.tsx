@@ -3,7 +3,7 @@ import { Html, Line } from "@react-three/drei";
 import { Shape } from "three";
 import type { AnalysisResults, SlabModel } from "../../app/types";
 import { buildDeckPolygon } from "../../solver/geometry/deckCoordinates";
-import { computeSectionStripPolygon, toXY } from "../overlayGeometry";
+import { computeDeckSectionStripPolygon, toXY } from "../overlayGeometry";
 import { buildSupportVisuals } from "../supportPresentation";
 
 interface StructureOverlayProps {
@@ -135,8 +135,8 @@ export const StructureOverlay = ({
   }, [model.geometry, Lx, Ly]);
 
   const sectionPolygon = useMemo(
-    () => computeSectionStripPolygon(model),
-    [model.geometry, model.section, model.placement.travelDirection],
+    () => computeDeckSectionStripPolygon(model),
+    [model.geometry, model.deckSection],
   );
 
   const supportVisuals = useMemo(

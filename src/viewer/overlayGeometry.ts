@@ -1,7 +1,7 @@
 import type { SlabModel } from "../app/types";
 import { clipConvexPolygons } from "../solver/geometry/convexPolygon";
-import { buildDeckPolygon } from "../solver/geometry/deckCoordinates";
-import type { Point2D } from "../solver/geometry/types";
+import { buildDeckPolygon, deckLocalToGlobal } from "../solver/geometry/deckCoordinates";
+import type { DeckLocalPoint, Point2D } from "../solver/geometry/types";
 
 /**
  * Reproduces the legacy (pre-WP-043) section-strip RECTANGLE selection from
@@ -58,6 +58,74 @@ export function computeSectionStripPolygon(model: SlabModel): Point2D[] | null {
 
     const deckPolygon = buildDeckPolygon(model.geometry);
     return clipConvexPolygons(rectPolygon, deckPolygon);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Deck-local (s/t) section-strip BAND polygon (WP-041A), mapped to global
+ * `{x,y}` via `deckLocalToGlobal`. Unlike `computeSectionStripPolygon` above
+ * (which clips a legacy global-XY rectangle to the deck), this builds the
+ * strip band directly in deck-local coordinates first, then maps its four
+ * corners to global XY — so at non-zero skew the strip follows the sheared
+ * deck (its global-x corners shift with the skew offset) rather than staying
+ * axis-aligned in global XY.
+ *
+ * - `mode: 'longitudinal'`: `t` ranges over `[centerTM - widthM/2, centerTM +
+ *   widthM/2]` clamped to `[0, geometry.widthM]`, spanning the full deck-local
+ *   `s` extent `[0, geometry.lengthM]`.
+ * - `mode: 'transverse'`: `s` ranges over `[centerSM - widthM/2, centerSM +
+ *   widthM/2]` clamped to `[0, geometry.lengthM]`, spanning the full
+ *   deck-local `t` extent `[0, geometry.widthM]`.
+ *
+ * At zero skew `deckLocalToGlobal` is the identity map, so this reproduces
+ * the same rectangle the legacy strip drew for an equivalent centre/width.
+ *
+ * Pure and total: returns `null` when `model.deckSection` is absent, the
+ * requested band is degenerate (zero or negative width after clamping to the
+ * deck's s/t extent), or the geometry/mapping is momentarily invalid
+ * (guarded with try/catch, mirroring `computeSectionStripPolygon`).
+ */
+export function computeDeckSectionStripPolygon(model: SlabModel): Point2D[] | null {
+  const deckSection = model.deckSection;
+  if (!deckSection) {
+    return null;
+  }
+
+  try {
+    const lengthM = model.geometry.lengthM;
+    const widthM = model.geometry.widthM;
+    const halfStrip = deckSection.widthM / 2;
+
+    let corners: DeckLocalPoint[];
+    if (deckSection.mode === "longitudinal") {
+      const tLo = Math.max(0, deckSection.centerTM - halfStrip);
+      const tHi = Math.min(widthM, deckSection.centerTM + halfStrip);
+      if (tHi - tLo <= 0) {
+        return null;
+      }
+      corners = [
+        { s: 0, t: tLo },
+        { s: lengthM, t: tLo },
+        { s: lengthM, t: tHi },
+        { s: 0, t: tHi },
+      ];
+    } else {
+      const sLo = Math.max(0, deckSection.centerSM - halfStrip);
+      const sHi = Math.min(lengthM, deckSection.centerSM + halfStrip);
+      if (sHi - sLo <= 0) {
+        return null;
+      }
+      corners = [
+        { s: sLo, t: 0 },
+        { s: sHi, t: 0 },
+        { s: sHi, t: widthM },
+        { s: sLo, t: widthM },
+      ];
+    }
+
+    return corners.map((corner) => deckLocalToGlobal(model.geometry, corner));
   } catch {
     return null;
   }
