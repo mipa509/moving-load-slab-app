@@ -283,6 +283,27 @@ export interface AnalysisResults {
   elapsedMs: number;
   warning?: string;
   error?: string;
+
+  // WP-032B: skew-general evidence (optional; populated by the adapter in
+  // WP-032C, consumed incrementally by WP-041B etc.)
+  deckPolygon?: Array<{ xM: number; yM: number }>;
+  deckBounds?: { xMinM: number; xMaxM: number; yMinM: number; yMaxM: number };
+  meshNodeOverlays?: StagedSkewAppContract.MeshNodeOverlayV2[];
+  meshElementOverlays?: StagedSkewAppContract.MeshElementOverlayV2[];
+  wheelPatchOverlays?: WheelPatchOverlay[];
+  nodalKinematics?: NodalKinematics[];
+  nodalFields?: NodalFieldMap;
+  elementFields?: ElementFieldMap;
+  physicalReactions?: SupportReactionRow[];
+  physicalReactionSummaryBySupport?: Array<PhysicalActionTotals & { supportId: string }>;
+  physicalReactionTotals?: PhysicalActionTotals;
+  reactionDistributions?: SupportReactionDistribution[]; // predefined for WP-034; adapter leaves undefined
+  sections?: SectionCurve[]; // predefined for WP-033; adapter leaves undefined
+  envelopeV2?: StagedSkewAppContract.EnvelopeDataV2; // predefined for WP-035; complete mxy-inclusive envelope
+  equilibrium?: SignedEquilibrium;
+  meshQuality?: MeshQualityReport;
+  verification?: VerificationEvidenceStatus;
+  warningRequired?: boolean;
 }
 
 export type PhysicalSupportDof = 'w' | 'rotationX' | 'rotationY';

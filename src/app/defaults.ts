@@ -150,6 +150,13 @@ export const idleResults = (): AnalysisResults => ({
     maxAbsShearKnPerM: 0,
   },
   elapsedMs: 0,
+  verification: {
+    formulation: "conditional",
+    referenceStudy19Deg: "not-run",
+    currentModelConvergence: "not-demonstrated",
+    evidenceIds: [],
+  },
+  warningRequired: false,
 });
 
 export const errorResults = (
