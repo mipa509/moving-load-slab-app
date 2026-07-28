@@ -1,5 +1,14 @@
 import { useMemo } from "react";
-import type { AnalysisResults, PlotMode, ResultField, SlabModel } from "../app/types";
+import type {
+  AnalysisResults,
+  GlobalResultant,
+  MeshQualityReport,
+  PlotMode,
+  ResultField,
+  SignedEquilibrium,
+  SlabModel,
+  VerificationEvidenceStatus,
+} from "../app/types";
 import {
   deriveViewportLayerVisibility,
   findContourExtrema,
@@ -9,10 +18,16 @@ import { ViewerCanvas } from "../viewer/ViewerCanvas";
 import { getViewerContour } from "../viewer/viewerPresentation";
 import { SectionPlot } from "./SectionPlot";
 import {
+  computeDeckSection,
   computeEnvelopeSectionCurves,
   computeSectionCurve,
   resolveSectionAxis,
 } from "../app/sectionCurve";
+import {
+  deckSectionAxisLabel,
+  deckSectionValueLabel,
+  toSectionPlotCurve,
+} from "../app/deckSectionView";
 
 interface ViewportProps {
   model: SlabModel;
@@ -87,6 +102,21 @@ export const Viewport = ({ model, results, selectedField, onModelChange, onCanva
         </div>
       </section>
 
+      {results.warningRequired === true ? (
+        <section className="experimental-banner" role="alert">
+          <span className="experimental-banner-badge">Experimental</span>
+          <div className="experimental-banner-body">
+            <strong>Non-zero-skew analysis — experimental, screening-only result.</strong>
+            <p>
+              This result comes from the skew-general analysis path, which has not yet completed
+              independent numerical verification. It has not received G7 checking or CEng
+              sign-off and must not be used for design. Treat these values as screening evidence
+              only, pending an authorized decision releasing this scope for design use.
+            </p>
+          </div>
+        </section>
+      ) : null}
+
       <section className="viewport-shell">
         <header className="viewport-shell-header">
           <div className="viewport-shell-heading">
@@ -155,6 +185,8 @@ export const Viewport = ({ model, results, selectedField, onModelChange, onCanva
 
       <SectionPlotPanel model={model} results={results} />
 
+      <DeckSectionPanel model={model} results={results} />
+
       <section className="summary-grid">
         <article className="summary-card">
           <h4>Max Deflection</h4>
@@ -174,6 +206,8 @@ export const Viewport = ({ model, results, selectedField, onModelChange, onCanva
           <small>{activeResultSummary.detail}</small>
         </article>
       </section>
+
+      <SkewDiagnosticsPanel results={results} />
 
       {model.display.tables && selectedField === "reactions" ? (
         <div className="table-stack">
@@ -335,6 +369,261 @@ const SectionPlotPanel = ({ model, results }: SectionPlotPanelProps) => {
         valueLabel={valueLabel}
         subtitle={subtitle}
       />
+    </section>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// WP-041B: deck-local (s/t) section panel — ADDITIVE, alongside (not instead
+// of) the legacy global-XY `SectionPlotPanel` above. Renders the deck-local
+// section for the CURRENT placement via `computeDeckSection`, mapped onto
+// the local `SectionPlot`-compatible shape via `toSectionPlotCurve`.
+// ---------------------------------------------------------------------------
+
+interface DeckSectionPanelProps {
+  model: SlabModel;
+  results: AnalysisResults;
+}
+
+const DeckSectionPanel = ({ model, results }: DeckSectionPanelProps) => {
+  const settings = model.deckSection;
+  const nodalFields = results.nodalFields;
+
+  // Guard: only ever call `computeDeckSection` when both inputs it needs are
+  // present. Otherwise fall through to `null`, which `SectionPlot` already
+  // renders gracefully as its built-in "No nodes in section band" empty state.
+  const deckCurve = useMemo(() => {
+    if (!settings || !nodalFields) return null;
+    return computeDeckSection(nodalFields, settings);
+  }, [settings, nodalFields]);
+
+  const localCurve = useMemo(() => toSectionPlotCurve(deckCurve), [deckCurve]);
+
+  const modeLabel = settings?.mode === "transverse" ? "Transverse" : "Longitudinal";
+  const axisLabel = settings ? deckSectionAxisLabel(settings) : "Distance (m)";
+  const valueLabel = settings ? deckSectionValueLabel(settings.ordinate) : "Mxx";
+  const centerAxisLabel = settings?.mode === "transverse" ? "s" : "t";
+  const centerM = settings
+    ? settings.mode === "longitudinal"
+      ? settings.centerTM
+      : settings.centerSM
+    : null;
+  const subtitle = settings
+    ? `Strip ${settings.widthM.toFixed(2)} m wide centred at ${centerAxisLabel} = ${centerM!.toFixed(2)} m`
+    : "Deck-local (s/t) section settings are not available for this model.";
+
+  return (
+    <section className="section-plot-panel deck-section-panel">
+      <header className="section-plot-header">
+        <div>
+          <p className="viewport-shell-kicker">Deck-local section (s/t)</p>
+          <h3>
+            {valueLabel} · {modeLabel}
+          </h3>
+        </div>
+        <div className="section-plot-legend">
+          <span className="section-plot-legend-current">— current placement</span>
+        </div>
+      </header>
+      <SectionPlot
+        current={localCurve}
+        axisLabel={axisLabel}
+        valueUnits="kN*m/m"
+        valueLabel={valueLabel}
+        subtitle={subtitle}
+      />
+    </section>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// WP-041B: skew-evidence diagnostics — ADDITIVE. Presents the signed-
+// equilibrium residual, mesh-quality warnings and verification statuses
+// carried on `results`. Each sub-panel is independently guarded by the
+// presence of its own field, renders a neutral note when the field is
+// absent, and never throws (idle/error results carry none of these fields).
+// ---------------------------------------------------------------------------
+
+const statusPillTone = (status: string): string => {
+  if (status === "passed") return "status-passed";
+  if (status === "conditional") return "status-conditional";
+  if (status === "failed") return "status-failed";
+  // "not-checked" | "not-run" | "not-demonstrated"
+  return "status-neutral";
+};
+
+interface EquilibriumSummaryProps {
+  equilibrium?: SignedEquilibrium;
+}
+
+const EquilibriumSummary = ({ equilibrium }: EquilibriumSummaryProps) => {
+  if (!equilibrium) {
+    return (
+      <div className="diagnostics-block">
+        <h4>Signed equilibrium residual</h4>
+        <p className="field-note">No equilibrium evidence available for this result.</p>
+      </div>
+    );
+  }
+
+  const rows: Array<{ label: string; resultant: GlobalResultant }> = [
+    { label: "Applied", resultant: equilibrium.applied },
+    { label: "Reactions", resultant: equilibrium.reactions },
+    { label: "Residual", resultant: equilibrium.residual },
+    { label: "|Residual|", resultant: equilibrium.absoluteResidual },
+  ];
+
+  return (
+    <div className="diagnostics-block">
+      <h4>Signed equilibrium residual</h4>
+      <p className="field-note">
+        Origin at x = {equilibrium.originM.xM.toFixed(3)} m, y = {equilibrium.originM.yM.toFixed(3)} m
+      </p>
+      <div className="table-scroll diagnostics-table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Resultant</th>
+              <th>Fz (kN)</th>
+              <th>Mx (kN*m)</th>
+              <th>My (kN*m)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.label}>
+                <td>{row.label}</td>
+                <td>{row.resultant.forceZKn.toFixed(3)}</td>
+                <td>{row.resultant.momentXKnm.toFixed(3)}</td>
+                <td>{row.resultant.momentYKnm.toFixed(3)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="diagnostics-normalized-grid">
+        <p>
+          <span>Normalized |Fz|</span>
+          <strong>{equilibrium.normalizedResidual.forceZ.toExponential(2)}</strong>
+        </p>
+        <p>
+          <span>Normalized |Mx|</span>
+          <strong>{equilibrium.normalizedResidual.momentX.toExponential(2)}</strong>
+        </p>
+        <p>
+          <span>Normalized |My|</span>
+          <strong>{equilibrium.normalizedResidual.momentY.toExponential(2)}</strong>
+        </p>
+      </div>
+    </div>
+  );
+};
+
+interface MeshQualitySummaryProps {
+  meshQuality?: MeshQualityReport;
+}
+
+const MeshQualitySummary = ({ meshQuality }: MeshQualitySummaryProps) => {
+  if (!meshQuality) {
+    return (
+      <div className="diagnostics-block">
+        <h4>Mesh-quality warnings</h4>
+        <p className="field-note">No mesh-quality evidence available for this result.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="diagnostics-block">
+      <h4>Mesh-quality warnings</h4>
+      <p className="diagnostics-status-row">
+        <span className={`pill status-pill ${statusPillTone(meshQuality.status === "ok" ? "passed" : "conditional")}`}>
+          {meshQuality.status.toUpperCase()}
+        </span>
+        <span className="field-note">{meshQuality.elements.length} element(s) assessed</span>
+      </p>
+      {meshQuality.diagnostics.length === 0 ? (
+        <p className="field-note">No mesh-quality diagnostics reported.</p>
+      ) : (
+        <ul className="diagnostics-list">
+          {meshQuality.diagnostics.map((diagnostic, index) => (
+            <li
+              key={`${diagnostic.code}-${index}`}
+              className={`diagnostics-list-item severity-${diagnostic.severity}`}
+            >
+              <span className="diagnostics-list-code">{diagnostic.code}</span>
+              <span className="diagnostics-list-message">{diagnostic.message}</span>
+              <span className="field-note">{diagnostic.elementIds.length} element(s)</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+};
+
+interface VerificationSummaryProps {
+  verification?: VerificationEvidenceStatus;
+}
+
+const VerificationSummary = ({ verification }: VerificationSummaryProps) => {
+  if (!verification) {
+    return (
+      <div className="diagnostics-block">
+        <h4>Verification status</h4>
+        <p className="field-note">No verification evidence available for this result.</p>
+      </div>
+    );
+  }
+
+  const rows: Array<{ label: string; status: string }> = [
+    { label: "Formulation", status: verification.formulation },
+    { label: "Reference study (19 deg)", status: verification.referenceStudy19Deg },
+    { label: "Current model convergence", status: verification.currentModelConvergence },
+  ];
+
+  return (
+    <div className="diagnostics-block">
+      <h4>Verification status</h4>
+      <ul className="diagnostics-status-list">
+        {rows.map((row) => (
+          <li key={row.label}>
+            <span>{row.label}</span>
+            <span className={`pill status-pill ${statusPillTone(row.status)}`}>{row.status}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="field-note">
+        {verification.evidenceIds.length > 0
+          ? `Evidence: ${verification.evidenceIds.join(", ")}`
+          : "No evidence references recorded."}
+      </p>
+    </div>
+  );
+};
+
+interface SkewDiagnosticsPanelProps {
+  results: AnalysisResults;
+}
+
+const SkewDiagnosticsPanel = ({ results }: SkewDiagnosticsPanelProps) => {
+  const { equilibrium, meshQuality, verification } = results;
+
+  if (!equilibrium && !meshQuality && !verification) {
+    return null;
+  }
+
+  return (
+    <section className="skew-diagnostics-panel">
+      <header className="skew-diagnostics-header">
+        <p className="viewport-shell-kicker">Skew-evidence diagnostics</p>
+        <h3>Equilibrium · Mesh Quality · Verification</h3>
+      </header>
+      <div className="diagnostics-grid">
+        <EquilibriumSummary equilibrium={equilibrium} />
+        <MeshQualitySummary meshQuality={meshQuality} />
+        <VerificationSummary verification={verification} />
+      </div>
     </section>
   );
 };
