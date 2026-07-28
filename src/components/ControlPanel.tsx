@@ -53,6 +53,7 @@ const resultFields: ResultField[] = [
   "deflection",
   "mx",
   "my",
+  "mxy",
   "qx",
   "qy",
   "reactions",

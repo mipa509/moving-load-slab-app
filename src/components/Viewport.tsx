@@ -26,6 +26,7 @@ const resultLabel: Record<ResultField, string> = {
   deflection: "Deflection",
   mx: "Mx",
   my: "My",
+  mxy: "Mxy",
   qx: "Qx",
   qy: "Qy",
   reactions: "Reactions",

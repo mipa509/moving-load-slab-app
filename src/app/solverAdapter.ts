@@ -27,6 +27,7 @@ const contourFields: Exclude<ResultField, "reactions">[] = [
   "deflection",
   "mx",
   "my",
+  "mxy",
   "qx",
   "qy",
 ];
@@ -35,6 +36,7 @@ const defaultUnits: Record<Exclude<ResultField, "reactions">, string> = {
   deflection: "mm",
   mx: "kN*m/m",
   my: "kN*m/m",
+  mxy: "kN*m/m",
   qx: "kN/m",
   qy: "kN/m",
 };

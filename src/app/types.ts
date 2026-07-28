@@ -1,6 +1,6 @@
 import type * as SkewGeometryContract from '../solver/geometry/types';
 
-export type ResultField = "deflection" | "mx" | "my" | "qx" | "qy" | "reactions";
+export type ResultField = "deflection" | "mx" | "my" | "mxy" | "qx" | "qy" | "reactions";
 
 export type SupportKind = "line" | "point" | "edge";
 export type Dof = "uz" | "rx" | "ry";

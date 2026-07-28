@@ -76,6 +76,7 @@ export function runFixedPositionAnalysis(model: SlabModel): SolverPayload {
     deflection: toNodalContour("deflection", result.nodalFields, (n) => n.deflection * 1000, "mm"),
     mx: toNodalContour("mx", result.nodalFields, (n) => n.mx, "kN*m/m"),
     my: toNodalContour("my", result.nodalFields, (n) => n.my, "kN*m/m"),
+    mxy: toNodalContour("mxy", result.nodalFields, (n) => n.mxy, "kN*m/m"),
     qx: toNodalContour("qx", result.nodalFields, (n) => n.qx, "kN/m"),
     qy: toNodalContour("qy", result.nodalFields, (n) => n.qy, "kN/m"),
   };
@@ -89,6 +90,7 @@ export function runFixedPositionAnalysis(model: SlabModel): SolverPayload {
       deflection: toContour("deflection", result, (item) => item.deflection * 1000, "mm"),
       mx: toContour("mx", result, (item) => item.moments.mx, "kN*m/m"),
       my: toContour("my", result, (item) => item.moments.my, "kN*m/m"),
+      mxy: toContour("mxy", result, (item) => item.moments.mxy, "kN*m/m"),
       qx: toContour("qx", result, (item) => item.shears.qx, "kN/m"),
       qy: toContour("qy", result, (item) => item.shears.qy, "kN/m"),
     },

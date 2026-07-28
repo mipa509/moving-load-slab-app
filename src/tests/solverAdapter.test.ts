@@ -151,6 +151,12 @@ describe("solver adapter", () => {
       expect(Number.isFinite(p.value)).toBe(true);
     });
 
+    // WP-041A: mxy is now a selectable result field, so the facade/adapter
+    // must surface an mxy nodal contour (not just the nodalFields map) for the
+    // 3D viewer to render.
+    expect(result.nodalContours.mxy?.points.length ?? 0).toBeGreaterThan(0);
+    expect(result.nodalContours.mxy?.units).toBe("kN*m/m");
+
     expect(result.elementFields?.qx.location).toBe("element-center");
 
     expect(result.meshNodeOverlays?.[0]).toBeDefined();
