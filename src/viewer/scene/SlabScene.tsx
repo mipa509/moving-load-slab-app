@@ -6,7 +6,9 @@ import {
 } from "@react-three/drei";
 import type { ContourScale } from "../../app/contourScale";
 import type { AnalysisResults, NodalContourData, ResultField, SlabModel } from "../../app/types";
+import { buildDeckPolygon, getDeckBounds } from "../../solver/geometry/deckCoordinates";
 import type { ProbeHit } from "../hooks/useViewerState";
+import { computeDeckFraming, type DeckBounds } from "../math/deckFraming";
 import type { ViewerDeformationState } from "../viewerPresentation";
 import { ExtremaMarkers } from "./ExtremaMarkers";
 import { MeshOverlay } from "./MeshOverlay";
@@ -46,9 +48,34 @@ export const SlabScene = ({
   const { plotMode } = model.display;
   const Lx = model.geometry.lengthM;
   const Ly = model.geometry.widthM;
-  const cx = Lx * 0.5;
-  const cy = Ly * 0.5;
-  const maxDim = Math.max(Lx, Ly);
+
+  // Frame the camera/probe on the deck's actual (possibly skewed) bounds
+  // instead of the `lengthM x widthM` rectangle, which under-covers a
+  // skewed deck. Guard against a momentarily-degenerate geometry (mid-edit)
+  // by falling back to the zero-skew rectangle bounds/polygon.
+  let deckBounds: DeckBounds;
+  try {
+    deckBounds = getDeckBounds(model.geometry);
+  } catch {
+    deckBounds = { xMin: 0, xMax: Lx, yMin: 0, yMax: Ly };
+  }
+  const framing = computeDeckFraming(deckBounds);
+
+  let deckPolygon: Array<{ x: number; y: number }>;
+  try {
+    deckPolygon = buildDeckPolygon(model.geometry);
+  } catch {
+    deckPolygon = [
+      { x: 0, y: 0 },
+      { x: Lx, y: 0 },
+      { x: Lx, y: Ly },
+      { x: 0, y: Ly },
+    ];
+  }
+
+  const cx = framing.centerX;
+  const cy = framing.centerY;
+  const maxDim = framing.maxSpan;
   const is3D = plotMode === "deformed";
 
   const cameraDistance = Math.max(maxDim * 1.15, deformation.zSpan * 3.4, maxDim * 0.55);
@@ -74,7 +101,7 @@ export const SlabScene = ({
           <OrthographicCamera
             makeDefault
             position={[cx, cy, 100]}
-            zoom={Math.min(580 / Lx, 380 / Ly)}
+            zoom={Math.min(580 / framing.spanX, 380 / framing.spanY)}
             near={-400}
             far={400}
           />
@@ -93,8 +120,8 @@ export const SlabScene = ({
 
       {showProbe && contour && results.meshNodes.length > 0 && (
         <ProbeSurface
-          slabLengthM={Lx}
-          slabWidthM={Ly}
+          framing={framing}
+          deckPolygon={deckPolygon}
           meshNodes={results.meshNodes}
           contour={contour}
           onProbeHit={onProbeHit}

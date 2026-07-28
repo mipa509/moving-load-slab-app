@@ -2,19 +2,21 @@ import { useCallback, useMemo, useRef } from "react";
 import type { ThreeEvent } from "@react-three/fiber";
 import type { MeshNodeOverlay, NodalContourData } from "../../app/types";
 import type { ProbeHit } from "../hooks/useViewerState";
+import type { DeckFraming } from "../math/deckFraming";
+import { pointInConvexPolygon } from "../math/deckFraming";
 import { buildProbeGrid, probeNearestValue } from "../math/probeHit";
 
 interface ProbeSurfaceProps {
-  slabLengthM: number;
-  slabWidthM: number;
+  framing: DeckFraming;
+  deckPolygon: Array<{ x: number; y: number }>;
   meshNodes: MeshNodeOverlay[];
   contour: NodalContourData;
   onProbeHit: (hit: ProbeHit | null) => void;
 }
 
 export const ProbeSurface = ({
-  slabLengthM,
-  slabWidthM,
+  framing,
+  deckPolygon,
   meshNodes,
   contour,
   onProbeHit,
@@ -22,8 +24,8 @@ export const ProbeSurface = ({
   const probeGrid = useRef<ReturnType<typeof buildProbeGrid>>(null);
 
   const planePosition = useMemo(
-    () => [slabLengthM * 0.5, slabWidthM * 0.5, 0.12] as [number, number, number],
-    [slabLengthM, slabWidthM],
+    () => [framing.centerX, framing.centerY, 0.12] as [number, number, number],
+    [framing.centerX, framing.centerY],
   );
 
   const updateProbeGrid = useCallback(() => {
@@ -46,6 +48,14 @@ export const ProbeSurface = ({
   const handlePointerMove = useCallback(
     (event: ThreeEvent<PointerEvent>) => {
       event.stopPropagation();
+
+      if (!pointInConvexPolygon(event.point.x, event.point.y, deckPolygon)) {
+        // Over the deck's bounding box but outside the actual (possibly
+        // skewed) parallelogram: there is no slab here.
+        onProbeHit(null);
+        return;
+      }
+
       updateProbeGrid();
       const grid = probeGrid.current;
       if (!grid) {
@@ -62,7 +72,7 @@ export const ProbeSurface = ({
         screenY: event.nativeEvent.offsetY,
       });
     },
-    [onProbeHit, updateProbeGrid],
+    [deckPolygon, onProbeHit, updateProbeGrid],
   );
 
   const handlePointerLeave = useCallback(() => {
@@ -75,7 +85,7 @@ export const ProbeSurface = ({
       onPointerMove={handlePointerMove}
       onPointerLeave={handlePointerLeave}
     >
-      <planeGeometry args={[slabLengthM, slabWidthM]} />
+      <planeGeometry args={[framing.spanX, framing.spanY]} />
       <meshBasicMaterial transparent opacity={0} depthWrite={false} />
     </mesh>
   );
