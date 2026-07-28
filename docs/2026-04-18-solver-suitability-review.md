@@ -82,3 +82,41 @@ The solver choice is sound **in kind** — a Mindlin plate with factor-once / so
 - **(b) Extend towards a bridge-deck solver:** move to a 5-DOF shell with eccentric beam elements and unstructured quads before it is called a bridge-deck solver.
 
 Path (a) is recommended for v1. The items in §4.1 and §4.2 form the candidate backlog for the next major revision.
+
+---
+
+## Addendum — 2026-07-28 (skew-analysis work)
+
+*This addendum records changes made since the 2026-04-18 review above. The
+original review text is retained unchanged as a dated record; where it and this
+addendum disagree, this addendum reflects the current code.*
+
+**Architecture change since the original review.** The element and solve
+strategy described in the header scope have since changed:
+
+- the plate element is now **MITC4** (assumed transverse-shear strain,
+  mitigating shear locking), replacing the original 4-node element, for **all**
+  slabs; and
+- the linear solve is a **sparse conjugate-gradient** solver, not the dense
+  direct/factorize-once solve described above.
+
+Rectangular results shifted deliberately to the corrected MITC4 values;
+global equilibrium totals are unchanged.
+
+**Scope change — plan skew (experimental).** The "rectangular plan" limitation
+in the original scope has been partially lifted: the unified solver now
+analyses **plan-skewed** decks, with rectangular as the `skew angle = 0` case
+of the same element, assembly, load path, and support mapping.
+
+**This does not change the review's bottom line for skew.** Non-zero-skew
+analysis is **experimental and screening-only**. It has **not** received the
+Chartered-Engineer review required by §6, has **no** independent numerical or
+published-benchmark verification, and carries a mandatory in-app experimental
+warning that no UI affordance can clear. The §6 requirement — CEng review and
+cross-check against a second independent method before any design-submission
+use — applies to skew results in full and remains outstanding.
+
+For the precise implemented / provisional / deferred / independently-verified
+breakdown of the skew capability, and the verification gates that must pass
+before the warning can be lifted, see
+[`skew-verification-status.md`](./skew-verification-status.md).

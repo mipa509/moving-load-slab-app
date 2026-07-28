@@ -1,21 +1,26 @@
 # Moving Load Slab App
 
-A browser-based structural analysis tool for rapid moving-load checks on rectangular concrete slab decks. Built for engineers who need a fast screening result, an envelope of worst-case moments, and a printable engineering note — without firing up a full FEA package.
+A browser-based structural analysis tool for rapid moving-load checks on concrete slab decks. Built for engineers who need a fast screening result, an envelope of worst-case moments, and a printable engineering note — without firing up a full FEA package.
 
 > **Status:** Screening / quick-check tool. Not a substitute for full design FEA. See [Scope and limitations](#scope-and-limitations) before using results outside preliminary checks.
+>
+> **Skew (non-rectangular plan) analysis is experimental and screening-only.** The unified solver now analyses plan-skewed decks (rectangular is the `skew angle = 0` case), but non-zero-skew results have **not** completed independent numerical verification and carry a mandatory in-app experimental warning. Do not use non-zero-skew results for design. See [`docs/skew-verification-status.md`](./docs/skew-verification-status.md).
 
 ## Features
 
-- **Linear-elastic plate analysis** of a rectangular RC slab with point and line supports.
+- **Linear-elastic plate analysis** of an RC slab with point, line, and (skew) edge supports.
+- **Plan-skew geometry** *(experimental)* — a skew-angle input with fixed-fixed / pinned-pinned boundary presets and user-creatable deck-edge supports; rectangular is the `skew angle = 0` case of the same solver.
 - **Vehicle loading** in two modes:
   - Axle definition with longitudinal spacings, axle load, and wheels-per-axle.
   - Direct wheel placement with arbitrary patch sizes.
 - **Live re-run** with debounced auto-analysis as inputs change.
-- **Moving-load envelope** — sweep the vehicle along a path and accumulate worst-case Mxx / Myy / deflection per node.
-- **Cross-section plot** along the travel axis with the current placement curve and envelope max/min curves overlaid.
-- **WebGL viewer** with three modes — *Structure*, *Results 2D* (nodal contours), and *Deformed 3D* (out-of-plane displacement).
+- **Moving-load envelope** — sweep the vehicle along a path and accumulate worst-case Mxx / Myy / **Mxy** / deflection per node, with skew-aware entry/exit travel bounds and worst-station capture.
+- **Result fields** — deflection, `Mx`, `My`, `Mxy` (twisting moment), `Qx`, `Qy`, and reactions, as nodal contours.
+- **Cross-section plots** — a global-XY section along the travel axis (current + envelope curves) *and* a deck-local (s/t) section that follows the skewed deck.
+- **WebGL viewer** with three modes — *Structure*, *Results 2D* (nodal contours), and *Deformed 3D* (out-of-plane displacement) — polygon-aware framing, probe, and overlays for skewed decks.
 - **Cursor-follow probe** for live value readout, docked colour legend, and configurable display toggles (mesh, supports, wheel patches, contours).
 - **Reaction summaries** per support and deduplicated totals.
+- **Skew-evidence diagnostics** — signed-equilibrium residuals, mesh-quality status, and three separately reported verification statuses (formulation / stored 19° reference study / current-model convergence), with an experimental banner on non-zero skew.
 - **Printable engineering note** (browser print → PDF) including:
   - Description, assumptions, structure & supports, vehicle loads.
   - Vehicle side-elevation diagram with axle arrows and kN labels.
@@ -29,9 +34,10 @@ A browser-based structural analysis tool for rapid moving-load checks on rectang
 
 ```powershell
 npm install
-npm run dev      # http://127.0.0.1:4173
-npm test         # vitest run, ~100 tests
-npm run build    # tsc + vite build, outputs to dist/
+npm run dev      # Vite dev server, http://localhost:5173
+npm test         # vitest run (~520 tests)
+npm run build    # tsc -b + vite build, outputs to dist/
+npm run preview  # serve the production build, http://localhost:4173
 ```
 
 Production build is a static SPA — `dist/` can be served by any static host or deployed to Vercel/Netlify/Cloudflare Pages.
@@ -43,7 +49,7 @@ Production build is a static SPA — `dist/` can be served by any static host or
 - `@react-three/fiber` + `@react-three/drei` (WebGL viewer, Three.js under the hood)
 - Vitest (unit tests, Node test environment — no jsdom)
 
-Custom in-repo solver: a 4-node Mindlin/Reissner plate element on a structured rectangular mesh, 3 DOFs per node (`w`, `rx`, `ry`), dense direct solve.
+Custom in-repo solver: a 4-node **MITC4** Mindlin/Reissner plate element (assumed transverse-shear strain, mitigating shear locking) on a structured mesh mapped to the deck geometry, 3 DOFs per node (`w`, `rx`, `ry`), solved with a **sparse conjugate-gradient** solver. Rectangular and skew decks use the same unified path — a skew deck is the sheared (`skew angle ≠ 0`) case of the same element and assembly.
 
 ## Project structure
 
@@ -64,7 +70,7 @@ The solver is intentionally narrow. Before relying on any result, confirm your p
 
 - **Plate bending only** — no in-plane (membrane) DOFs. Composite steel–concrete decks, eccentric edge beams acting compositely, in-plane prestress, and restraint thermal/shrinkage effects cannot be modelled.
 - **No beam, bar, or rigid-link elements** — kerbs, edge-stiffening beams, diaphragms, and bearing plinths are not represented.
-- **Structured rectangular mesh only** — skew decks, curved-in-plan decks, non-rectangular plan shapes, and local refinement under tyre patches are not supported.
+- **Structured mesh only** — a plan-**skew** deck is supported *(experimental, screening-only — see below)* as a sheared structured mesh, but curved-in-plan decks, general non-rectangular / non-parallelogram plan shapes, and local refinement under tyre patches are not supported.
 - **Isotropic material only** — voided, ribbed, and orthotropic deck behaviour is not captured.
 - **Supports align to mesh nodes/edges** — arbitrary bearing positions require mesh adjustment.
 - **Dense direct solve** — practical up to ~10⁴ DOFs.
@@ -72,9 +78,9 @@ The solver is intentionally narrow. Before relying on any result, confirm your p
 - **Tyre patch loads** are clipped rectangular pressure patches converted to equivalent nodal vertical loads; local effects under the contact patch remain mesh-dependent.
 - **Post-processing** reports `w`, plate moments, and reactions. Wood–Armer reinforcement moments are not yet produced.
 
-Suitable as a screening / quick-check tool for **right (non-skew), solid RC slab decks without composite edge beams**. Any design-submission use requires independent verification against a second method and Chartered Engineer review.
+Suitable as a screening / quick-check tool for **right (non-skew), solid RC slab decks without composite edge beams**. **Plan-skew analysis is experimental and screening-only:** non-zero-skew results are not independently verified, carry a mandatory in-app warning, and must not be used for design. Any design-submission use (skew or not) requires independent verification against a second method and Chartered Engineer review.
 
-See [`docs/2026-04-18-solver-suitability-review.md`](./docs/2026-04-18-solver-suitability-review.md) for a full assessment against bridge-deck use and the roadmap to lift these limitations.
+See [`docs/2026-04-18-solver-suitability-review.md`](./docs/2026-04-18-solver-suitability-review.md) for the bridge-deck assessment, and [`docs/skew-verification-status.md`](./docs/skew-verification-status.md) for the precise implemented / provisional / deferred / verified breakdown of the skew capability.
 
 ## Workflow notes
 
@@ -87,7 +93,8 @@ See [`docs/2026-04-18-solver-suitability-review.md`](./docs/2026-04-18-solver-su
 
 ## Documentation
 
-- [Solver suitability review (2026-04-18)](./docs/2026-04-18-solver-suitability-review.md)
+- [Solver suitability review (2026-04-18)](./docs/2026-04-18-solver-suitability-review.md) — incl. the skew-analysis addendum
+- **Skew analysis:** [verification status](./docs/skew-verification-status.md) · [implementation status ledger](./docs/skew-implementation-status.md) · [implementation plan](./docs/2026-07-21-skew-plate-analysis-implementation-plan.md)
 - [Benchmark reference](./docs/benchmark-reference.md)
 - Version specifications: [v5](./docs/v5-specification.md) · [v4](./docs/v4-specification.md) · [v3](./docs/v3-specification.md) · [v2](./docs/v2-specification.md) · [v1](./docs/v1-specification.md)
 - Feature design notes: [V5 WebGL viewer](./docs/2026-04-17-v5-webgl-viewer.md) · [PDF envelope + vehicle elevation](./docs/2026-05-18-pdf-envelope-and-vehicle-diagram.md)
