@@ -1373,6 +1373,39 @@ th {
     color: #5a6573;
     text-align: center;
   }
+
+  .report-note-warning {
+    margin: 6pt 0 10pt;
+    padding: 6pt 8pt;
+    border: 1pt solid #a43b31;
+    border-radius: 3pt;
+    background: #fdecea;
+    color: #a43b31;
+    font-size: 9.5pt;
+    line-height: 1.35;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .report-note-note {
+    font-size: 9pt;
+    color: #3b4552;
+    line-height: 1.35;
+    margin-top: 4pt;
+  }
+}
+
+/* Report warning is also styled for on-screen preview (report is print-first,
+ * but keep the safety banner legible if the note is ever shown on screen). */
+.report-note-warning {
+  margin: 0.5rem 0 0.75rem;
+  padding: 0.55rem 0.7rem;
+  border: 1.5px solid var(--danger);
+  border-radius: 8px;
+  background: #fdecea;
+  color: var(--danger);
+  font-size: 0.85rem;
+  line-height: 1.4;
 }
 
 /* ── Viewer shell (WebGL) ─────────────────────────── */
