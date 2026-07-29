@@ -81,6 +81,10 @@ The solver is intentionally narrow. Before relying on any result, confirm your p
 
 Suitable as a screening / quick-check tool for **right (non-skew), solid RC slab decks without composite edge beams**. **Plan-skew analysis is experimental and screening-only:** non-zero-skew results are not independently verified, carry a mandatory in-app warning, and must not be used for design. Any design-submission use (skew or not) requires independent verification against a second method and Chartered Engineer review.
 
+### High-skew roadmap
+
+Rather than add a triangular/mixed-element mesher to this app to reach high skew, the moving-load capability (vehicle + wheel-patch loads, the moving-load envelope sweep, and the section / reaction / contour plots) is being **ported onto a separate app, Anax** — Python, with **gmsh** unstructured meshing and an **OpenSeesPy** solver — which handles general / skew / irregular plan geometry natively. This app remains the rectangular / low-skew screening tool; the high-skew moving-load work continues in the Anax repository (new branch), where the detailed port plan lives.
+
 See [`docs/2026-04-18-solver-suitability-review.md`](./docs/2026-04-18-solver-suitability-review.md) for the bridge-deck assessment, and [`docs/skew-verification-status.md`](./docs/skew-verification-status.md) for the precise implemented / provisional / deferred / verified breakdown of the skew capability.
 
 ## Workflow notes
