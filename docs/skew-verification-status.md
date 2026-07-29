@@ -95,6 +95,46 @@ can clear the warning.
 
 ---
 
+## Mesh behaviour at high skew (important)
+
+The solver uses a single **uniformly sheared structured quadrilateral mesh**
+for all skew angles (rectangular is the `skew angle = 0` case). There is no
+triangular, mixed, or refined mesh, and no special treatment of the acute /
+obtuse corners.
+
+As skew increases, every element becomes a more distorted parallelogram — its
+interior angles are `90° ± skew`, and its scaled Jacobian is `≈ cos(skew)`:
+
+| Skew | Acute interior angle | Scaled Jacobian ≈ |
+| --- | --- | --- |
+| 19° | 71° | 0.95 |
+| 35° | 55° | 0.82 |
+| 45° | 45° | 0.71 |
+| 60° | 30° | 0.50 |
+
+Two consequences the reader must understand:
+
+- **The internal mesh-quality screen is permissive and is not the safeguard
+  here.** Its thresholds (scaled Jacobian ≥ 0.3, interior angles within
+  30°–150°) are only tripped by a uniform sheared-quad mesh at roughly **60°**
+  skew. So the mesh-quality panel reports **OK even at 45°** — a status that
+  means "no *severe* Q4 distortion", **not** "results are accurate".
+- **Equilibrium residuals are self-consistency, not accuracy.** A distorted
+  mesh can satisfy signed equilibrium to solver precision and still be
+  inaccurate.
+
+Established FE practice moves to triangular / mixed / refined meshing well
+before this — commonly around **30–35°** skew. Because this tool cannot, an
+explicit **advisory fires at skew ≥ 30°** (`src/app/skewMeshAdvisory.ts`)
+telling the engineer the sheared-quad results at that angle are very rough
+screening only. This advisory is *in addition to* — and never a replacement
+for — the mandatory non-zero-skew experimental warning, which applies to
+**all** non-zero skew regardless of angle. Proper high-skew accuracy (a
+triangular / mixed mesh, e.g. an MITC3 element) is out of scope for the current
+plan and would be a separate work-stream.
+
+---
+
 ## Saved-model migration and compatibility
 
 - Existing (rectangular / legacy) saved JSON continues to load unchanged;

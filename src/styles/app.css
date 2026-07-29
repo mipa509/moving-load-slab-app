@@ -295,6 +295,14 @@
   line-height: 1.35;
 }
 
+.control-warning-strong {
+  border-color: var(--danger);
+  border-width: 1.5px;
+  background: #fdecea;
+  color: var(--danger);
+  font-weight: 600;
+}
+
 .preset-row {
   display: flex;
   gap: 0.5rem;

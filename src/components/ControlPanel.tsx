@@ -17,6 +17,7 @@ import { PLOT_MODE_OPTIONS } from "../app/plotModes";
 import { getTravelAxisSliderConfig } from "../app/placementControls";
 import { DECK_EDGE_OPTIONS, buildPresetSupports, describeSkewSign } from "../app/supportPresets";
 import { getNormalSpan, getSupportOffset } from "../solver/geometry/deckCoordinates";
+import { skewMeshAdvisory } from "../app/skewMeshAdvisory";
 import { SectionCard } from "./SectionCard";
 
 interface ControlPanelProps {
@@ -447,6 +448,11 @@ export const ControlPanel = ({
           </p>
           <p className="field-note">{describeSkewSign(model.geometry.skewAngleDeg)}</p>
         </div>
+        {skewMeshAdvisory(model.geometry.skewAngleDeg) ? (
+          <p className="control-warning control-warning-strong">
+            {skewMeshAdvisory(model.geometry.skewAngleDeg)}
+          </p>
+        ) : null}
         <p className="control-warning">
           Fixed supports idealise a fully clamped plate edge; confirm the real bearing provides
           that rotational restraint.

@@ -71,6 +71,7 @@ The solver is intentionally narrow. Before relying on any result, confirm your p
 - **Plate bending only** — no in-plane (membrane) DOFs. Composite steel–concrete decks, eccentric edge beams acting compositely, in-plane prestress, and restraint thermal/shrinkage effects cannot be modelled.
 - **No beam, bar, or rigid-link elements** — kerbs, edge-stiffening beams, diaphragms, and bearing plinths are not represented.
 - **Structured mesh only** — a plan-**skew** deck is supported *(experimental, screening-only — see below)* as a sheared structured mesh, but curved-in-plan decks, general non-rectangular / non-parallelogram plan shapes, and local refinement under tyre patches are not supported.
+- **High skew degrades the mesh** — the sheared quadrilateral mesh becomes increasingly distorted as skew grows (interior angles `90° ± skew`), and established practice moves to triangular/mixed meshing around 30–35°. This tool has no triangular mesh: an advisory fires at skew ≥ 30° and results there are very rough screening only. Note the internal mesh-quality "OK" is not an accuracy claim — it only flags *severe* distortion (≈ 60°+). See [`docs/skew-verification-status.md`](./docs/skew-verification-status.md).
 - **Isotropic material only** — voided, ribbed, and orthotropic deck behaviour is not captured.
 - **Supports align to mesh nodes/edges** — arbitrary bearing positions require mesh adjustment.
 - **Dense direct solve** — practical up to ~10⁴ DOFs.
