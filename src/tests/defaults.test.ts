@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   createDefaultModel,
   errorResults,
+  sanitizeDeckSection,
   sanitizeLoadedModel,
   serializeModelForSave,
   validateModelForRun,
 } from "../app/defaults";
+import type { DeckSectionSettings } from "../app/types";
 
 const IMPLICIT_V1_SNAPSHOT = {
   projectName: "Legacy slab",
@@ -634,6 +636,139 @@ describe("app model sanitization", () => {
       expect((thrown as Error).message).toBe(expectedError);
     },
   );
+});
+
+describe("deck-local section settings (WP-041A, live-only)", () => {
+  const DEFAULT_DECK_SECTION: DeckSectionSettings = {
+    mode: "longitudinal",
+    ordinate: "mx",
+    centerTM: 2.5,
+    widthM: 1,
+  };
+
+  it("creates the live default deckSection with the expected shape", () => {
+    const model = createDefaultModel();
+
+    expect(model.deckSection).toEqual(DEFAULT_DECK_SECTION);
+  });
+
+  it("sanitizeDeckSection accepts a valid longitudinal input", () => {
+    const result = sanitizeDeckSection(
+      { mode: "longitudinal", ordinate: "my", centerTM: 1.5, widthM: 0.75 },
+      DEFAULT_DECK_SECTION,
+    );
+
+    expect(result).toEqual({
+      mode: "longitudinal",
+      ordinate: "my",
+      centerTM: 1.5,
+      widthM: 0.75,
+    });
+  });
+
+  it("sanitizeDeckSection accepts a valid transverse input", () => {
+    const result = sanitizeDeckSection(
+      { mode: "transverse", ordinate: "mxy", centerSM: 4, widthM: 2 },
+      DEFAULT_DECK_SECTION,
+    );
+
+    expect(result).toEqual({
+      mode: "transverse",
+      ordinate: "mxy",
+      centerSM: 4,
+      widthM: 2,
+    });
+  });
+
+  it.each([
+    "not-a-mode",
+    undefined,
+    null,
+    123,
+  ])("sanitizeDeckSection falls back to the default on an invalid mode %s", (mode) => {
+    const result = sanitizeDeckSection(
+      { mode, ordinate: "mx", centerTM: 1, widthM: 1 },
+      DEFAULT_DECK_SECTION,
+    );
+
+    expect(result).toEqual(DEFAULT_DECK_SECTION);
+  });
+
+  it.each([
+    "not-an-ordinate",
+    undefined,
+    null,
+    "MX",
+  ])("sanitizeDeckSection falls back to the default on an invalid ordinate %s", (ordinate) => {
+    const result = sanitizeDeckSection(
+      { mode: "longitudinal", ordinate, centerTM: 1, widthM: 1 },
+      DEFAULT_DECK_SECTION,
+    );
+
+    expect(result).toEqual(DEFAULT_DECK_SECTION);
+  });
+
+  it("sanitizeDeckSection falls back to the default on a non-positive widthM", () => {
+    const result = sanitizeDeckSection(
+      { mode: "longitudinal", ordinate: "mx", centerTM: 1, widthM: 0 },
+      DEFAULT_DECK_SECTION,
+    );
+
+    expect(result).toEqual(DEFAULT_DECK_SECTION);
+  });
+
+  it("sanitizeDeckSection falls back to the default on a non-finite centre", () => {
+    const longitudinal = sanitizeDeckSection(
+      { mode: "longitudinal", ordinate: "mx", centerTM: Number.NaN, widthM: 1 },
+      DEFAULT_DECK_SECTION,
+    );
+    const transverse = sanitizeDeckSection(
+      { mode: "transverse", ordinate: "mx", centerSM: "not-a-number", widthM: 1 },
+      DEFAULT_DECK_SECTION,
+    );
+
+    expect(longitudinal).toEqual(DEFAULT_DECK_SECTION);
+    expect(transverse).toEqual(DEFAULT_DECK_SECTION);
+  });
+
+  it("sanitizeDeckSection falls back to the default on missing/non-object input", () => {
+    expect(sanitizeDeckSection(undefined, DEFAULT_DECK_SECTION)).toEqual(DEFAULT_DECK_SECTION);
+    expect(sanitizeDeckSection(null, DEFAULT_DECK_SECTION)).toEqual(DEFAULT_DECK_SECTION);
+    expect(sanitizeDeckSection("nope", DEFAULT_DECK_SECTION)).toEqual(DEFAULT_DECK_SECTION);
+  });
+
+  it("defaults deckSection on a loaded legacy snapshot lacking the field, and still round-trips", () => {
+    const legacyV2 = v2Snapshot(19);
+    expect(legacyV2).not.toHaveProperty("deckSection");
+
+    const model = sanitizeLoadedModel(legacyV2);
+
+    expect(model.deckSection).toEqual(DEFAULT_DECK_SECTION);
+
+    const persisted = JSON.parse(serializeModelForSave(model)) as Record<string, unknown>;
+    expect(persisted).not.toHaveProperty("deckSection");
+    expect(Object.keys(persisted).sort()).toEqual(
+      [
+        "schemaVersion",
+        "supportSchema",
+        "projectName",
+        "description",
+        "assumptions",
+        "geometry",
+        "material",
+        "mesh",
+        "supports",
+        "vehicle",
+        "placement",
+        "display",
+        "section",
+      ].sort(),
+    );
+
+    const reloaded = sanitizeLoadedModel(persisted);
+    expect(reloaded).toEqual(model);
+    expect(reloaded.deckSection).toEqual(DEFAULT_DECK_SECTION);
+  });
 });
 
 describe("run validation", () => {

@@ -160,4 +160,52 @@ describe("vehicle placement semantics", () => {
 
     expect(getTravelAxisSliderConfig(appModel)).toBeNull();
   });
+
+  it("keeps zero-skew x-travel bounds identical to the pre-skew formula", () => {
+    const appModel = buildBaseAppModel();
+    appModel.placement.travelDirection = "x+";
+
+    const slider = getTravelAxisSliderConfig(appModel);
+
+    // Unchanged: min = -maxRelativeEdge, max = lengthM - minRelativeEdge.
+    expect(slider?.min).toBeCloseTo(-2.2, 8);
+    expect(slider?.max).toBeCloseTo(12.2, 8);
+  });
+
+  it("widens the x-travel bounds for a 19deg skew deck by widthM*tan(skew)", () => {
+    const zeroSkewModel = buildBaseAppModel();
+    zeroSkewModel.placement.travelDirection = "x+";
+    const zeroSlider = getTravelAxisSliderConfig(zeroSkewModel);
+    if (!zeroSlider) throw new Error("Expected a travel-axis slider config.");
+    const zeroRange = zeroSlider.max - zeroSlider.min;
+
+    const skewModel = buildBaseAppModel();
+    skewModel.geometry = { ...skewModel.geometry, skewAngleDeg: 19 };
+    skewModel.placement.travelDirection = "x+";
+    const skewSlider = getTravelAxisSliderConfig(skewModel);
+    if (!skewSlider) throw new Error("Expected a travel-axis slider config.");
+    const skewRange = skewSlider.max - skewSlider.min;
+
+    const expectedGrowth =
+      skewModel.geometry.widthM * Math.abs(Math.tan((19 * Math.PI) / 180));
+
+    expect(skewRange).toBeGreaterThan(zeroRange);
+    expect(skewRange - zeroRange).toBeCloseTo(expectedGrowth, 6);
+  });
+
+  it("leaves y-travel bounds unaffected by skew (skew only widens the global-x extent)", () => {
+    const zeroSkewModel = buildBaseAppModel();
+    zeroSkewModel.placement.travelDirection = "y+";
+    const zeroSlider = getTravelAxisSliderConfig(zeroSkewModel);
+    if (!zeroSlider) throw new Error("Expected a travel-axis slider config.");
+
+    const skewModel = buildBaseAppModel();
+    skewModel.geometry = { ...skewModel.geometry, skewAngleDeg: 19 };
+    skewModel.placement.travelDirection = "y+";
+    const skewSlider = getTravelAxisSliderConfig(skewModel);
+    if (!skewSlider) throw new Error("Expected a travel-axis slider config.");
+
+    expect(skewSlider.min).toBeCloseTo(zeroSlider.min, 8);
+    expect(skewSlider.max).toBeCloseTo(zeroSlider.max, 8);
+  });
 });

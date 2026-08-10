@@ -1,4 +1,5 @@
-import type { Dof, Support } from "../app/types";
+import type { Dof, SlabGeometry, Support } from "../app/types";
+import { getDeckEdgeSegment } from "../solver/geometry/deckCoordinates";
 
 export type SupportChipTone = "fixed" | "spring" | "free";
 
@@ -18,7 +19,10 @@ export interface SupportVisual {
   chips: SupportChipVisual[];
 }
 
-export function buildSupportVisuals(supports: Support[]): SupportVisual[] {
+export function buildSupportVisuals(
+  supports: Support[],
+  geometry: SlabGeometry,
+): SupportVisual[] {
   return supports.map((support) => {
     const chips = buildSupportChips(support);
 
@@ -33,6 +37,27 @@ export function buildSupportVisuals(supports: Support[]): SupportVisual[] {
       };
     }
 
+    if (support.kind === "edge") {
+      const [p0, p1] = getDeckEdgeSegment(geometry, support.edge);
+      const anchor: [number, number] = [
+        0.5 * (p0.x + p1.x),
+        0.5 * (p0.y + p1.y),
+      ];
+
+      return {
+        id: support.id,
+        kind: "edge",
+        anchor,
+        labelAnchor: anchor,
+        glyphAnchors: sampleSegmentGlyphAnchors(p0.x, p0.y, p1.x, p1.y),
+        linePoints: [
+          [p0.x, p0.y],
+          [p1.x, p1.y],
+        ],
+        chips,
+      };
+    }
+
     const anchor: [number, number] = [
       0.5 * (support.x1 + support.x2),
       0.5 * (support.y1 + support.y2),
@@ -43,7 +68,7 @@ export function buildSupportVisuals(supports: Support[]): SupportVisual[] {
       kind: "line",
       anchor,
       labelAnchor: anchor,
-      glyphAnchors: sampleLineGlyphAnchors(support),
+      glyphAnchors: sampleSegmentGlyphAnchors(support.x1, support.y1, support.x2, support.y2),
       linePoints: [
         [support.x1, support.y1],
         [support.x2, support.y2],
@@ -71,20 +96,23 @@ function toChipTone(type: Support["constraints"]["uz"]["type"]): SupportChipTone
   return "free";
 }
 
-function sampleLineGlyphAnchors(
-  support: Extract<Support, { kind: "line" }>,
+function sampleSegmentGlyphAnchors(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
 ): [number, number][] {
-  const dx = support.x2 - support.x1;
-  const dy = support.y2 - support.y1;
+  const dx = x2 - x1;
+  const dy = y2 - y1;
   const length = Math.hypot(dx, dy);
   if (length <= 1e-9) {
-    return [[support.x1, support.y1]];
+    return [[x1, y1]];
   }
 
   const count = clamp(Math.round(length / 1.8) + 1, 2, 6);
   return Array.from({ length: count }, (_, index) => {
     const t = count === 1 ? 0.5 : index / (count - 1);
-    return [support.x1 + dx * t, support.y1 + dy * t];
+    return [x1 + dx * t, y1 + dy * t];
   });
 }
 

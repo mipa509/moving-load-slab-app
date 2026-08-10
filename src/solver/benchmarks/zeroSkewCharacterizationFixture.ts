@@ -224,7 +224,14 @@ export const ZERO_SKEW_CHARACTERIZATION_HASHES = {
     elementStiffness: "d39e6d3f80877d833e7811f6ec35e85ffde0fc75604611d206cbc54f49d56f60",
     globalLoadVector: "26861442529cffab66f5d5d09f647f52267c54c1c81d77adf6de668aac29ef7b",
     nodalDisplacements: "07f12380c0e8598d1f8940b4cd52cd5f2783b8e430c32f82f5e28b4911dbeacf",
-    supportReactions: "9b22617c79379c24e0bd02e1f17e408276c9ab71884b0976fb8e4c114012b4b8",
+    // WP-026 rebaselined the internal zero-skew load path from the legacy AABB
+    // integrator to the unified polygon integrator (`assemblePolygonPatchLoads`).
+    // The two load vectors agree to <= 5.33e-15 (WP-024), so the reaction VALUES
+    // shift only in their last ~1 ULP. Everything derived from the displacement
+    // field is byte-identical: `nodalDisplacements`, `summary` (totalVerticalReaction
+    // still exactly -100), and `diagnostics` hashes are unchanged. Pre-WP-026
+    // supportReactions hash: 9b22617c79379c24e0bd02e1f17e408276c9ab71884b0976fb8e4c114012b4b8
+    supportReactions: "15de749ce66324823408626f613bcf5652f8c2c694f2cc6b544d317b5761d37d",
     summary: "5d63a00503d22f18778faeb5e39fbc8a7feb52ad1d5078746dc2f24394494cc4",
     diagnostics: "c628ac75567a7b9e4a849f761e8de9edcf0d5c0347846eaae3852ac8ecfc309c",
   },

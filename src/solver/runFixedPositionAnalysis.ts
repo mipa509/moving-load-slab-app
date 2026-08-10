@@ -1,12 +1,13 @@
 import { computeMindlinQ4ElementStiffness } from "./core/element";
 import { generateStructuredMesh } from "./core/mesh";
+import { normalizeSolverGeometry } from "./model/fromAppModel";
 import {
+  assertEquilibriumWithinTolerance,
+  assertFiniteNodalFieldValues,
   assertStableSupportConfiguration,
   assertValidSolverState,
 } from "./analysisGuards";
-import {
-  mapSupportsToMesh,
-} from "./core/supports";
+import { mapNormalizedSupportsToMesh } from "./core/supports";
 import {
   addElementStiffnessToSparse,
   addToSparseDiagonal,
@@ -16,17 +17,28 @@ import {
   multiplySparseMatrixVector,
   solveConjugateGradient,
 } from "./core/sparse";
-import { assembleWheelPatchLoads } from "./loads/patch";
+import { assemblePolygonPatchLoads } from "./loads/patch";
 import { generateWheelPatches } from "./loads/vehicle";
 import { recoverElementCenterResults } from "./post/recover";
+import { recoverNodalFields } from "./post/recoverNodal";
 import {
+  computeSignedEquilibrium,
+  type NodalVerticalLoad,
+  type SupportActionInput,
+} from "./core/equilibrium";
+import {
+  type SupportDofConstraint,
   DOF_INDEX_BY_KEY,
   type FixedPositionAnalysisModel,
   type FixedPositionAnalysisResult,
   type FixedPositionAnalysisSummary,
+  type InternalNormalizedSupport,
   type NodalDisplacement,
+  type NormalizedGeneralizedDofConstraints,
+  type NormalizedSupportRestraint,
   type SignConventionDefinition,
   type StructuredMesh,
+  type SupportDefinition,
   type SupportDofAssignment,
   type SupportReaction,
 } from "./model/types";
@@ -46,20 +58,17 @@ export function runFixedPositionAnalysis(
   model: FixedPositionAnalysisModel,
 ): FixedPositionAnalysisResult {
   validateModel(model);
-  if ((model.slab.skewAngleDeg ?? 0) !== 0) {
-    throw new Error(
-      "Nonzero-skew public analysis is temporarily unavailable until polygon loading and skew support mapping are integrated.",
-    );
-  }
 
+  const geometry = normalizeSolverGeometry(model.slab);
   const mesh = generateStructuredMesh(model.slab, model.mesh, model.supports);
   const totalDofs = mesh.nodes.length * 3;
   const globalK = createSparseMatrix(totalDofs);
   assembleGlobalStiffness(globalK, mesh, model);
 
-  const mappedSupports = mapSupportsToMesh(
+  const normalizedSupports = model.supports.map(toNormalizedSupport);
+  const mappedSupports = mapNormalizedSupportsToMesh(
     mesh,
-    model.supports,
+    normalizedSupports,
     model.mesh.tolerance,
   );
   assertStableSupportConfiguration(mappedSupports.assignments);
@@ -68,7 +77,7 @@ export function runFixedPositionAnalysis(
   }
 
   const wheelPatches = generateWheelPatches(model.vehicle, model.slab);
-  const loadAssembly = assembleWheelPatchLoads(mesh, wheelPatches, totalDofs);
+  const loadAssembly = assemblePolygonPatchLoads(mesh, wheelPatches, totalDofs);
 
   const reduced = buildReducedSystem(
     globalK,
@@ -105,6 +114,33 @@ export function runFixedPositionAnalysis(
     model.slab.thickness,
     fullDisplacements,
   );
+  const nodalFields = recoverNodalFields(
+    mesh,
+    model.material,
+    model.slab.thickness,
+    fullDisplacements,
+  );
+  assertFiniteNodalFieldValues(nodalFields);
+
+  // Signed global force/moment equilibrium about the ADR reporting origin (the
+  // start-support centre). Consistent transverse patch loads are work-conjugate
+  // to `w` only, so applied couples are zero; reactions carry the couples.
+  const equilibrium = computeSignedEquilibrium({
+    appliedLoads: buildAppliedVerticalLoads(mesh, loadAssembly.globalLoadVector),
+    supportActions: buildSupportActions(supportReactions),
+    origin: { x: 0, y: geometry.widthM / 2 },
+    characteristicLengthM: Math.max(geometry.lengthM, geometry.widthM),
+  });
+  // Tolerance tied to the iterative-solver precision (never an arbitrary display
+  // percentage); a sign/assembly inconsistency yields an O(1) normalized residual.
+  const relativeSolverResidual =
+    solveResult.initialResidualNorm > 0
+      ? solveResult.residualNorm / solveResult.initialResidualNorm
+      : solveResult.residualNorm;
+  assertEquilibriumWithinTolerance(
+    equilibrium,
+    Math.max(1e-5, 1e3 * relativeSolverResidual),
+  );
 
   const summary = buildSummary(loadAssembly.totalWheelLoad, loadAssembly.totalAppliedLoadToSlab, nodalDisplacements, elementResults, supportReactions);
   assertValidSolverState({
@@ -116,7 +152,7 @@ export function runFixedPositionAnalysis(
     supportReactions,
     summary,
   });
-  const warnings = collectWarnings(model);
+  const warnings = collectWarnings(model, geometry.skewAngleDeg);
 
   return {
     units: {
@@ -129,7 +165,9 @@ export function runFixedPositionAnalysis(
     wheelPatches,
     nodalDisplacements,
     elementResults,
+    nodalFields,
     supportReactions,
+    equilibrium,
     summary,
     diagnostics: {
       converged: solveResult.converged,
@@ -311,10 +349,102 @@ function buildSummary(
 
 function collectWarnings(
   model: FixedPositionAnalysisModel,
+  skewAngleDeg: number,
 ): string[] {
   const warnings: string[] = [];
+  if (skewAngleDeg !== 0) {
+    warnings.push(
+      "EXPERIMENTAL: non-zero-skew analysis is screening-only. The formulation, " +
+        "published-benchmark, and independent Chartered-Engineer reviews are not yet " +
+        "complete; do not rely on these results for design.",
+    );
+  }
   if (model.slab.thickness < 0.1) {
     warnings.push("Very thin slab thickness may require a finer mesh for stable Mindlin behavior.");
   }
   return warnings;
+}
+
+/**
+ * Convert a legacy point/line solver support into the normalized edge/line/point
+ * support consumed by `mapNormalizedSupportsToMesh`. The generalized rotation
+ * constraints map `rx -> betaX` and `ry -> betaY` (WP-002 ADR). Behaviour and
+ * per-DOF overrides are resolved with the same base+overlay rule as the legacy
+ * mapper so zero-skew restraint semantics are preserved exactly; a non-zero-skew
+ * edge is expressed as an inclined deck-local coordinate line until WP-027
+ * activates the ergonomic `EdgeSupport` union.
+ */
+function toNormalizedSupport(
+  support: SupportDefinition,
+): InternalNormalizedSupport {
+  const id = support.id ?? "support";
+  const restraint = toNormalizedRestraint(support);
+  if (support.kind === "point") {
+    return { id, kind: "point", x: support.x, y: support.y, restraint };
+  }
+  return {
+    id,
+    kind: "line",
+    x1: support.x1,
+    y1: support.y1,
+    x2: support.x2,
+    y2: support.y2,
+    restraint,
+  };
+}
+
+function toNormalizedRestraint(
+  support: SupportDefinition,
+): NormalizedSupportRestraint {
+  const free: SupportDofConstraint = { kind: "free" };
+  const fixed: SupportDofConstraint = { kind: "fixed" };
+  const base: NormalizedGeneralizedDofConstraints =
+    support.behavior === "fixed"
+      ? { w: fixed, betaX: fixed, betaY: fixed }
+      : support.behavior === "pinned"
+        ? { w: fixed, betaX: free, betaY: free }
+        : { w: free, betaX: free, betaY: free };
+  return {
+    behavior: "custom",
+    dofs: {
+      w: support.dofs?.w ?? base.w,
+      betaX: support.dofs?.rx ?? base.betaX,
+      betaY: support.dofs?.ry ?? base.betaY,
+    },
+  };
+}
+
+/** Assembled downward-positive vertical nodal loads (kN) for equilibrium. */
+function buildAppliedVerticalLoads(
+  mesh: StructuredMesh,
+  globalLoadVector: Float64Array,
+): NodalVerticalLoad[] {
+  const loads: NodalVerticalLoad[] = [];
+  for (const node of mesh.nodes) {
+    const fz = globalLoadVector[node.id * 3];
+    if (fz !== 0) {
+      loads.push({ nodeId: node.id, x: node.x, y: node.y, fz });
+    }
+  }
+  return loads;
+}
+
+/**
+ * Raw restrained-DOF support actions for equilibrium. `value` is the stored
+ * reaction (fixed: residual `K*u - f`, already an external action; spring:
+ * `+k*u`, normalized to `-k*u` inside `computeSignedEquilibrium`). Fixed-DOF
+ * de-duplication and fixed-over-spring precedence are handled there.
+ */
+function buildSupportActions(
+  supportReactions: SupportReaction[],
+): SupportActionInput[] {
+  return supportReactions.map((reaction) => ({
+    supportId: reaction.supportId,
+    nodeId: reaction.nodeId,
+    x: reaction.x,
+    y: reaction.y,
+    dof: reaction.dof,
+    kind: reaction.type,
+    value: reaction.value,
+  }));
 }

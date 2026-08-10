@@ -1,4 +1,5 @@
 import type * as SkewGeometryContract from '../geometry/types';
+import type { SignedEquilibriumReport } from '../core/equilibrium';
 import type {
   DiagnosticWarning,
   ElementCenterPlateResult,
@@ -319,7 +320,18 @@ export interface FixedPositionAnalysisResult {
   wheelPatches: WheelPatch[];
   nodalDisplacements: NodalDisplacement[];
   elementResults: ElementCenterResult[];
+  /**
+   * Area-weighted nodal recovery (WP-030), one entry per mesh node, including
+   * the twisting moment `mxy`. Smoothed averages, never singular corner extrema.
+   */
+  nodalFields: NodalFieldValues[];
   supportReactions: SupportReaction[];
+  /**
+   * Signed global force/moment equilibrium (WP-025) about the ADR reporting
+   * origin (start-support centre). Verified within tolerance before the result
+   * is returned; exposed for the facade, reaction distributions, and the report.
+   */
+  equilibrium: SignedEquilibriumReport;
   summary: FixedPositionAnalysisSummary;
   diagnostics: SolverDiagnostics;
   warnings: string[];

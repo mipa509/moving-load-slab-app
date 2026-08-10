@@ -246,15 +246,18 @@ function assertPatchLoadConserved(
   }
 }
 
+/**
+ * Legacy axis-aligned-AABB patch integrator, retained only as a zero-skew
+ * reference oracle for the frozen characterization/rebaseline fixtures. The
+ * public solver path uses {@link assemblePolygonPatchLoads}; callers here must
+ * pass a rectangular zero-skew mesh. The temporary non-rectangular fail-closed
+ * guard was removed at WP-026 once the solver stopped routing skew meshes here.
+ */
 export function assembleWheelPatchLoads(
   mesh: StructuredMesh,
   wheelPatches: WheelPatch[],
   totalDofs: number,
 ): PatchLoadAssembly {
-  for (const element of mesh.elements) {
-    assertLegacyRectangularElement(mesh, element);
-  }
-
   const globalLoadVector = new Float64Array(totalDofs);
   const contributions: ElementPatchLoadContribution[] = [];
   let totalWheelLoad = 0;
@@ -310,31 +313,6 @@ export function assembleWheelPatchLoads(
     totalAppliedLoadToSlab,
     contributions,
   };
-}
-
-function assertLegacyRectangularElement(
-  mesh: StructuredMesh,
-  element: StructuredMesh["elements"][number],
-): void {
-  const resolved = resolveMeshElementGeometry(mesh, element);
-  const { xMin, xMax, yMin, yMax } = resolved.bounds;
-  const expected = [
-    [xMin, yMin],
-    [xMax, yMin],
-    [xMax, yMax],
-    [xMin, yMax],
-  ] as const;
-  const exactRectangle =
-    resolved.polygon.length === expected.length &&
-    resolved.polygon.every(
-      (point, index) =>
-        point.x === expected[index][0] && point.y === expected[index][1],
-    );
-  if (!exactRectangle) {
-    throw new Error(
-      `Legacy AABB patch integration rejects non-rectangular mesh element ${element.id}; WP-024 polygon integration is required.`,
-    );
-  }
 }
 
 function integrateNodalForcesForRectangularOverlap(

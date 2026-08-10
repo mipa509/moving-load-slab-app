@@ -1,6 +1,9 @@
 import { useMemo } from "react";
 import { Html, Line } from "@react-three/drei";
+import { Shape } from "three";
 import type { AnalysisResults, SlabModel } from "../../app/types";
+import { buildDeckPolygon } from "../../solver/geometry/deckCoordinates";
+import { computeDeckSectionStripPolygon, toXY } from "../overlayGeometry";
 import { buildSupportVisuals } from "../supportPresentation";
 
 interface StructureOverlayProps {
@@ -19,10 +22,68 @@ const PATCH_FILL = "#e85d2c";
 const PATCH_FILL_OPACITY = 0.55;
 const PATCH_OUTLINE = "#3a1206";
 const PATCH_OUTLINE_WIDTH = 1.4;
+const PATCH_ORIGINAL_OUTLINE_WIDTH = 0.9;
+const PATCH_ORIGINAL_OUTLINE_OPACITY = 0.55;
 const SECTION_FILL = "#5fc9c1";
 const SECTION_FILL_OPACITY = 0.16;
 const SECTION_OUTLINE = "#0e524d";
 const SECTION_OUTLINE_WIDTH = 1.2;
+
+type XYPoint = { x: number; y: number };
+
+/** Closes a polygon ring (repeats the first point) and tags every vertex with
+ * a fixed z so it can be handed straight to drei's `<Line>`. */
+function toClosedLinePoints(
+  polygon: readonly XYPoint[],
+  z: number,
+): [number, number, number][] {
+  if (polygon.length === 0) {
+    return [];
+  }
+  return [...polygon, polygon[0]].map(
+    (point) => [point.x, point.y, z] as [number, number, number],
+  );
+}
+
+/** Fills an arbitrary (convex) polygon as a flat, print-safe mesh. Builds a
+ * `THREE.Shape` from the polygon's `{x,y}` ring and renders it with
+ * `shapeGeometry`, matching the flat XY plane the existing `planeGeometry`
+ * fills already render in, so it drops in at the same z-offsets. */
+function PolygonFill({
+  polygon,
+  color,
+  opacity,
+  z,
+}: {
+  polygon: readonly XYPoint[];
+  color: string;
+  opacity: number;
+  z: number;
+}) {
+  const shape = useMemo(() => {
+    if (polygon.length < 3) {
+      return null;
+    }
+    const nextShape = new Shape();
+    nextShape.moveTo(polygon[0].x, polygon[0].y);
+    for (let index = 1; index < polygon.length; index += 1) {
+      nextShape.lineTo(polygon[index].x, polygon[index].y);
+    }
+    nextShape.closePath();
+    return nextShape;
+  }, [polygon]);
+
+  if (!shape) {
+    return null;
+  }
+
+  return (
+    <mesh position={[0, 0, z]}>
+      <shapeGeometry args={[shape]} />
+      <meshBasicMaterial color={color} transparent opacity={opacity} />
+    </mesh>
+  );
+}
 
 const SupportGlyph = ({
   position,
@@ -53,75 +114,53 @@ export const StructureOverlay = ({
 }: StructureOverlayProps) => {
   const Lx = model.geometry.lengthM;
   const Ly = model.geometry.widthM;
-  const sectionAxisIsX =
-    model.section.axis === "x" ||
-    (model.section.axis === "auto" &&
-      (model.placement.travelDirection === "x+" ||
-        model.placement.travelDirection === "x-"));
-  const halfStrip = model.section.widthM / 2;
-  const sectionRect = sectionAxisIsX
-    ? {
-        xMin: 0,
-        xMax: Lx,
-        yMin: Math.max(0, model.section.centerPerpM - halfStrip),
-        yMax: Math.min(Ly, model.section.centerPerpM + halfStrip),
-      }
-    : {
-        xMin: Math.max(0, model.section.centerPerpM - halfStrip),
-        xMax: Math.min(Lx, model.section.centerPerpM + halfStrip),
-        yMin: 0,
-        yMax: Ly,
-      };
-  const sectionWidth = sectionRect.xMax - sectionRect.xMin;
-  const sectionHeight = sectionRect.yMax - sectionRect.yMin;
-  const sectionOutline: [number, number, number][] = [
-    [sectionRect.xMin, sectionRect.yMin, 0.022],
-    [sectionRect.xMax, sectionRect.yMin, 0.022],
-    [sectionRect.xMax, sectionRect.yMax, 0.022],
-    [sectionRect.xMin, sectionRect.yMax, 0.022],
-    [sectionRect.xMin, sectionRect.yMin, 0.022],
-  ];
   const maxDim = Math.max(Lx, Ly);
   const pointGlyphSize = clamp(maxDim * 0.04, 0.16, 0.28);
   const lineGlyphSize = pointGlyphSize * 0.8;
   const chipOffset = clamp(maxDim * 0.045, 0.22, SUPPORT_CHIP_OFFSET_M);
 
-  const boundaryPoints = useMemo(
-    () =>
-      [
-        [0, 0, 0.01],
-        [Lx, 0, 0.01],
-        [Lx, Ly, 0.01],
-        [0, Ly, 0.01],
-        [0, 0, 0.01],
-      ] as [number, number, number][],
-    [Lx, Ly],
+  const boundaryPoints = useMemo(() => {
+    let polygon: XYPoint[];
+    try {
+      polygon = buildDeckPolygon(model.geometry);
+    } catch {
+      polygon = [
+        { x: 0, y: 0 },
+        { x: Lx, y: 0 },
+        { x: Lx, y: Ly },
+        { x: 0, y: Ly },
+      ];
+    }
+    return toClosedLinePoints(polygon, 0.01);
+  }, [model.geometry, Lx, Ly]);
+
+  const sectionPolygon = useMemo(
+    () => computeDeckSectionStripPolygon(model),
+    [model.geometry, model.deckSection],
   );
 
-  const supportVisuals = useMemo(() => buildSupportVisuals(model.supports), [model.supports]);
+  const supportVisuals = useMemo(
+    () => buildSupportVisuals(model.supports, model.geometry),
+    [model.supports, model.geometry],
+  );
+
+  const wheelPatchOverlays = results.wheelPatchOverlays ?? [];
+  const useWheelPatchOverlays = wheelPatchOverlays.length > 0;
 
   return (
     <>
       <Line points={boundaryPoints} color="#e3ebf5" lineWidth={1.5} />
 
-      {showSectionStrip && sectionWidth > 0 && sectionHeight > 0 ? (
+      {showSectionStrip && sectionPolygon ? (
         <group>
-          <mesh
-            position={[
-              sectionRect.xMin + sectionWidth / 2,
-              sectionRect.yMin + sectionHeight / 2,
-              0.018,
-            ]}
-          >
-            <planeGeometry args={[sectionWidth, sectionHeight]} />
-            <meshBasicMaterial
-              color={SECTION_FILL}
-              transparent
-              opacity={SECTION_FILL_OPACITY}
-            />
-          </mesh>
+          <PolygonFill
+            polygon={sectionPolygon}
+            color={SECTION_FILL}
+            opacity={SECTION_FILL_OPACITY}
+            z={0.018}
+          />
           <Line
-            points={sectionOutline}
+            points={toClosedLinePoints(sectionPolygon, 0.022)}
             color={SECTION_OUTLINE}
             lineWidth={SECTION_OUTLINE_WIDTH}
             dashed
@@ -181,7 +220,46 @@ export const StructureOverlay = ({
           </group>
         ))}
 
-      {showWheelPatches &&
+      {showWheelPatches && useWheelPatchOverlays &&
+        wheelPatchOverlays.map((overlay) => {
+          const originalPolygon = toXY(overlay.originalPolygon);
+          const clippedPolygon = overlay.clippedPolygon ? toXY(overlay.clippedPolygon) : null;
+
+          return (
+            <group key={overlay.id}>
+              {originalPolygon.length >= 3 ? (
+                <Line
+                  points={toClosedLinePoints(originalPolygon, 0.019)}
+                  color={PATCH_OUTLINE}
+                  lineWidth={PATCH_ORIGINAL_OUTLINE_WIDTH}
+                  transparent
+                  opacity={PATCH_ORIGINAL_OUTLINE_OPACITY}
+                  dashed
+                  dashSize={0.06}
+                  gapSize={0.05}
+                />
+              ) : null}
+
+              {clippedPolygon && clippedPolygon.length >= 3 ? (
+                <>
+                  <PolygonFill
+                    polygon={clippedPolygon}
+                    color={PATCH_FILL}
+                    opacity={PATCH_FILL_OPACITY}
+                    z={0.02}
+                  />
+                  <Line
+                    points={toClosedLinePoints(clippedPolygon, 0.025)}
+                    color={PATCH_OUTLINE}
+                    lineWidth={PATCH_OUTLINE_WIDTH}
+                  />
+                </>
+              ) : null}
+            </group>
+          );
+        })}
+
+      {showWheelPatches && !useWheelPatchOverlays &&
         (results.wheelPatches ?? []).map((patch, index) => {
           const width = patch.xMaxM - patch.xMinM;
           const height = patch.yMaxM - patch.yMinM;

@@ -272,6 +272,49 @@
   font-size: 0.9rem;
 }
 
+.control-readout {
+  display: grid;
+  gap: 0.15rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.5rem 0.65rem;
+  background: #f6f9fc;
+}
+
+.control-readout .field-note {
+  margin: 0;
+}
+
+.control-warning {
+  border: 1px solid #efcd99;
+  border-radius: 8px;
+  background: #fff7ea;
+  color: var(--warning);
+  padding: 0.55rem 0.7rem;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.control-warning-strong {
+  border-color: var(--danger);
+  border-width: 1.5px;
+  background: #fdecea;
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.preset-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.preset-button {
+  flex: 1 1 auto;
+  min-width: 120px;
+  font-weight: 600;
+}
+
 .result-area {
   background: linear-gradient(180deg, #ffffff, #fbfcfe);
   border: 1px solid var(--line);
@@ -924,6 +967,215 @@ th {
   color: #5a6573;
 }
 
+/* WP-041B: deck-local (s/t) section panel — additive alongside
+   `.section-plot-panel` above; a slightly cooler accent tells it apart from
+   the legacy global-XY panel at a glance without changing that panel's
+   rules. */
+.deck-section-panel {
+  border-color: rgba(36, 95, 156, 0.24);
+  background: #f7f9fd;
+}
+
+/* WP-041B: experimental / screening-only banner, shown only when
+   `results.warningRequired` is true (non-zero-skew analyses). Deliberately a
+   strong warning look, distinct from the softer `.notice.warning` used for
+   ordinary solver warnings. */
+.experimental-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  border: 1.5px solid var(--danger);
+  border-radius: 10px;
+  padding: 0.75rem 0.9rem;
+  background: linear-gradient(180deg, #fdeceb, #fbe0dd);
+  box-shadow: 0 10px 24px rgba(164, 59, 49, 0.14);
+}
+
+.experimental-banner-badge {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: var(--danger);
+  color: #fff8f7;
+  white-space: nowrap;
+}
+
+.experimental-banner-body {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.experimental-banner-body strong {
+  color: #7e2721;
+  font-size: 0.94rem;
+}
+
+.experimental-banner-body p {
+  margin: 0;
+  color: #7e2721;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+/* WP-041B: skew-evidence diagnostics panel (equilibrium / mesh quality /
+   verification). Reuses the visual language of `.table-panel` / `.notice` /
+   `.pill` / `.field-note` rather than introducing a new idiom. */
+.skew-diagnostics-panel {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.75rem 0.9rem;
+  background: linear-gradient(180deg, #ffffff, #f7f9fb);
+}
+
+.skew-diagnostics-header {
+  margin-bottom: 0.6rem;
+}
+
+.skew-diagnostics-header h3 {
+  font-size: 0.98rem;
+  color: var(--accent-2);
+}
+
+.diagnostics-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
+}
+
+.diagnostics-block {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.65rem 0.7rem;
+  background: rgba(244, 247, 251, 0.5);
+  display: grid;
+  gap: 0.4rem;
+  align-content: start;
+}
+
+.diagnostics-block h4 {
+  font-size: 0.85rem;
+  color: var(--ink);
+}
+
+.diagnostics-table-scroll {
+  max-height: 160px;
+}
+
+.diagnostics-table-scroll table {
+  font-size: 0.78rem;
+}
+
+.diagnostics-normalized-grid {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.diagnostics-normalized-grid p {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 0.78rem;
+}
+
+.diagnostics-normalized-grid span {
+  color: var(--ink-muted);
+}
+
+.diagnostics-normalized-grid strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.diagnostics-status-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.diagnostics-status-list {
+  list-style: none;
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+}
+
+.diagnostics-status-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+}
+
+.diagnostics-list {
+  list-style: none;
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+}
+
+.diagnostics-list-item {
+  display: grid;
+  gap: 0.15rem;
+  font-size: 0.78rem;
+  border-left: 3px solid var(--line);
+  padding-left: 0.5rem;
+}
+
+.diagnostics-list-item.severity-warning {
+  border-left-color: var(--warning);
+}
+
+.diagnostics-list-item.severity-info {
+  border-left-color: var(--accent);
+}
+
+.diagnostics-list-code {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.diagnostics-list-message {
+  color: var(--ink-muted);
+}
+
+.status-pill.status-passed {
+  background: #e4f2e8;
+  border-color: #a9d3b6;
+  color: #1e6b3a;
+}
+
+.status-pill.status-conditional {
+  background: #f6f0d9;
+  border-color: #dec786;
+  color: #805a12;
+}
+
+.status-pill.status-failed {
+  background: #f8e2df;
+  border-color: #d9b3ae;
+  color: #823028;
+}
+
+.status-pill.status-neutral {
+  background: #eef1f4;
+  border-color: var(--line);
+  color: var(--ink-muted);
+}
+
+@media (max-width: 1080px) {
+  .diagnostics-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Engineering note (screen — hidden, shown only on print) */
 .report-note {
   display: none;
@@ -1121,6 +1373,39 @@ th {
     color: #5a6573;
     text-align: center;
   }
+
+  .report-note-warning {
+    margin: 6pt 0 10pt;
+    padding: 6pt 8pt;
+    border: 1pt solid #a43b31;
+    border-radius: 3pt;
+    background: #fdecea;
+    color: #a43b31;
+    font-size: 9.5pt;
+    line-height: 1.35;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .report-note-note {
+    font-size: 9pt;
+    color: #3b4552;
+    line-height: 1.35;
+    margin-top: 4pt;
+  }
+}
+
+/* Report warning is also styled for on-screen preview (report is print-first,
+ * but keep the safety banner legible if the note is ever shown on screen). */
+.report-note-warning {
+  margin: 0.5rem 0 0.75rem;
+  padding: 0.55rem 0.7rem;
+  border: 1.5px solid var(--danger);
+  border-radius: 8px;
+  background: #fdecea;
+  color: var(--danger);
+  font-size: 0.85rem;
+  line-height: 1.4;
 }
 
 /* ── Viewer shell (WebGL) ─────────────────────────── */
@@ -1408,4 +1693,68 @@ th {
   .vehicle-side-elevation {
     page-break-inside: avoid;
   }
+}
+
+/* WP-044: per-support reaction distribution plot — additive. Reuses
+   `.section-plot-panel` / `.section-plot-header` / `.section-plot` /
+   `.section-plot-caption` / `.field` / `.notice.warning` / `.field-note`
+   idioms already defined above; no existing selector is redefined here. */
+.reaction-distribution-panel {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.reaction-distribution-support-select {
+  min-width: 200px;
+}
+
+.reaction-distribution-plot-controls {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.35rem;
+}
+
+.reaction-distribution-plot-series {
+  min-width: 260px;
+}
+
+.reaction-distribution-plot-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.3rem 0 0;
+}
+
+.reaction-distribution-plot-legend-marker {
+  display: inline-block;
+  width: 0.65rem;
+  height: 0.65rem;
+  margin-left: 0.55rem;
+  border: 1.3px solid #153a63;
+}
+
+.reaction-distribution-plot-legend-marker:first-of-type {
+  margin-left: 0;
+}
+
+.reaction-distribution-plot-legend-marker-normal {
+  background: #153a63;
+  border-radius: 1px;
+}
+
+.reaction-distribution-plot-legend-marker-shared {
+  background: #fff7ea;
+  border-color: #a46c1e;
+  transform: rotate(45deg);
+}
+
+.reaction-distribution-panel-totals {
+  font-variant-numeric: tabular-nums;
+}
+
+.reaction-distribution-mesh-warning-emphasis {
+  border-color: var(--danger);
+  background: #fdeceb;
+  color: #7e2721;
 }

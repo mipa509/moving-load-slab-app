@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { buildSupportVisuals } from "../viewer/supportPresentation";
-import type { Support } from "../app/types";
+import type { SlabGeometry, Support } from "../app/types";
+
+const zeroSkewGeometry: SlabGeometry = {
+  lengthM: 10,
+  widthM: 5,
+  thicknessM: 0.4,
+  skewAngleDeg: 0,
+};
 
 describe("support presentation", () => {
   it("builds point-support visuals with one glyph and chip states", () => {
@@ -19,7 +26,7 @@ describe("support presentation", () => {
       },
     ];
 
-    const visuals = buildSupportVisuals(supports);
+    const visuals = buildSupportVisuals(supports, zeroSkewGeometry);
 
     expect(visuals).toHaveLength(1);
     expect(visuals[0]).toMatchObject({
@@ -53,7 +60,7 @@ describe("support presentation", () => {
       },
     ];
 
-    const visuals = buildSupportVisuals(supports);
+    const visuals = buildSupportVisuals(supports, zeroSkewGeometry);
 
     expect(visuals[0].kind).toBe("line");
     expect(visuals[0].glyphAnchors.length).toBeGreaterThan(1);

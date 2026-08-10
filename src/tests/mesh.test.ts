@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   generateStructuredMesh,
   getMeshElementCenter,
+  resolveMeshElementGeometry,
 } from "../solver/core/mesh";
 import {
   evaluateStructuredMeshQuality,
@@ -9,7 +10,7 @@ import {
   MeshQualityError,
 } from "../solver/core/meshQuality";
 import { deckLocalToGlobal } from "../solver/geometry/deckCoordinates";
-import { assembleWheelPatchLoads } from "../solver/loads/patch";
+import { isAffineParallelogramQ4 } from "../solver/core/q4Geometry";
 import type {
   MeshNode,
   SlabGeometry,
@@ -229,11 +230,15 @@ describe("skew structured mesh", () => {
     expect(center).not.toEqual({ x: 2, y: 1 });
   });
 
-  it("does not let skew elements enter legacy AABB patch integration", () => {
-    const mesh = makeMesh(19);
-    expect(() => assembleWheelPatchLoads(mesh, [], mesh.nodes.length * 3)).toThrow(
-      /rejects non-rectangular mesh element/i,
-    );
+  it("emits affine parallelogram elements everywhere for a skew mesh", () => {
+    // WP-026 release load integration is exact only for affine parallelogram Q4
+    // elements; the structured skew generator must emit them everywhere so the
+    // polygon load path never rejects a loaded element.
+    const mesh = makeMesh(19, 3, 3);
+    for (const element of mesh.elements) {
+      const resolved = resolveMeshElementGeometry(mesh, element);
+      expect(isAffineParallelogramQ4(resolved.nodes)).toBe(true);
+    }
   });
 
   it("rejects forged rectangular metadata over skew physical nodeIds", () => {
@@ -247,7 +252,7 @@ describe("skew structured mesh", () => {
       { x: xMin, y: yMax },
     ];
 
-    expect(() => assembleWheelPatchLoads(mesh, [], mesh.nodes.length * 3)).toThrow(
+    expect(() => resolveMeshElementGeometry(mesh, element)).toThrow(
       /polygon does not exactly match its indexed nodes/i,
     );
   });

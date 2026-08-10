@@ -2,11 +2,13 @@ import type {
   AnalysisResults,
   ConstraintSet,
   ConstraintSetting,
+  DeckSectionSettings,
   DisplayToggles,
   LegacyConstraintSet,
   MeshSettings,
   PersistedModelV2SkewLegacySupports,
   SectionAxisMode,
+  SectionOrdinate,
   SectionSettings,
   SlabGeometry,
   MaterialProps,
@@ -16,6 +18,13 @@ import type {
   VehicleDefinition,
   VehiclePlacement,
 } from "./types";
+import type { DeckEdge } from "../solver/geometry/types";
+
+const DECK_EDGES: readonly DeckEdge[] = ["start", "end", "lower-side", "upper-side"];
+
+function isDeckEdge(input: unknown): input is DeckEdge {
+  return typeof input === "string" && (DECK_EDGES as readonly string[]).includes(input);
+}
 
 const isPlotMode = (input: unknown): input is DisplayToggles["plotMode"] =>
   input === "results" || input === "structure" || input === "deformed";
@@ -52,6 +61,18 @@ const defaultSupports = (widthM: number): Support[] => [
     },
   },
 ];
+
+/**
+ * Live-only default for `model.deckSection` (WP-041A). Centre is the deck's
+ * transverse mid-point for the default 5 m width; not persisted (see
+ * `serializeModelForSave`) and re-applied by `sanitizeDeckSection` on load.
+ */
+const DEFAULT_DECK_SECTION: DeckSectionSettings = {
+  mode: "longitudinal",
+  ordinate: "mx",
+  centerTM: 2.5,
+  widthM: 1,
+};
 
 const DEFAULT_DESCRIPTION =
   "Linear-elastic plate analysis of a slab subjected to vehicular wheel loads. Maximum reactions, moments and deflections are extracted from a parametric sweep of the load along the defined travel path.";
@@ -118,6 +139,7 @@ export const createDefaultModel = (): SlabModel => ({
     centerPerpM: 2.5,
     widthM: 1.0,
   },
+  deckSection: { ...DEFAULT_DECK_SECTION },
 });
 
 export const idleResults = (): AnalysisResults => ({
@@ -143,6 +165,13 @@ export const idleResults = (): AnalysisResults => ({
     maxAbsShearKnPerM: 0,
   },
   elapsedMs: 0,
+  verification: {
+    formulation: "conditional",
+    referenceStudy19Deg: "not-run",
+    currentModelConvergence: "not-demonstrated",
+    evidenceIds: [],
+  },
+  warningRequired: false,
 });
 
 export const errorResults = (
@@ -179,6 +208,11 @@ export const sanitizeLoadedModel = (input: unknown): SlabModel => {
     display: sanitizeDisplay(candidate.display, defaults.display),
     supports: sanitizeSupports(candidate.supports, defaultSupports(geometry.widthM)),
     section: sanitizeSection(candidate.section, defaults.section),
+    // Live-only view setting: not part of the persisted schema (see
+    // `serializeModelForSave`), so `candidate.deckSection` is normally
+    // undefined for legitimate saved files and this simply re-applies the
+    // default; see `DEFAULT_DECK_SECTION` above.
+    deckSection: sanitizeDeckSection(candidate.deckSection, defaults.deckSection ?? DEFAULT_DECK_SECTION),
   };
 };
 
@@ -216,14 +250,22 @@ export const serializeModelForSave = (model: SlabModel): string => {
             x2: support.x2,
             y2: support.y2,
           }
-        : {
-            id: support.id,
-            name: support.name,
-            kind: "point" as const,
-            constraints: copyConstraintSet(support.constraints),
-            x: support.x,
-            y: support.y,
-          },
+        : support.kind === "point"
+          ? {
+              id: support.id,
+              name: support.name,
+              kind: "point" as const,
+              constraints: copyConstraintSet(support.constraints),
+              x: support.x,
+              y: support.y,
+            }
+          : {
+              id: support.id,
+              name: support.name,
+              kind: "edge" as const,
+              constraints: copyConstraintSet(support.constraints),
+              edge: support.edge,
+            },
     ),
     vehicle: {
       name: model.vehicle.name,
@@ -373,6 +415,16 @@ function validateSupports(input: unknown, version: "V1" | "V2"): void {
         `supports[${index}]`,
         version,
       );
+    } else if (support.kind === "edge") {
+      expectExactKeys(
+        support,
+        ["id", "name", "kind", "constraints", "edge"],
+        `supports[${index}]`,
+        version,
+      );
+      if (!isDeckEdge(support.edge)) {
+        throw migrationError(version, `supports[${index}].edge is not a valid deck edge`);
+      }
     } else {
       throw migrationError(version, `supports[${index}] is not a legacy coordinate support`);
     }
@@ -711,6 +763,51 @@ function sanitizeSection(input: unknown, fallback: SectionSettings): SectionSett
   };
 }
 
+const SECTION_ORDINATES: readonly SectionOrdinate[] = ["mx", "my", "mxy"];
+
+function isSectionOrdinate(input: unknown): input is SectionOrdinate {
+  return typeof input === "string" && (SECTION_ORDINATES as readonly string[]).includes(input);
+}
+
+/**
+ * Sanitizes a live-only `model.deckSection` (WP-041A). All-or-nothing: any
+ * invalid or missing field (bad `mode`/`ordinate`, non-positive `widthM`, or
+ * a non-finite centre for the given mode) falls back to the complete
+ * `fallback` object rather than mixing valid/invalid fields.
+ */
+export function sanitizeDeckSection(
+  input: unknown,
+  fallback: DeckSectionSettings,
+): DeckSectionSettings {
+  if (!isRecord(input)) {
+    return fallback;
+  }
+  if (input.mode !== "longitudinal" && input.mode !== "transverse") {
+    return fallback;
+  }
+  if (!isSectionOrdinate(input.ordinate)) {
+    return fallback;
+  }
+  const widthM = finiteNumber(input.widthM, Number.NaN);
+  if (!Number.isFinite(widthM) || widthM <= 0) {
+    return fallback;
+  }
+
+  if (input.mode === "longitudinal") {
+    const centerTM = finiteNumber(input.centerTM, Number.NaN);
+    if (!Number.isFinite(centerTM)) {
+      return fallback;
+    }
+    return { mode: "longitudinal", ordinate: input.ordinate, centerTM, widthM };
+  }
+
+  const centerSM = finiteNumber(input.centerSM, Number.NaN);
+  if (!Number.isFinite(centerSM)) {
+    return fallback;
+  }
+  return { mode: "transverse", ordinate: input.ordinate, centerSM, widthM };
+}
+
 function sanitizeSupports(input: unknown, fallback: Support[]): Support[] {
   if (!Array.isArray(input)) {
     return fallback;
@@ -759,6 +856,19 @@ function sanitizeSupport(input: unknown, fallback: Support, index: number): Supp
       y1: finiteNumber(input.y1, fallback.kind === "line" ? fallback.y1 : 0),
       x2: finiteNumber(input.x2, fallback.kind === "line" ? fallback.x2 : 0),
       y2: finiteNumber(input.y2, fallback.kind === "line" ? fallback.y2 : 0),
+      constraints,
+    };
+  }
+
+  if (input.kind === "edge") {
+    if (!isDeckEdge(input.edge)) {
+      return null;
+    }
+    return {
+      id,
+      name,
+      kind: "edge",
+      edge: input.edge,
       constraints,
     };
   }

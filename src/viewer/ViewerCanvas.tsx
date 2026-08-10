@@ -2,7 +2,9 @@ import { useEffect, useMemo, useRef } from "react";
 import { Canvas } from "@react-three/fiber";
 import { createContourScale } from "../app/contourScale";
 import type { AnalysisResults, ResultField, SlabModel } from "../app/types";
+import { getDeckBounds } from "../solver/geometry/deckCoordinates";
 import { useViewerState } from "./hooks/useViewerState";
+import { computeDeckFraming } from "./math/deckFraming";
 import { SlabScene } from "./scene/SlabScene";
 import { ViewerToolbar } from "./ViewerToolbar";
 import { LegendDock } from "./LegendDock";
@@ -21,6 +23,26 @@ interface ViewerCanvasProps {
   selectedField: ResultField;
   onModelChange: (model: SlabModel) => void;
   onCanvasReady?: (canvas: HTMLCanvasElement) => void;
+}
+
+/**
+ * Reference span (metres) used to scale the deformation exaggeration.
+ * Uses the deck's actual (possibly skewed) bounds rather than
+ * `max(lengthM, widthM)`, which under-covers a skewed deck. Falls back to
+ * the zero-skew rectangle bounds if the geometry is momentarily degenerate
+ * (mid-edit).
+ */
+function getDeformationReferenceSpanM(geometry: SlabModel["geometry"]): number {
+  try {
+    return computeDeckFraming(getDeckBounds(geometry)).maxSpan;
+  } catch {
+    return computeDeckFraming({
+      xMin: 0,
+      xMax: geometry.lengthM,
+      yMin: 0,
+      yMax: geometry.widthM,
+    }).maxSpan;
+  }
 }
 
 export const ViewerCanvas = ({
@@ -47,10 +69,16 @@ export const ViewerCanvas = ({
     () =>
       deriveViewerDeformation(
         results.nodalDisplacements,
-        Math.max(model.geometry.lengthM, model.geometry.widthM),
+        getDeformationReferenceSpanM(model.geometry),
         deformScale,
       ),
-    [deformScale, model.geometry.lengthM, model.geometry.widthM, results.nodalDisplacements],
+    [
+      deformScale,
+      model.geometry.lengthM,
+      model.geometry.widthM,
+      model.geometry.skewAngleDeg,
+      results.nodalDisplacements,
+    ],
   );
   const probePosition =
     probeHit && wrapRef.current

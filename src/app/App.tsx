@@ -9,7 +9,7 @@ import {
 } from "./defaults";
 import { buildAutoRunSignature } from "./autoRun";
 import { runFixedAnalysis } from "./solverAdapter";
-import { runPathEnvelope, type EnvelopeProgress } from "./runPathEnvelope";
+import { runPathEnvelope, toLegacyEnvelopeData, type EnvelopeProgress } from "./runPathEnvelope";
 import {
   cloneVehicleDefinition,
   createVehicleLibraryItem,
@@ -56,12 +56,16 @@ export const App = () => {
   const [reportImages, setReportImages] = useState<{
     currentMx?: string;
     currentMy?: string;
+    currentMxy?: string;
     envelopeMx?: string;
     envelopeMy?: string;
+    envelopeMxy?: string;
     envelopeMxStationM?: number;
     envelopeMyStationM?: number;
+    envelopeMxyStationM?: number;
     envelopeMxPeak?: number;
     envelopeMyPeak?: number;
+    envelopeMxyPeak?: number;
     envelopeUnits?: string;
   }>({});
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -102,9 +106,13 @@ export const App = () => {
       previousEnvelope && previousSignature === nextSignature
         ? previousEnvelope
         : undefined;
+    const carryEnvelopeV2 =
+      results.envelopeV2 && results.envelopeV2.signature === nextSignature
+        ? results.envelopeV2
+        : undefined;
 
     startTransition(() => {
-      setResults({ ...nextResults, envelope: carryEnvelope });
+      setResults({ ...nextResults, envelope: carryEnvelope, envelopeV2: carryEnvelopeV2 });
       setRunning(false);
     });
   };
@@ -119,10 +127,10 @@ export const App = () => {
     setEnvelopeRunning(true);
     setEnvelopeProgress(null);
     try {
-      const envelope = await runPathEnvelope(model, (progress) => {
+      const envelopeV2 = await runPathEnvelope(model, (progress) => {
         setEnvelopeProgress(progress);
       });
-      setResults((prev) => ({ ...prev, envelope }));
+      setResults((prev) => ({ ...prev, envelope: toLegacyEnvelopeData(envelopeV2), envelopeV2 }));
     } catch (error) {
       setResults((prev) => ({
         ...prev,
@@ -234,11 +242,20 @@ export const App = () => {
     const prevPlotMode = model.display.plotMode;
     const prevPlacement = model.placement;
 
-    const captureField = async (field: "mx" | "my"): Promise<string | undefined> => {
+    // Field-generic capture — mx, my, and mxy all flow through one path so the
+    // twisting-moment (mxy) figure is not a third copy-paste of the capture
+    // logic (WP-045).
+    const captureField = async (field: "mx" | "my" | "mxy"): Promise<string | undefined> => {
       setSelectedResultField(field);
       await waitFrames(4);
       return canvasRef.current?.toDataURL("image/png");
     };
+
+    // The mxy worst station lives on the full envelopeV2 (the legacy envelope
+    // omits mxy); capture it only when envelopeV2 is present and fresh.
+    const envelopeV2 = results.envelopeV2;
+    const envelopeV2Fresh =
+      envelopeV2 !== undefined && envelopeV2.signature === buildAutoRunSignature(model);
 
     try {
       setModel((curr) => ({ ...curr, display: { ...curr.display, plotMode: "results" } }));
@@ -246,14 +263,18 @@ export const App = () => {
 
       const currentMx = await captureField("mx");
       const currentMy = await captureField("my");
+      const currentMxy = await captureField("mxy");
 
       const captures: {
         envelopeMx?: string;
         envelopeMy?: string;
+        envelopeMxy?: string;
         envelopeMxStationM?: number;
         envelopeMyStationM?: number;
+        envelopeMxyStationM?: number;
         envelopeMxPeak?: number;
         envelopeMyPeak?: number;
+        envelopeMxyPeak?: number;
         envelopeUnits?: string;
       } = {};
 
@@ -295,6 +316,20 @@ export const App = () => {
           captures.envelopeUnits = envelope.my.units;
         }
 
+        if (envelopeV2Fresh && envelopeV2) {
+          const mxyStation = envelopeV2.worstStations.mxy.stationM;
+          setModel(stationModel(mxyStation));
+          await waitFrames(2);
+          const mxyRun = await runFixedAnalysis(stationModel(mxyStation));
+          if (mxyRun.status === "success") {
+            setResults(mxyRun);
+            await waitFrames(4);
+            captures.envelopeMxy = await captureField("mxy");
+            captures.envelopeMxyStationM = mxyStation;
+            captures.envelopeMxyPeak = envelopeV2.worstStations.mxy.peakValue;
+          }
+        }
+
         // Restore original placement + re-run so the UI reflects user's last setup.
         setModel((curr) => ({ ...curr, placement: prevPlacement }));
         const restoredRun = await runFixedAnalysis({
@@ -310,6 +345,7 @@ export const App = () => {
       setReportImages({
         currentMx,
         currentMy,
+        currentMxy,
         ...captures,
       });
       await waitFrames(2);

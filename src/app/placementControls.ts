@@ -1,5 +1,6 @@
 import { generateWheelPatches } from "../solver/loads/vehicle";
 import { fromAppModel } from "../solver/model/fromAppModel";
+import { getDeckBounds } from "../solver/geometry/deckCoordinates";
 import type { SlabModel } from "./types";
 
 export interface TravelAxisSliderConfig {
@@ -62,6 +63,24 @@ function getVehicleTravelEnvelope(model: SlabModel): { min: number; max: number 
   const reference = alongX ? analysisModel.vehicle.reference.x : analysisModel.vehicle.reference.y;
   const slabSpan = alongX ? model.geometry.lengthM : model.geometry.widthM;
 
+  // Skew-aware deck extent along the travel axis. A skewed deck's global-x
+  // span exceeds lengthM by widthM*|tan(skew)| (its y-span is unaffected), so
+  // using the plain rectangle bounds would under-cover the deck and clip the
+  // vehicle's entry/exit across the skewed start/end edges. Fall back to the
+  // zero-skew rectangle on any geometry error; at zero skew getDeckBounds
+  // returns exactly {0, lengthM} / {0, widthM}, so this reduces to the
+  // pre-skew formula unchanged.
+  let deckMin = 0;
+  let deckMax = slabSpan;
+  try {
+    const deckBounds = getDeckBounds(model.geometry);
+    deckMin = alongX ? deckBounds.xMin : deckBounds.yMin;
+    deckMax = alongX ? deckBounds.xMax : deckBounds.yMax;
+  } catch {
+    deckMin = 0;
+    deckMax = slabSpan;
+  }
+
   let minRelativeEdge = Infinity;
   let maxRelativeEdge = -Infinity;
 
@@ -77,11 +96,11 @@ function getVehicleTravelEnvelope(model: SlabModel): { min: number; max: number 
   }
 
   if (!Number.isFinite(minRelativeEdge) || !Number.isFinite(maxRelativeEdge)) {
-    return { min: 0, max: slabSpan };
+    return { min: deckMin, max: deckMax };
   }
 
   return {
-    min: -maxRelativeEdge,
-    max: slabSpan - minRelativeEdge,
+    min: deckMin - maxRelativeEdge,
+    max: deckMax - minRelativeEdge,
   };
 }

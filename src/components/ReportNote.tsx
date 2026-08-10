@@ -2,6 +2,7 @@ import type {
   AnalysisResults,
   ConstraintSetting,
   Dof,
+  SlabGeometry,
   SlabModel,
   Support,
 } from "../app/types";
@@ -10,18 +11,33 @@ import {
   computeSectionCurve,
   resolveSectionAxis,
 } from "../app/sectionCurve";
+import { getDeckEdgeSegment } from "../solver/geometry/deckCoordinates";
+import {
+  REPORT_EXCLUDED_EFFECTS,
+  REPORT_EXPERIMENTAL_WARNING,
+  REPORT_THEORY_STATEMENT,
+  reportEquilibriumStatus,
+  reportMeshQualityStatus,
+  reportShowsExperimentalWarning,
+  reportSkewGeometry,
+  reportVerificationLines,
+} from "../app/reportContent";
 import { SectionPlot } from "./SectionPlot";
 import { VehicleSideElevation } from "./VehicleSideElevation";
 
 interface ReportNoteImages {
   currentMx?: string;
   currentMy?: string;
+  currentMxy?: string;
   envelopeMx?: string;
   envelopeMy?: string;
+  envelopeMxy?: string;
   envelopeMxStationM?: number;
   envelopeMyStationM?: number;
+  envelopeMxyStationM?: number;
   envelopeMxPeak?: number;
   envelopeMyPeak?: number;
+  envelopeMxyPeak?: number;
   envelopeUnits?: string;
 }
 
@@ -41,9 +57,13 @@ const formatConstraint = (setting: ConstraintSetting): string => {
   return setting.type;
 };
 
-const supportCoords = (support: Support): string => {
+const supportCoords = (support: Support, geometry: SlabGeometry): string => {
   if (support.kind === "line") {
     return `(${support.x1.toFixed(2)}, ${support.y1.toFixed(2)}) → (${support.x2.toFixed(2)}, ${support.y2.toFixed(2)})`;
+  }
+  if (support.kind === "edge") {
+    const [p0, p1] = getDeckEdgeSegment(geometry, support.edge);
+    return `${support.edge}: (${p0.x.toFixed(2)}, ${p0.y.toFixed(2)}) → (${p1.x.toFixed(2)}, ${p1.y.toFixed(2)})`;
   }
   return `(${support.x.toFixed(2)}, ${support.y.toFixed(2)})`;
 };
@@ -82,6 +102,12 @@ export const ReportNote = ({ model, results, images, preparedBy }: ReportNotePro
   const assumptions = splitAssumptions(model.assumptions);
   const mxData = results.nodalContours.mx;
   const myData = results.nodalContours.my;
+  const mxyData = results.nodalContours.mxy;
+  const skew = reportSkewGeometry(model);
+  const showWarning = reportShowsExperimentalWarning(results);
+  const verificationLines = reportVerificationLines(results.verification);
+  const equilibrium = reportEquilibriumStatus(results);
+  const meshQuality = reportMeshQualityStatus(results);
 
   return (
     <article className="report-note" aria-label="Engineering note">
@@ -103,10 +129,16 @@ export const ReportNote = ({ model, results, images, preparedBy }: ReportNotePro
           ) : null}
           <div>
             <dt>Solver</dt>
-            <dd>Linear-elastic plate (Kirchhoff)</dd>
+            <dd>Reissner–Mindlin plate (MITC4), sparse CG</dd>
           </div>
         </dl>
       </header>
+
+      {showWarning ? (
+        <section className="report-note-warning" role="alert">
+          <strong>{REPORT_EXPERIMENTAL_WARNING}</strong>
+        </section>
+      ) : null}
 
       <section className="report-note-section">
         <h2>1. Description</h2>
@@ -135,6 +167,26 @@ export const ReportNote = ({ model, results, images, preparedBy }: ReportNotePro
               <td>
                 {model.geometry.lengthM.toFixed(2)} m × {model.geometry.widthM.toFixed(2)} m
               </td>
+            </tr>
+            <tr>
+              <th>Plan skew</th>
+              <td>
+                {skew.skewAngleDeg.toFixed(1)}°
+                {skew.isSkew
+                  ? " (positive skew shifts support lines toward +x as y grows)"
+                  : " (right / rectangular deck)"}
+              </td>
+            </tr>
+            <tr>
+              <th>Centreline span · normal span</th>
+              <td>
+                {skew.centrelineSpanM.toFixed(2)} m ·{" "}
+                {skew.normalSpanM.toFixed(2)} m (perpendicular between supports)
+              </td>
+            </tr>
+            <tr>
+              <th>Support offset</th>
+              <td>{skew.supportOffsetM.toFixed(3)} m · width {skew.widthM.toFixed(2)} m</td>
             </tr>
             <tr>
               <th>Slab thickness</th>
@@ -177,7 +229,7 @@ export const ReportNote = ({ model, results, images, preparedBy }: ReportNotePro
                 <td>{support.id}</td>
                 <td>{support.name}</td>
                 <td>{support.kind}</td>
-                <td>{supportCoords(support)}</td>
+                <td>{supportCoords(support, model.geometry)}</td>
                 {DOFS.map((dof) => (
                   <td key={dof}>{formatConstraint(support.constraints[dof])}</td>
                 ))}
@@ -401,6 +453,19 @@ export const ReportNote = ({ model, results, images, preparedBy }: ReportNotePro
             <p className="report-note-missing">Plot capture not available.</p>
           )}
         </figure>
+        <figure>
+          <figcaption>
+            <strong>Mxy</strong> — twisting moment
+            {mxyData
+              ? ` · range ${mxyData.min.toFixed(2)} to ${mxyData.max.toFixed(2)} ${mxyData.units}`
+              : null}
+          </figcaption>
+          {images.currentMxy ? (
+            <img src={images.currentMxy} alt="Mxy twisting-moment contour at current placement" />
+          ) : (
+            <p className="report-note-missing">Plot capture not available.</p>
+          )}
+        </figure>
       </section>
 
       <section className="report-note-section report-note-figures">
@@ -456,6 +521,54 @@ export const ReportNote = ({ model, results, images, preparedBy }: ReportNotePro
             worst-station plan views.
           </p>
         )}
+      </section>
+
+      <section className="report-note-section">
+        <h2>9. Analysis status, equilibrium & verification</h2>
+        <p>{REPORT_THEORY_STATEMENT}</p>
+        <table className="report-note-table">
+          <tbody>
+            <tr>
+              <th>Mesh quality</th>
+              <td>
+                {meshQuality.available
+                  ? `${(meshQuality.status ?? "").toUpperCase()} — ${meshQuality.elementCount} element(s), ${meshQuality.diagnosticCount} diagnostic(s)`
+                  : "not available"}
+              </td>
+            </tr>
+            <tr>
+              <th>Signed equilibrium (self-consistency)</th>
+              <td>
+                {equilibrium.available
+                  ? `normalized residuals |Fz|=${equilibrium.normalizedForceZ?.toExponential(2)}, |Mx|=${equilibrium.normalizedMomentX?.toExponential(2)}, |My|=${equilibrium.normalizedMomentY?.toExponential(2)} (a consistency check, not an accuracy check)`
+                  : "not available"}
+              </td>
+            </tr>
+            {verificationLines.map((line) => (
+              <tr key={line.label}>
+                <th>{line.label}</th>
+                <td>{line.status}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="report-note-note">
+          Moment axes and signs: Mxx bends about the y-axis, Myy about the x-axis, and Mxy is the
+          twisting moment; all values are the solver's raw field signs exactly as displayed.
+          {skew.isSkew
+            ? " Non-zero-skew results are experimental screening only — see the warning above; no UI setting can remove it."
+            : ""}
+        </p>
+      </section>
+
+      <section className="report-note-section">
+        <h2>10. Modelling exclusions</h2>
+        <p>The plate idealisation does not represent:</p>
+        <ul>
+          {REPORT_EXCLUDED_EFFECTS.map((effect) => (
+            <li key={effect}>{effect}</li>
+          ))}
+        </ul>
       </section>
 
       <footer className="report-note-footer">

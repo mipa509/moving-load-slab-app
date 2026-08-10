@@ -1,8 +1,8 @@
 import type * as SkewGeometryContract from '../solver/geometry/types';
 
-export type ResultField = "deflection" | "mx" | "my" | "qx" | "qy" | "reactions";
+export type ResultField = "deflection" | "mx" | "my" | "mxy" | "qx" | "qy" | "reactions";
 
-export type SupportKind = "line" | "point";
+export type SupportKind = "line" | "point" | "edge";
 export type Dof = "uz" | "rx" | "ry";
 export type ConstraintType = "free" | "fixed" | "pinned" | "spring";
 export type VehicleInputMode = "axle" | "direct";
@@ -50,7 +50,12 @@ export interface PointSupport extends SupportBase {
   y: number;
 }
 
-export type Support = LineSupport | PointSupport;
+export interface EdgeSupport extends SupportBase {
+  kind: "edge";
+  edge: SkewGeometryContract.DeckEdge;
+}
+
+export type Support = LineSupport | PointSupport | EdgeSupport;
 
 export interface AxleInput {
   id: string;
@@ -131,6 +136,13 @@ export interface SlabModel {
   placement: VehiclePlacement;
   display: DisplayToggles;
   section: SectionSettings;
+  /**
+   * Deck-local (s/t) section-cut settings (WP-041A), additive alongside the
+   * legacy global-XY `section` above. Optional and live-only: it is defaulted
+   * on load (see `sanitizeLoadedModel`) and is NOT part of the persisted-save
+   * schema (see `serializeModelForSave`), so it never appears in saved JSON.
+   */
+  deckSection?: DeckSectionSettings;
 }
 
 export interface ContourPoint {
@@ -278,6 +290,27 @@ export interface AnalysisResults {
   elapsedMs: number;
   warning?: string;
   error?: string;
+
+  // WP-032B: skew-general evidence (optional; populated by the adapter in
+  // WP-032C, consumed incrementally by WP-041B etc.)
+  deckPolygon?: Array<{ xM: number; yM: number }>;
+  deckBounds?: { xMinM: number; xMaxM: number; yMinM: number; yMaxM: number };
+  meshNodeOverlays?: StagedSkewAppContract.MeshNodeOverlayV2[];
+  meshElementOverlays?: StagedSkewAppContract.MeshElementOverlayV2[];
+  wheelPatchOverlays?: WheelPatchOverlay[];
+  nodalKinematics?: NodalKinematics[];
+  nodalFields?: NodalFieldMap;
+  elementFields?: ElementFieldMap;
+  physicalReactions?: SupportReactionRow[];
+  physicalReactionSummaryBySupport?: Array<PhysicalActionTotals & { supportId: string }>;
+  physicalReactionTotals?: PhysicalActionTotals;
+  reactionDistributions?: SupportReactionDistribution[]; // predefined for WP-034; adapter leaves undefined
+  sections?: SectionCurve[]; // predefined for WP-033; adapter leaves undefined
+  envelopeV2?: StagedSkewAppContract.EnvelopeDataV2; // predefined for WP-035; complete mxy-inclusive envelope
+  equilibrium?: SignedEquilibrium;
+  meshQuality?: MeshQualityReport;
+  verification?: VerificationEvidenceStatus;
+  warningRequired?: boolean;
 }
 
 export type PhysicalSupportDof = 'w' | 'rotationX' | 'rotationY';
@@ -328,6 +361,13 @@ export type LegacyCoordinateSupport =
       constraints: LegacyConstraintSet;
       x: number;
       y: number;
+    }
+  | {
+      id: string;
+      name: string;
+      kind: 'edge';
+      constraints: LegacyConstraintSet;
+      edge: SkewGeometryContract.DeckEdge;
     };
 
 export interface PersistedMaterialSnapshotV1 {

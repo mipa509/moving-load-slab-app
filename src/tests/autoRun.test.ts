@@ -33,4 +33,17 @@ describe("auto-run signature", () => {
 
     expect(buildAutoRunSignature(changed)).not.toBe(buildAutoRunSignature(base));
   });
+
+  it("changes when skewAngleDeg changes, invalidating a stale envelope signature", () => {
+    const base = createDefaultModel();
+    const skewed = {
+      ...base,
+      geometry: {
+        ...base.geometry,
+        skewAngleDeg: 19,
+      },
+    };
+
+    expect(buildAutoRunSignature(skewed)).not.toBe(buildAutoRunSignature(base));
+  });
 });

@@ -125,4 +125,139 @@ describe("solver adapter", () => {
     ]);
     expect(result.reactionTotals).toEqual({ uz: 100, rx: 12, ry: 0 });
   });
+
+  it("populates skew-general evidence fields from a real (zero-skew) solve", async () => {
+    // Delegate the mocked facade to the real implementation for this test only,
+    // so we exercise actual solver output rather than a hand-written payload.
+    const actualSolver = await vi.importActual<typeof import("../solver")>("../solver");
+    runFixedPositionAnalysisMock.mockImplementation(actualSolver.runFixedPositionAnalysis);
+
+    const result = await runFixedAnalysis(createDefaultModel());
+
+    expect(result.status).toBe("success");
+    if (result.status !== "success") return;
+
+    expect(result.equilibrium).toBeDefined();
+    expect(Number.isFinite(result.equilibrium?.normalizedResidual.forceZ)).toBe(true);
+    expect(Number.isFinite(result.equilibrium?.normalizedResidual.momentX)).toBe(true);
+    expect(Number.isFinite(result.equilibrium?.normalizedResidual.momentY)).toBe(true);
+
+    expect(["ok", "warning"]).toContain(result.meshQuality?.status);
+
+    expect(typeof result.verification?.currentModelConvergence).toBe("string");
+
+    expect(result.nodalFields?.mxy.points.length).toBeGreaterThan(0);
+    result.nodalFields?.mxy.points.forEach((p) => {
+      expect(Number.isFinite(p.value)).toBe(true);
+    });
+
+    // WP-041A: mxy is now a selectable result field, so the facade/adapter
+    // must surface an mxy nodal contour (not just the nodalFields map) for the
+    // 3D viewer to render.
+    expect(result.nodalContours.mxy?.points.length ?? 0).toBeGreaterThan(0);
+    expect(result.nodalContours.mxy?.units).toBe("kN*m/m");
+
+    expect(result.elementFields?.qx.location).toBe("element-center");
+
+    expect(result.meshNodeOverlays?.[0]).toBeDefined();
+    expect(Number.isFinite(result.meshNodeOverlays?.[0]?.sM)).toBe(true);
+    expect(Number.isFinite(result.meshNodeOverlays?.[0]?.tM)).toBe(true);
+
+    expect(result.meshElementOverlays?.[0]?.polygon.length).toBe(4);
+
+    expect((result.wheelPatchOverlays?.length ?? 0)).toBeGreaterThan(0);
+  });
+
+  it("rejects a malformed meshElementOverlays polygon instead of synthesizing evidence", async () => {
+    runFixedPositionAnalysisMock.mockResolvedValue({
+      contours: {
+        deflection: {
+          field: "deflection",
+          points: [{ xM: 0.5, yM: 0.5, value: -2 }],
+          min: -2,
+          max: -2,
+          units: "mm",
+        },
+      },
+      nodalContours: {
+        deflection: {
+          field: "deflection",
+          points: [{ nodeId: 0, xM: 0.5, yM: 0.5, value: -2 }],
+          min: -2,
+          max: -2,
+          units: "mm",
+        },
+      },
+      meshNodes: [],
+      meshElements: [],
+      nodalDisplacements: [],
+      mesh: { xCoordsM: [0, 1], yCoordsM: [0, 1] },
+      wheelPatches: [],
+      reactions: [],
+      summary: { maxDeflectionMm: 2, maxAbsMomentKnmPerM: 0, maxAbsShearKnPerM: 0 },
+      meshElementOverlays: [
+        {
+          id: 0,
+          nodeIds: [0, 1, 2, 3],
+          // Malformed: only 3 vertices instead of the required 4.
+          polygon: [
+            { xM: 0, yM: 0 },
+            { xM: 1, yM: 0 },
+            { xM: 1, yM: 1 },
+          ],
+          bounds: { xMinM: 0, xMaxM: 1, yMinM: 0, yMaxM: 1 },
+        },
+      ],
+    });
+
+    const result = await runFixedAnalysis(createDefaultModel());
+
+    expect(result.status).toBe("error");
+    expect(result.error).toMatch(/meshElementOverlays/i);
+  });
+
+  it("rejects a malformed equilibrium payload instead of synthesizing zero residual", async () => {
+    runFixedPositionAnalysisMock.mockResolvedValue({
+      contours: {
+        deflection: {
+          field: "deflection",
+          points: [{ xM: 0.5, yM: 0.5, value: -2 }],
+          min: -2,
+          max: -2,
+          units: "mm",
+        },
+      },
+      nodalContours: {
+        deflection: {
+          field: "deflection",
+          points: [{ nodeId: 0, xM: 0.5, yM: 0.5, value: -2 }],
+          min: -2,
+          max: -2,
+          units: "mm",
+        },
+      },
+      meshNodes: [],
+      meshElements: [],
+      nodalDisplacements: [],
+      mesh: { xCoordsM: [0, 1], yCoordsM: [0, 1] },
+      wheelPatches: [],
+      reactions: [],
+      summary: { maxDeflectionMm: 2, maxAbsMomentKnmPerM: 0, maxAbsShearKnPerM: 0 },
+      equilibrium: {
+        originM: { xM: 0, yM: 0 },
+        applied: { forceZKn: 0, momentXKnm: 0, momentYKnm: 0 },
+        reactions: { forceZKn: 0, momentXKnm: 0, momentYKnm: 0 },
+        residual: { forceZKn: 0, momentXKnm: 0, momentYKnm: 0 },
+        absoluteResidual: { forceZKn: 0, momentXKnm: 0, momentYKnm: 0 },
+        // Malformed: non-finite normalized residual.
+        normalizedResidual: { forceZ: Number.NaN, momentX: 0, momentY: 0 },
+        normalization: { characteristicLengthM: 1, forceScaleKn: 1, momentScaleKnm: 1 },
+      },
+    });
+
+    const result = await runFixedAnalysis(createDefaultModel());
+
+    expect(result.status).toBe("error");
+    expect(result.error).toMatch(/equilibrium/i);
+  });
 });

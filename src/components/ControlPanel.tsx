@@ -1,17 +1,23 @@
 import type {
   AxleInput,
   ConstraintType,
+  DeckSectionSettings,
   Dof,
   DirectWheelInput,
   PlotMode,
   ResultField,
+  SectionOrdinate,
   SlabModel,
   Support,
   VehicleLibraryItem,
 } from "../app/types";
+import type { DeckEdge } from "../solver/geometry/types";
 import { deriveMeshResolution } from "../app/meshSizing";
 import { PLOT_MODE_OPTIONS } from "../app/plotModes";
 import { getTravelAxisSliderConfig } from "../app/placementControls";
+import { DECK_EDGE_OPTIONS, buildPresetSupports, describeSkewSign } from "../app/supportPresets";
+import { getNormalSpan, getSupportOffset } from "../solver/geometry/deckCoordinates";
+import { skewMeshAdvisory } from "../app/skewMeshAdvisory";
 import { SectionCard } from "./SectionCard";
 
 interface ControlPanelProps {
@@ -50,6 +56,7 @@ const resultFields: ResultField[] = [
   "deflection",
   "mx",
   "my",
+  "mxy",
   "qx",
   "qy",
   "reactions",
@@ -68,6 +75,22 @@ const springUnitsByDof: Record<Dof, string> = {
 const parseNumericInput = (value: string, fallback: number): number => {
   const num = Number(value);
   return Number.isFinite(num) ? num : fallback;
+};
+
+const DECK_SECTION_ORDINATE_OPTIONS: { value: SectionOrdinate; label: string }[] = [
+  { value: "mx", label: "Mx" },
+  { value: "my", label: "My" },
+  { value: "mxy", label: "Mxy" },
+];
+
+// Guard fallback for the (always-populated-in-practice) optional
+// `model.deckSection`; keeps the controls below total even before a model
+// has been through `sanitizeLoadedModel`/`createDefaultModel`.
+const DEFAULT_DECK_SECTION: DeckSectionSettings = {
+  mode: "longitudinal",
+  ordinate: "mx",
+  centerTM: 2.5,
+  widthM: 1,
 };
 
 const getLineOrientation = (
@@ -397,6 +420,43 @@ export const ControlPanel = ({
             }
           />
         </label>
+        <label className="field">
+          <span>Skew angle (deg)</span>
+          <input
+            type="number"
+            min={-45}
+            max={45}
+            step="1"
+            value={model.geometry.skewAngleDeg}
+            onChange={(e) =>
+              setModel((curr) => ({
+                ...curr,
+                geometry: {
+                  ...curr.geometry,
+                  skewAngleDeg: parseNumericInput(e.target.value, curr.geometry.skewAngleDeg),
+                },
+              }))
+            }
+          />
+        </label>
+        <div className="control-readout">
+          <p className="field-note">
+            Support offset: {getSupportOffset(model.geometry).toFixed(3)} m
+          </p>
+          <p className="field-note">
+            Normal span: {getNormalSpan(model.geometry).toFixed(3)} m
+          </p>
+          <p className="field-note">{describeSkewSign(model.geometry.skewAngleDeg)}</p>
+        </div>
+        {skewMeshAdvisory(model.geometry.skewAngleDeg) ? (
+          <p className="control-warning control-warning-strong">
+            {skewMeshAdvisory(model.geometry.skewAngleDeg)}
+          </p>
+        ) : null}
+        <p className="control-warning">
+          Fixed supports idealise a fully clamped plate edge; confirm the real bearing provides
+          that rotational restraint.
+        </p>
       </SectionCard>
 
       <SectionCard title="Material" defaultCollapsed>
@@ -491,6 +551,37 @@ export const ControlPanel = ({
         subtitle="Line and point supports with explicit uz/rx/ry constraints"
         defaultCollapsed
       >
+        <div className="preset-row">
+          <button
+            type="button"
+            className="button preset-button"
+            onClick={() =>
+              setModel((curr) => ({
+                ...curr,
+                supports: buildPresetSupports(curr.geometry, "fixed-fixed"),
+              }))
+            }
+          >
+            Fixed-Fixed
+          </button>
+          <button
+            type="button"
+            className="button preset-button"
+            onClick={() =>
+              setModel((curr) => ({
+                ...curr,
+                supports: buildPresetSupports(curr.geometry, "pinned-pinned"),
+              }))
+            }
+          >
+            Pinned-Pinned
+          </button>
+        </div>
+        <p className="field-note">
+          Presets replace all supports with two standard end supports (start/end edge or line,
+          following the current skew). Use "Add Support" below for custom, manually edited
+          supports.
+        </p>
         <p className="field-note">
           Line supports are axis-aligned only in v1. The editor below keeps each line support
           horizontal or vertical.
@@ -531,45 +622,84 @@ export const ControlPanel = ({
               />
             </label>
 
-            <label className="field">
-              <span>Type</span>
-              <select
-                value={support.kind}
-                onChange={(e) =>
-                  setModel((curr) => {
-                    const supports = [...curr.supports];
-                    const prev = supports[supportIndex];
-                    const nextKind = e.target.value as Support["kind"];
-                    supports[supportIndex] =
-                      nextKind === "line"
-                        ? {
-                            id: prev.id,
-                            name: prev.name,
-                            kind: "line",
-                            x1: 0,
-                            y1: 0,
-                            x2: 0,
-                            y2: curr.geometry.widthM,
-                            constraints: prev.constraints,
-                          }
-                        : {
-                            id: prev.id,
-                            name: prev.name,
-                            kind: "point",
-                            x: 0,
-                            y: 0,
-                            constraints: prev.constraints,
-                          };
-                    return { ...curr, supports };
-                  })
-                }
-              >
-                <option value="line">Line</option>
-                <option value="point">Point</option>
-              </select>
-            </label>
+            {support.kind !== "edge" || model.geometry.skewAngleDeg !== 0 ? (
+              <label className="field">
+                <span>Type</span>
+                <select
+                  value={support.kind}
+                  onChange={(e) =>
+                    setModel((curr) => {
+                      const supports = [...curr.supports];
+                      const prev = supports[supportIndex];
+                      const nextKind = e.target.value as Support["kind"];
+                      supports[supportIndex] =
+                        nextKind === "line"
+                          ? {
+                              id: prev.id,
+                              name: prev.name,
+                              kind: "line",
+                              x1: 0,
+                              y1: 0,
+                              x2: 0,
+                              y2: curr.geometry.widthM,
+                              constraints: prev.constraints,
+                            }
+                          : nextKind === "point"
+                            ? {
+                                id: prev.id,
+                                name: prev.name,
+                                kind: "point",
+                                x: 0,
+                                y: 0,
+                                constraints: prev.constraints,
+                              }
+                            : {
+                                id: prev.id,
+                                name: prev.name,
+                                kind: "edge",
+                                edge: "start",
+                                constraints: prev.constraints,
+                              };
+                      return { ...curr, supports };
+                    })
+                  }
+                >
+                  <option value="line">Line</option>
+                  <option value="point">Point</option>
+                  {model.geometry.skewAngleDeg !== 0 ? (
+                    <option value="edge">Edge</option>
+                  ) : null}
+                </select>
+              </label>
+            ) : null}
 
-            {support.kind === "line" ? (
+            {support.kind === "edge" ? (
+              <label className="field">
+                <span>Deck edge</span>
+                <select
+                  value={support.edge}
+                  onChange={(e) =>
+                    setModel((curr) => {
+                      const supports = [...curr.supports];
+                      const edgeSupport = supports[supportIndex];
+                      if (edgeSupport.kind === "edge") {
+                        supports[supportIndex] = {
+                          ...edgeSupport,
+                          edge: e.target.value as DeckEdge,
+                        };
+                      }
+                      return { ...curr, supports };
+                    })
+                  }
+                >
+                  {DECK_EDGE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : support.kind === "line" ? (
               <>
                 {support.x1 !== support.x2 && support.y1 !== support.y2 ? (
                   <p className="field-note">
@@ -1484,6 +1614,123 @@ export const ControlPanel = ({
                   <option value="x">Along X</option>
                   <option value="y">Along Y</option>
                 </select>
+              </label>
+            </>
+          );
+        })()}
+      </SectionCard>
+
+      <SectionCard
+        title="Deck-Local Section"
+        subtitle="Section cut in deck-local (s/t) coordinates — follows the skewed deck"
+      >
+        {(() => {
+          const deckSection = model.deckSection ?? DEFAULT_DECK_SECTION;
+          const isLongitudinal = deckSection.mode === "longitudinal";
+          const centerLabel = isLongitudinal ? "t (transverse)" : "s (longitudinal)";
+          const centerValue = isLongitudinal ? deckSection.centerTM : deckSection.centerSM;
+
+          return (
+            <>
+              <p className="field-note">
+                Deck-local (s/t) settings, independent of the legacy X/Y section above; the
+                mode/ordinate here are explicit and never inferred from the travel direction. This
+                strip drives the viewer&apos;s section-strip overlay and follows the skewed deck.
+              </p>
+              <label className="field">
+                <span>Mode</span>
+                <select
+                  value={deckSection.mode}
+                  onChange={(e) => {
+                    const nextMode = e.target.value as DeckSectionSettings["mode"];
+                    setModel((curr) => {
+                      const current = curr.deckSection ?? DEFAULT_DECK_SECTION;
+                      if (current.mode === nextMode) {
+                        return curr;
+                      }
+                      const next: DeckSectionSettings =
+                        nextMode === "longitudinal"
+                          ? {
+                              mode: "longitudinal",
+                              ordinate: current.ordinate,
+                              widthM: current.widthM,
+                              centerTM: curr.geometry.widthM / 2,
+                            }
+                          : {
+                              mode: "transverse",
+                              ordinate: current.ordinate,
+                              widthM: current.widthM,
+                              centerSM: curr.geometry.lengthM / 2,
+                            };
+                      return { ...curr, deckSection: next };
+                    });
+                  }}
+                >
+                  <option value="longitudinal">Longitudinal (along s)</option>
+                  <option value="transverse">Transverse (along t)</option>
+                </select>
+              </label>
+              <label className="field">
+                <span>Ordinate</span>
+                <select
+                  value={deckSection.ordinate}
+                  onChange={(e) => {
+                    const ordinate = e.target.value as SectionOrdinate;
+                    setModel((curr) => {
+                      const current = curr.deckSection ?? DEFAULT_DECK_SECTION;
+                      return { ...curr, deckSection: { ...current, ordinate } };
+                    });
+                  }}
+                >
+                  {DECK_SECTION_ORDINATE_OPTIONS.map(({ value, label }) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                <span>Center {centerLabel} (m)</span>
+                <input
+                  type="number"
+                  step="0.05"
+                  value={centerValue}
+                  onChange={(e) => {
+                    setModel((curr) => {
+                      const current = curr.deckSection ?? DEFAULT_DECK_SECTION;
+                      const fallbackCenter =
+                        current.mode === "longitudinal" ? current.centerTM : current.centerSM;
+                      const value = parseNumericInput(e.target.value, fallbackCenter);
+                      return {
+                        ...curr,
+                        deckSection:
+                          current.mode === "longitudinal"
+                            ? { ...current, centerTM: value }
+                            : { ...current, centerSM: value },
+                      };
+                    });
+                  }}
+                />
+              </label>
+              <label className="field">
+                <span>Strip width (m)</span>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={deckSection.widthM}
+                  onChange={(e) => {
+                    setModel((curr) => {
+                      const current = curr.deckSection ?? DEFAULT_DECK_SECTION;
+                      return {
+                        ...curr,
+                        deckSection: {
+                          ...current,
+                          widthM: parseNumericInput(e.target.value, current.widthM),
+                        },
+                      };
+                    });
+                  }}
+                />
               </label>
             </>
           );
